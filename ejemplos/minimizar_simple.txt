@@ -1,0 +1,5 @@
+MINIMIZE
+1 2
+SUBJECT TO
+1 1 <= 3
+2 1 <= 4
