@@ -16,6 +16,7 @@ class SimplexSolver:
         self.tableau: Optional[np.ndarray] = None
         self.variables: List[str] = []
         self.solution: Dict[str, float] = {}
+        self.steps: List[Dict[str, Any]] = []   # historial de pasos
 
     def solve(
         self,
@@ -23,6 +24,7 @@ class SimplexSolver:
         A: List[List[float]],
         b: List[float],
         maximize: bool = True,
+        log_steps: bool = True,                 # para controlar impresión en consola
     ) -> Dict[str, Any]:
         """
         Resuelve un problema de programación lineal usando el método simplex.
@@ -36,6 +38,10 @@ class SimplexSolver:
         Returns:
             dict: Diccionario con la solución y el valor óptimo
         """
+        
+        # Reiniciar historial
+        self.steps.clear()
+        
         # Convertir a arrays de numpy
         c_arr = np.array(c, dtype=float)
         A_arr = np.array(A, dtype=float)
@@ -51,11 +57,14 @@ class SimplexSolver:
         # Para el tableau simplex:
         # - Maximización: coeficientes van negados (-c)
         # - Minimización: coeficientes van positivos (c)
-        if maximize:
-            c_tableau = -c_arr
-        else:
-            c_tableau = c_arr
+        #if maximize:
+        #    c_tableau = -c_arr
+        #else:
+        #    c_tableau = c_arr
 
+
+        # Coeficientes de la función objetivo
+        c_tableau = -c_arr if maximize else c_arr
         # Agregar función objetivo al tableau
         c_extended = np.hstack([c_tableau, np.zeros(m)])
 
@@ -68,13 +77,24 @@ class SimplexSolver:
         # Variables básicas iniciales (variables de holgura)
         basic_vars = list(range(n, n + m))
 
-        print("Tableau inicial:")
-        self._print_tableau()
+        # Guardar estado inicial
+        self.steps.append({
+            "iteration": 0,
+            "entering_var": None,
+            "leaving_var": None,
+            "pivot": None,
+            "tableau": self.tableau.copy()
+        })
+
+        if log_steps:
+            print("Tableau inicial:")
+            self._print_tableau()
 
         iteration = 0
         while True:
             iteration += 1
-            print(f"\n--- Iteración {iteration} ---")
+            if log_steps:
+                print(f"\n--- Iteración {iteration} ---")
 
             # Verificar si la solución es óptima
             if maximize:
@@ -85,7 +105,8 @@ class SimplexSolver:
                 entering_col = int(np.argmax(self.tableau[-1, :-1]))
 
             if optimal_condition:
-                print("Solución óptima encontrada!")
+                if log_steps:
+                    print("Solución óptima encontrada!")
                 break
 
             # Variable que entra ya fue calculada arriba
@@ -105,9 +126,10 @@ class SimplexSolver:
             leaving_row = int(np.argmin(ratios))
             pivot = self.tableau[leaving_row, entering_col]
 
-            print(f"Variable que entra: x{entering_col + 1}")
-            print(f"Variable que sale: x{basic_vars[leaving_row] + 1}")
-            print(f"Elemento pivote: {pivot}")
+            if log_steps:
+                print(f"Variable que entra: x{entering_col + 1}")
+                print(f"Variable que sale: x{basic_vars[leaving_row] + 1}")
+                print(f"Elemento pivote: {pivot}")
 
             # Actualizar variables básicas
             basic_vars[leaving_row] = entering_col
@@ -120,18 +142,30 @@ class SimplexSolver:
                     self.tableau[i] -= (
                         self.tableau[i, entering_col] * self.tableau[leaving_row]
                     )
+            
+            # Guardar paso
+            self.steps.append({
+                "iteration": iteration,
+                "entering_var": entering_col,
+                "leaving_var": basic_vars[leaving_row],
+                "pivot": pivot,
+                "tableau": self.tableau.copy()
+            })
 
-            print("Tableau después del pivoteo:")
-            self._print_tableau()
+            if log_steps:
+                print("Tableau después del pivoteo:")
+                self._print_tableau()
 
             if iteration > 50:  # Prevenir bucles infinitos
                 return {"status": "error", "message": "Demasiadas iteraciones"}
 
         # Construir la solución
-        solution = {}
-        for i in range(n):
-            solution[f"x{i+1}"] = 0.0
-
+        
+        #solution = {}
+        #for i in range(n):
+        #    solution[f"x{i+1}"] = 0.0
+        
+        solution = {f"x{i+1}": 0.0 for i in range(n)}
         for i, var in enumerate(basic_vars):
             if var < n:  # Solo variables originales
                 solution[f"x{var+1}"] = float(self.tableau[i, -1])
@@ -146,6 +180,7 @@ class SimplexSolver:
             "solution": solution,
             "optimal_value": optimal_value,
             "iterations": iteration,
+            "steps": self.steps                 # se devuelve el historial completo
         }
 
     def _print_tableau(self):
