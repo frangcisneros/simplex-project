@@ -180,7 +180,7 @@ class SimplexSolver:
             "solution": solution,
             "optimal_value": optimal_value,
             "iterations": iteration,
-            "steps": self.steps                 # se devuelve el historial completo
+            "steps": self.steps             # se devuelve el historial completo
         }
 
     def _print_tableau(self):
