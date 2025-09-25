@@ -7,6 +7,8 @@ import sys
 import argparse
 import numpy as np
 from typing import List, Tuple, Optional, Dict, Any
+from export import export_to_pdf
+import os
 
 
 class SimplexSolver:
@@ -26,6 +28,8 @@ class SimplexSolver:
         maximize: bool = True,
         log_steps: bool = True,                 # para controlar impresión en consola
     ) -> Dict[str, Any]:
+        # Reiniciar historial
+        self.steps.clear()
         """
         Resuelve un problema de programación lineal usando el método simplex.
 
@@ -38,9 +42,6 @@ class SimplexSolver:
         Returns:
             dict: Diccionario con la solución y el valor óptimo
         """
-        
-        # Reiniciar historial
-        self.steps.clear()
         
         # Convertir a arrays de numpy
         c_arr = np.array(c, dtype=float)
@@ -57,11 +58,6 @@ class SimplexSolver:
         # Para el tableau simplex:
         # - Maximización: coeficientes van negados (-c)
         # - Minimización: coeficientes van positivos (c)
-        #if maximize:
-        #    c_tableau = -c_arr
-        #else:
-        #    c_tableau = c_arr
-
 
         # Coeficientes de la función objetivo
         c_tableau = -c_arr if maximize else c_arr
@@ -77,20 +73,24 @@ class SimplexSolver:
         # Variables básicas iniciales (variables de holgura)
         basic_vars = list(range(n, n + m))
 
+        # Inicializar contador de iteraciones
+        iteration = 0
+
         # Guardar estado inicial
         self.steps.append({
-            "iteration": 0,
+            "iteration": iteration, # Iteración 0
             "entering_var": None,
             "leaving_var": None,
             "pivot": None,
-            "tableau": self.tableau.copy()
+            "tableau": self.tableau.copy(),
+            "basic_vars": basic_vars.copy(),
+            "pivot_coords_next": None  # no hay pivote todavía
         })
 
         if log_steps:
             print("Tableau inicial:")
             self._print_tableau()
 
-        iteration = 0
         while True:
             iteration += 1
             if log_steps:
@@ -131,8 +131,24 @@ class SimplexSolver:
                 print(f"Variable que sale: x{basic_vars[leaving_row] + 1}")
                 print(f"Elemento pivote: {pivot}")
 
+            # Guardar tableau previo antes de pivotear
+            tableau_before_pivot = self.tableau.copy()
+            
+            if len(self.steps) > 0:
+                self.steps[-1]["pivot_coords_next"] = {
+                    "entering_col": entering_col,
+                    "leaving_row": leaving_row,
+                    "pivot": pivot,
+                    "tableau_before_pivot": tableau_before_pivot
+                }
+
+            # Guardar la variable que sale antes de actualizar
+            leaving_var_idx = basic_vars[leaving_row]
+            
+            
+
             # Actualizar variables básicas
-            basic_vars[leaving_row] = entering_col
+            basic_vars[leaving_row] = entering_col            
 
             # Operaciones de pivoteo
             self.tableau[leaving_row] /= pivot
@@ -147,9 +163,12 @@ class SimplexSolver:
             self.steps.append({
                 "iteration": iteration,
                 "entering_var": entering_col,
-                "leaving_var": basic_vars[leaving_row],
+                "leaving_var": leaving_var_idx,         # índice de la variable que sale (x4, x5, ...)
+                "leaving_row": leaving_row,             # fila pivote
                 "pivot": pivot,
-                "tableau": self.tableau.copy()
+                "tableau": self.tableau.copy(),
+                "basic_vars": basic_vars.copy(),
+                "pivot_coords_next": None   # se asignará en la siguiente iteración
             })
 
             if log_steps:
@@ -180,7 +199,8 @@ class SimplexSolver:
             "solution": solution,
             "optimal_value": optimal_value,
             "iterations": iteration,
-            "steps": self.steps             # se devuelve el historial completo
+            "steps": self.steps,                    # historial completo
+            "n_original_vars": n,                   # cantidad de variables de decisión originales
         }
 
     def _print_tableau(self):
@@ -332,6 +352,12 @@ def main():
     parser.add_argument(
         "--interactive", "-i", action="store_true", help="Modo interactivo"
     )
+    parser.add_argument(
+        "--show-steps", "-s", action="store_true", help="Mostrar el paso a paso en consola"
+    )
+    parser.add_argument(
+        "--pdf", "-p", metavar="archivo.pdf", help="Generar PDF con el paso a paso y la solución"
+    )
 
     args = parser.parse_args()
 
@@ -360,8 +386,6 @@ def main():
         elif coeff < 0:
             print(" ", end="")
         print(f"{coeff}x{i+1}", end="")
-    print()
-
     print("\nSujeto a:")
     for i, (row, rhs) in enumerate(zip(A, b)):
         print(f"  ", end="")
@@ -372,13 +396,12 @@ def main():
                 print(" ", end="")
             print(f"{coeff}x{j+1}", end="")
         print(f" <= {rhs}")
-
     print("  xi >= 0 para todo i")
     print("=" * 50)
 
     # Resolver
     solver = SimplexSolver()
-    result = solver.solve(c, A, b, maximize)
+    result = solver.solve(c, A, b, maximize, log_steps=args.show_steps)
 
     # Mostrar resultado
     print("\n" + "=" * 50)
@@ -394,7 +417,30 @@ def main():
             print(f"  {var} = {value:.4f}")
     else:
         print(f"Estado: {result['status']}")
-        print(f"Mensaje: {result['message']}")
+        print(f"Mensaje: {result.get('message','')}")
+    
+    # Generar PDF si se indicó
+    if args.pdf and result["status"] == "optimal":
+        # Crear carpeta 'reports' si no existe
+        reports_dir = "reports"
+        os.makedirs(reports_dir, exist_ok=True)
+
+        # Asegurarse de que el archivo se guarde dentro de 'reports/'
+        output_filename = os.path.basename(args.pdf)  # solo el nombre
+        output_path = os.path.join(reports_dir, output_filename)
+        
+        # --- Construir resumen del problema ---
+        problem_summary = {
+            "objective_str": ("Maximizar" if maximize else "Minimizar") + " z = " +
+                            " + ".join(f"{coef}x{i+1}" for i, coef in enumerate(c)),
+            "constraints_str": [
+                " + ".join(f"{coef}x{j+1}" for j, coef in enumerate(row)) + f" <= {rhs}"
+                for row, rhs in zip(A, b)
+            ]
+        }
+        result["problem"] = problem_summary
+
+        export_to_pdf(result, output_path)
 
 
 if __name__ == "__main__":
