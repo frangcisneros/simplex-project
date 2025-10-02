@@ -7,6 +7,8 @@ import sys
 import argparse
 import numpy as np
 from typing import List, Tuple, Optional, Dict, Any
+from copy import deepcopy
+from src.debug import Debug
 
 
 class SimplexSolver:
@@ -23,6 +25,7 @@ class SimplexSolver:
         A: List[List[float]],
         b: List[float],
         maximize: bool = True,
+        debug: Optional[Debug] = None,   # recibe debug
     ) -> Dict[str, Any]:
         """
         Resuelve un problema de programación lineal usando el método simplex.
@@ -32,6 +35,7 @@ class SimplexSolver:
             A: Matriz de coeficientes de las restricciones
             b: Vector de términos independientes
             maximize: True para maximizar, False para minimizar
+            debug: Instancia de Debug para trazar las iteraciones
 
         Returns:
             dict: Diccionario con la solución y el valor óptimo
@@ -109,6 +113,19 @@ class SimplexSolver:
             print(f"Variable que sale: x{basic_vars[leaving_row] + 1}")
             print(f"Elemento pivote: {pivot}")
 
+            # Log "before pivot"
+            if debug:
+                debug.log_iteration(
+                    iteration,
+                    deepcopy(self.tableau),
+                    entering=entering_name,
+                    leaving=leaving_name,
+                    pivot=pivot,
+                    ratios=ratios,
+                    z=current_z,
+                    msg="before pivot",
+                )
+
             # Actualizar variables básicas
             basic_vars[leaving_row] = entering_col
 
@@ -120,6 +137,25 @@ class SimplexSolver:
                     self.tableau[i] -= (
                         self.tableau[i, entering_col] * self.tableau[leaving_row]
                     )
+
+            print("Tableau después del pivoteo:")
+            self._print_tableau()
+
+            if iteration > 50:  # Prevenir bucles infinitos
+                return {"status": "error", "message": "Demasiadas iteraciones"}
+        
+        # Log "after pivot"
+            if debug:
+                debug.log_iteration(
+                    iteration,
+                    deepcopy(self.tableau),
+                    entering=entering_name,
+                    leaving=leaving_name,
+                    pivot=pivot,
+                    ratios=ratios,
+                    z=new_z,
+                    msg="after pivot",
+                )
 
             print("Tableau después del pivoteo:")
             self._print_tableau()
@@ -296,6 +332,13 @@ def main():
     )
     parser.add_argument(
         "--interactive", "-i", action="store_true", help="Modo interactivo"
+    )
+    parser.add_argument(
+        "--debug", choices=["NONE", "L", "M", "XL"], default="NONE",
+        help="Nivel de debug (NONE, L, M, XL)"
+    )
+    parser.add_argument(
+        "--debug-out", help="Archivo JSON para guardar el trace de debug"
     )
 
     args = parser.parse_args()
