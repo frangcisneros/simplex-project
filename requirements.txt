@@ -1,11 +1,11 @@
 numpy>=1.21.0
 
 # NLP and AI dependencies
-torch>=2.0.0
-transformers>=4.30.0
-accelerate>=0.20.0
-bitsandbytes>=0.40.0
-sentencepiece>=0.1.99
+torch
+transformers
+accelerate
+bitsandbytes
+sentencepiece
 
 # Optional optimization libraries
 PuLP>=2.7.0

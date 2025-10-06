@@ -1,5 +1,26 @@
 """
-Paquete NLP para el sistema de programación lineal.
+Sistema NLP para resolver problemas de optimización descritos en lenguaje natural.
+
+Este paquete permite escribir problemas de programación lineal en español
+(o cualquier lenguaje natural) y resolverlos automáticamente. El sistema
+usa modelos de lenguaje para extraer la información matemática del texto,
+la valida, genera el modelo, y lo resuelve con algoritmos de optimización.
+
+Componentes principales:
+- Procesadores NLP: Convierten texto a problemas estructurados
+- Generadores de modelos: Transforman a formatos de solver específicos
+- Solvers: Resuelven el problema de optimización
+- Conectores: Orquestan todo el pipeline
+
+Uso básico:
+    from nlp import NLPConnectorFactory, NLPModelType, SolverType
+
+    connector = NLPConnectorFactory.create_connector(
+        nlp_model_type=NLPModelType.FLAN_T5_SMALL,
+        solver_type=SolverType.SIMPLEX
+    )
+
+    result = connector.process_and_solve("Maximizar 3x + 2y sujeto a x + y <= 10")
 """
 
 from .interfaces import (
@@ -18,6 +39,14 @@ from .config import (
     PromptTemplates,
     ErrorMessages,
     DefaultSettings,
+)
+
+from .complexity_analyzer import (
+    ModelSelector,
+    ComplexityAnalyzer,
+    SystemAnalyzer,
+    ProblemComplexity,
+    SystemCapability,
 )
 
 from .processor import TransformerNLPProcessor, MockNLPProcessor
@@ -52,6 +81,12 @@ __all__ = [
     "PromptTemplates",
     "ErrorMessages",
     "DefaultSettings",
+    # Complexity analysis
+    "ModelSelector",
+    "ComplexityAnalyzer",
+    "SystemAnalyzer",
+    "ProblemComplexity",
+    "SystemCapability",
     # Processors
     "TransformerNLPProcessor",
     "MockNLPProcessor",

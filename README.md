@@ -32,7 +32,7 @@ python simplex.py --interactive
 Puedes resolver problemas escritos en español usando:
 
 ```
-python nlp_simplex.py --nlp --file ejemplos/nlp/problema_produccion_simple.txt
+python nlp_simplex.py --nlp --file ejemplos/nlp/problema_complejo.txt
 ```
 
 O escribir el texto directamente:

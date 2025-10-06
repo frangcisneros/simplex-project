@@ -1,6 +1,9 @@
 """
-Conectores para integrar NLP con solvers de optimización.
-Implementa el patrón Adapter y Factory para mantener bajo acoplamiento.
+Conectores que integran el procesamiento NLP con los solvers de optimización.
+
+Orquestan todo el flujo: procesar texto -> validar problema -> generar modelo -> resolver.
+Incluye adaptadores para usar el SimplexSolver existente sin modificarlo, y factories
+para crear fácilmente configuraciones completas del sistema.
 """
 
 import logging
@@ -36,14 +39,12 @@ class SolverType(Enum):
 
 class SimplexSolverAdapter(IOptimizationSolver):
     """
-    Adapter para integrar SimplexSolver existente con la nueva arquitectura.
+    Permite usar el SimplexSolver original con el nuevo sistema NLP.
 
-    Principios SOLID:
-    - SRP: Solo adapta SimplexSolver a la interfaz IOptimizationSolver
-    - OCP: Permite usar SimplexSolver sin modificar su código
-    - LSP: Implementa completamente IOptimizationSolver
-    - ISP: Interface específica para solvers
-    - DIP: Depende de abstracciones
+    El SimplexSolver ya existía antes del sistema NLP y tiene su propia interfaz.
+    Este adaptador traduce entre lo que espera SimplexSolver (c, A, b) y lo que
+    devuelve el modelo generator. También enriquece los resultados con nombres
+    de variables personalizados.
     """
 
     def __init__(self):
@@ -52,13 +53,17 @@ class SimplexSolverAdapter(IOptimizationSolver):
 
     def solve(self, model: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Resuelve el modelo usando SimplexSolver.
+        Ejecuta el algoritmo Simplex y devuelve la solución.
+
+        Valida que el modelo tenga las claves necesarias (c, A, b, maximize),
+        llama al SimplexSolver, y si hay variable_names personalizado,
+        mapea la solución de x1, x2, x3... a los nombres reales.
 
         Args:
-            model: Modelo con claves 'c', 'A', 'b', 'maximize'
+            model: Modelo con claves 'c', 'A', 'b', 'maximize' y opcionalmente 'variable_names'
 
         Returns:
-            Resultado de la optimización
+            Diccionario con 'status', 'solution', 'objective_value', etc.
         """
         try:
             required_keys = ["c", "A", "b", "maximize"]
@@ -91,10 +96,11 @@ class SimplexSolverAdapter(IOptimizationSolver):
 
 class NLPConnectorFactory:
     """
-    Factory para crear conectores NLP según la configuración.
+    Crea conectores NLP configurados y listos para usar.
 
-    Principio de responsabilidad única: Solo se encarga de crear conectores.
-    Patrón Factory: Encapsula la lógica de creación de objetos complejos.
+    En vez de instanciar manualmente cada componente (procesador, generador, solver, validador),
+    esta factory lo hace automáticamente con la configuración adecuada. Simplifica
+    la creación del sistema completo.
     """
 
     @staticmethod
@@ -105,16 +111,20 @@ class NLPConnectorFactory:
         custom_config: Optional[Dict[str, Any]] = None,
     ) -> "NLPOptimizationConnector":
         """
-        Crea un conector NLP configurado.
+        Construye un conector NLP completo con todos sus componentes.
+
+        Instancia el procesador NLP (real o mock), el generador de modelos
+        para el solver elegido, el solver mismo, y el validador. Devuelve
+        todo conectado y listo para procesar problemas.
 
         Args:
-            nlp_model_type: Tipo de modelo NLP
-            solver_type: Tipo de solver a usar
-            use_mock_nlp: Si usar mock NLP para testing
-            custom_config: Configuración personalizada
+            nlp_model_type: Modelo de lenguaje a usar (FLAN-T5, Mistral, etc.)
+            solver_type: Qué solver usar (por ahora solo SIMPLEX está implementado)
+            use_mock_nlp: Si True, usa un procesador simple para testing
+            custom_config: Parámetros personalizados para el modelo NLP
 
         Returns:
-            Conector NLP configurado
+            NLPOptimizationConnector configurado y listo para usar
         """
         # Crear procesador NLP
         if use_mock_nlp:
@@ -148,16 +158,18 @@ class NLPConnectorFactory:
 
 class NLPOptimizationConnector(INLPConnector):
     """
-    Conector principal que orquesta el pipeline completo NLP -> Modelo -> Solución.
+    Orquesta el pipeline completo: texto -> NLP -> modelo -> solución.
 
-    Principios SOLID aplicados:
-    - SRP: Solo se encarga de orquestar el pipeline
-    - OCP: Extensible mediante inyección de dependencias
-    - LSP: Implementa completamente INLPConnector
-    - ISP: Interface específica para conectores
-    - DIP: Depende solo de abstracciones (interfaces)
+    Este es el componente principal del sistema. Recibe texto en lenguaje natural
+    y coordina todos los pasos:
+    1. Procesar el texto con NLP para extraer el problema
+    2. Validar que el problema esté bien formado
+    3. Generar el modelo matemático
+    4. Resolver con el solver
+    5. Devolver resultados completos
 
-    Patrón de diseño: Facade - Proporciona interfaz simple para subsistema complejo.
+    Maneja errores en cada paso y proporciona información detallada sobre
+    qué salió mal si algo falla.
     """
 
     def __init__(
@@ -168,13 +180,16 @@ class NLPOptimizationConnector(INLPConnector):
         validator: IModelValidator,
     ):
         """
-        Inicializa el conector con todas las dependencias.
+        Conecta todos los componentes del sistema.
+
+        Recibe las instancias de cada componente ya configuradas. Esto permite
+        flexibilidad: podemos usar cualquier implementación que cumpla las interfaces.
 
         Args:
-            nlp_processor: Procesador de lenguaje natural
-            model_generator: Generador de modelos
-            solver: Solver de optimización
-            validator: Validador de modelos
+            nlp_processor: Procesador para extraer problemas del texto
+            model_generator: Generador para convertir a formato del solver
+            solver: Algoritmo que resuelve el problema de optimización
+            validator: Validador para chequear que el problema esté bien formado
         """
         self.nlp_processor = nlp_processor
         self.model_generator = model_generator
@@ -184,13 +199,24 @@ class NLPOptimizationConnector(INLPConnector):
 
     def process_and_solve(self, natural_language_text: str) -> Dict[str, Any]:
         """
-        Pipeline completo: texto -> NLP -> modelo -> solución.
+        Ejecuta el proceso completo desde texto hasta la solución óptima.
+
+        Pasos:
+        1. Verifica que el procesador NLP esté disponible
+        2. Procesa el texto para extraer el problema
+        3. Valida que el problema sea matemáticamente correcto
+        4. Genera el modelo en el formato del solver
+        5. Resuelve el problema de optimización
+        6. Devuelve solución con metadata (tiempo, confianza, problema extraído)
+
+        Si algo falla en cualquier paso, devuelve un dict con success=False
+        y detalles del error.
 
         Args:
-            natural_language_text: Descripción del problema en lenguaje natural
+            natural_language_text: Descripción del problema en español
 
         Returns:
-            Resultado completo del proceso
+            Dict con 'success', 'solution', 'extracted_problem', 'processing_time', etc.
         """
         start_time = time.time()
 
@@ -284,10 +310,13 @@ class NLPOptimizationConnector(INLPConnector):
 
     def health_check(self) -> Dict[str, Any]:
         """
-        Verifica el estado de todos los componentes.
+        Revisa si todos los componentes del sistema están funcionando.
+
+        Verifica que el procesador NLP esté disponible y que los demás componentes
+        se hayan instanciado correctamente. Útil para debugging y monitoreo.
 
         Returns:
-            Estado de salud del conector
+            Dict con 'overall_status' (healthy/degraded/unhealthy) y detalles de cada componente
         """
         health = {"overall_status": "healthy", "components": {}}
 
@@ -331,8 +360,11 @@ class NLPOptimizationConnector(INLPConnector):
 
 class ConfigurableNLPConnector:
     """
-    Conector configurable que permite cambiar componentes dinámicamente.
-    Útil para experimentación y testing.
+    Wrapper que permite reconfigurar el conector dinámicamente.
+
+    A diferencia del conector normal que se instancia con componentes fijos,
+    este permite cambiar el modelo NLP, el solver, etc. sin crear un objeto nuevo.
+    Útil para experimentación y testing de diferentes configuraciones.
     """
 
     def __init__(self):
@@ -347,10 +379,13 @@ class ConfigurableNLPConnector:
         custom_config: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
-        Configura el conector con los parámetros especificados.
+        Configura (o reconfigura) el conector con nuevos parámetros.
+
+        Usa la factory para crear un nuevo conector interno con la configuración
+        especificada, y hace un health check para asegurar que todo funciona.
 
         Returns:
-            True si la configuración fue exitosa
+            True si la configuración fue exitosa y el sistema está listo para usar
         """
         try:
             self.connector = NLPConnectorFactory.create_connector(
@@ -374,7 +409,12 @@ class ConfigurableNLPConnector:
             return False
 
     def process_and_solve(self, natural_language_text: str) -> Dict[str, Any]:
-        """Procesa texto si el conector está configurado."""
+        """
+        Procesa texto si el conector ya fue configurado.
+
+        Delega al conector interno. Si aún no se llamó configure(),
+        devuelve un error.
+        """
         if not self.connector:
             return {
                 "success": False,
@@ -385,7 +425,12 @@ class ConfigurableNLPConnector:
         return self.connector.process_and_solve(natural_language_text)
 
     def get_status(self) -> Dict[str, Any]:
-        """Obtiene el estado actual del conector."""
+        """
+        Devuelve el estado actual del conector.
+
+        Indica si está configurado y, si lo está, el health status de todos
+        los componentes internos.
+        """
         if not self.connector:
             return {"configured": False, "status": "not_configured"}
 

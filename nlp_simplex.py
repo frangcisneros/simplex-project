@@ -34,8 +34,8 @@ def setup_logging(verbose: bool = False):
 
     # Reducir verbosidad de transformers si no está en modo debug
     if not verbose:
-        logging.getLogger("transformers").setLevel(logging.WARNING)
-        logging.getLogger("torch").setLevel(logging.WARNING)
+        logging.getLogger("transformers").setLevel(logging.ERROR)
+        logging.getLogger("torch").setLevel(logging.ERROR)
 
 
 def nlp_mode(args):

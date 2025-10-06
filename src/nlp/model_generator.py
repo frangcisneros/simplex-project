@@ -1,6 +1,9 @@
 """
-Generadores de modelos de optimización.
-Convierte OptimizationProblem a diferentes formatos de solver.
+Generadores de modelos de optimización para diferentes solvers.
+
+Cada solver (Simplex, PuLP, OR-Tools) espera su propia estructura de datos.
+Estos generadores toman nuestro OptimizationProblem estándar y lo convierten
+al formato específico que necesita cada solver.
 """
 
 import logging
@@ -26,13 +29,15 @@ from .interfaces import IModelGenerator, OptimizationProblem, IModelValidator
 
 class SimplexModelGenerator(IModelGenerator):
     """
-    Generador de modelos para el solver Simplex existente.
-    Convierte OptimizationProblem al formato esperado por SimplexSolver.
+    Convierte problemas a formato de matrices para el algoritmo Simplex.
 
-    Principios SOLID:
-    - SRP: Solo se encarga de generar modelos para Simplex
-    - OCP: Extensible sin modificar código existente
-    - LSP: Implementa completamente IModelGenerator
+    El solver Simplex espera el problema en forma estándar:
+    - c: vector de coeficientes de la función objetivo
+    - A: matriz de coeficientes de restricciones
+    - b: vector de lados derechos de las restricciones
+
+    Este generador transforma OptimizationProblem a ese formato,
+    manejando restricciones >= y de igualdad.
     """
 
     def __init__(self):
@@ -40,13 +45,20 @@ class SimplexModelGenerator(IModelGenerator):
 
     def generate_model(self, problem: OptimizationProblem) -> Dict[str, Any]:
         """
-        Genera modelo en formato SimplexSolver.
+        Transforma el problema a formato de matrices listo para Simplex.
+
+        Proceso:
+        1. Extrae coeficientes c de la función objetivo
+        2. Construye matriz A con coeficientes de restricciones
+        3. Convierte restricciones >= a <= (multiplicando por -1)
+        4. Divide restricciones = en dos restricciones (<= y >=)
+        5. Valida que todas las dimensiones coincidan
 
         Args:
             problem: Problema de optimización estructurado
 
         Returns:
-            Dict con 'c', 'A', 'b', 'maximize' para SimplexSolver
+            Dict con 'c', 'A', 'b', 'maximize' y 'variable_names' para SimplexSolver
         """
         try:
             # Extraer función objetivo
@@ -107,7 +119,11 @@ class SimplexModelGenerator(IModelGenerator):
 
 class PuLPModelGenerator(IModelGenerator):
     """
-    Generador de modelos PuLP.
+    Genera modelos usando la librería PuLP de Python.
+
+    PuLP es una librería popular para modelado de optimización. Tiene su propio
+    sistema de variables, restricciones y funciones objetivo. Este generador
+    crea objetos PuLP a partir de nuestro formato estándar.
     """
 
     def __init__(self):
@@ -116,7 +132,13 @@ class PuLPModelGenerator(IModelGenerator):
             raise ImportError("PuLP library not available")
 
     def generate_model(self, problem: OptimizationProblem) -> Dict[str, Any]:
-        """Genera modelo PuLP."""
+        """
+        Crea un problema PuLP con variables, objetivo y restricciones.
+
+        Construye objetos LpVariable para cada variable de decisión,
+        define la función objetivo usando lpSum, y agrega cada restricción
+        con su operador correspondiente (<=, >=, =).
+        """
         try:
             # Crear problema
             sense = (
@@ -174,7 +196,11 @@ class PuLPModelGenerator(IModelGenerator):
 
 class ORToolsModelGenerator(IModelGenerator):
     """
-    Generador de modelos OR-Tools.
+    Genera modelos para Google OR-Tools.
+
+    OR-Tools es el conjunto de herramientas de optimización de Google.
+    Este generador crea variables NumVar, define el objetivo, y construye
+    restricciones usando la API de OR-Tools.
     """
 
     def __init__(self):
@@ -183,7 +209,13 @@ class ORToolsModelGenerator(IModelGenerator):
             raise ImportError("OR-Tools library not available")
 
     def generate_model(self, problem: OptimizationProblem) -> Dict[str, Any]:
-        """Genera modelo OR-Tools."""
+        """
+        Construye un modelo OR-Tools completo.
+
+        Crea un solver GLOP (para programación lineal), define variables no negativas,
+        establece los coeficientes del objetivo, y agrega restricciones con sus
+        límites (bounds) según el operador.
+        """
         try:
             # Crear solver
             solver = pywraplp.Solver.CreateSolver("GLOP")
@@ -248,8 +280,16 @@ class ORToolsModelGenerator(IModelGenerator):
 
 class ModelValidator(IModelValidator):
     """
-    Validador de problemas de optimización.
-    Verifica que el problema extraído por NLP sea coherente.
+    Valida que los problemas extraídos por NLP sean matemáticamente correctos.
+
+    Revisa que:
+    - El tipo de objetivo sea 'maximize' o 'minimize'
+    - Los coeficientes sean números
+    - Las dimensiones de restricciones coincidan con las variables
+    - Los operadores sean válidos (<=, >=, =)
+    - No haya problemas demasiado grandes (límites configurables)
+
+    Ayuda a detectar errores antes de intentar resolver el problema.
     """
 
     def __init__(self, max_variables: int = 20, max_constraints: int = 50):
@@ -259,26 +299,32 @@ class ModelValidator(IModelValidator):
 
     def validate(self, problem: OptimizationProblem) -> bool:
         """
-        Valida el problema de optimización.
+        Revisa si el problema se puede resolver o tiene errores.
+
+        Ejecuta todas las validaciones (dimensiones, tipos, límites) y
+        retorna True solo si pasa todas. Si falla alguna, retorna False.
 
         Args:
-            problem: Problema a validar
+            problem: Problema de optimización a validar
 
         Returns:
-            True si es válido, False en caso contrario
+            True si todo está correcto, False si hay algún error
         """
         errors = self.get_validation_errors(problem)
         return len(errors) == 0
 
     def get_validation_errors(self, problem: OptimizationProblem) -> List[str]:
         """
-        Obtiene lista de errores de validación.
+        Genera una lista detallada de todos los problemas encontrados.
+
+        Revisa cada aspecto del problema y acumula mensajes de error descriptivos.
+        Útil para debugging y para mostrar al usuario qué está mal con su problema.
 
         Args:
             problem: Problema a validar
 
         Returns:
-            Lista de errores encontrados
+            Lista de strings describiendo cada error (lista vacía si es válido)
         """
         errors = []
 
