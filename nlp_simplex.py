@@ -165,6 +165,32 @@ def nlp_mode(args):
             traceback.print_exc()
 
 
+def detect_file_format(filename):
+    """
+    Detecta si un archivo es formato clásico de Simplex o lenguaje natural.
+
+    Returns:
+        'classic' si es formato MAXIMIZE/MINIMIZE
+        'nlp' si es lenguaje natural
+    """
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            first_line = f.readline().strip().upper()
+            # Si empieza con MAXIMIZE o MINIMIZE, es formato clásico
+            if first_line in ["MAXIMIZE", "MINIMIZE"]:
+                return "classic"
+            # Caso especial: archivos en carpeta nlp/ son siempre lenguaje natural
+            if "nlp" in str(Path(filename).parts):
+                return "nlp"
+            # Si la primera línea es larga (>50 caracteres), probablemente es lenguaje natural
+            if len(first_line) > 50:
+                return "nlp"
+            # Por defecto, asumir lenguaje natural si no parece formato clásico
+            return "nlp"
+    except Exception:
+        return "nlp"  # En caso de error, asumir lenguaje natural
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Simplex Solver con capacidades NLP",
@@ -172,29 +198,32 @@ def main():
         epilog="""
 Ejemplos de uso:
 
-  # Modo tradicional (archivos)
-  python nlp_simplex.py archivo.txt
+  # Modo automático - detecta el formato del archivo
+  python nlp_simplex.py ejemplos/nlp/problema_complejo.txt
+  python nlp_simplex.py ejemplos/maximizar_basico.txt
 
   # Modo NLP con texto directo
-  python nlp_simplex.py --nlp --text "Maximizar 2x + 3y sujeto a x + y <= 10"
+  python nlp_simplex.py --text "Maximizar 2x + 3y sujeto a x + y <= 10"
   
-  # Modo NLP con archivo de texto
+  # Modo NLP explícito con archivo
   python nlp_simplex.py --nlp --file problema.txt
   
   # Modo NLP interactivo
   python nlp_simplex.py --nlp
   
-  # Modo NLP (usa Mistral 7B por defecto)
-  python nlp_simplex.py --nlp --text "..."
-  
   # Modo de prueba (mock NLP)
   python nlp_simplex.py --nlp --mock --text "cualquier texto"
+  
+  # Modo tradicional (formato clásico)
+  python nlp_simplex.py --classic archivo.txt
         """,
     )
 
     # Argumentos para modo tradicional
     parser.add_argument(
-        "filename", nargs="?", help="Archivo con el problema (modo tradicional)"
+        "filename",
+        nargs="?",
+        help="Archivo con el problema (detección automática de formato)",
     )
     parser.add_argument(
         "--interactive", "-i", action="store_true", help="Modo interactivo tradicional"
@@ -202,15 +231,22 @@ Ejemplos de uso:
 
     # Argumentos para modo NLP
     parser.add_argument(
-        "--nlp", action="store_true", help="Usar procesamiento de lenguaje natural"
+        "--nlp", action="store_true", help="Forzar modo NLP (lenguaje natural)"
     )
     parser.add_argument("--text", "-t", type=str, help="Texto del problema (modo NLP)")
     parser.add_argument(
         "--file", "-f", type=str, help="Archivo con texto del problema (modo NLP)"
     )
-    # Modelo Mistral 7B está configurado por defecto - no se necesita argumento
     parser.add_argument(
         "--mock-nlp", "--mock", action="store_true", help="Usar NLP mock para pruebas"
+    )
+
+    # Argumento para forzar modo clásico
+    parser.add_argument(
+        "--classic",
+        "-c",
+        action="store_true",
+        help="Forzar modo clásico (MAXIMIZE/MINIMIZE)",
     )
 
     # Argumentos generales
@@ -222,9 +258,28 @@ Ejemplos de uso:
 
     # Determinar modo de operación
     if args.nlp or args.text or args.file or args.mock_nlp:
-        # Modo NLP
+        # Modo NLP explícito
         nlp_mode(args)
-    elif args.filename or args.interactive or len(sys.argv) == 1:
+    elif args.classic:
+        # Modo clásico forzado
+        original_main()
+    elif args.filename:
+        # Detectar automáticamente el formato del archivo
+        file_format = detect_file_format(args.filename)
+
+        if file_format == "nlp":
+            # Archivo de lenguaje natural - usar modo NLP
+            print(f"=== SIMPLEX SOLVER - Detectado: Lenguaje Natural ===")
+            print(f"Archivo: {args.filename}\n")
+            # Crear args equivalentes para nlp_mode
+            args.file = args.filename
+            nlp_mode(args)
+        else:
+            # Archivo formato clásico - usar solver original
+            print(f"=== SIMPLEX SOLVER - Detectado: Formato Clásico ===")
+            print(f"Archivo: {args.filename}\n")
+            original_main()
+    elif args.interactive or len(sys.argv) == 1:
         # Modo tradicional - usar solver original
         original_main()
     else:

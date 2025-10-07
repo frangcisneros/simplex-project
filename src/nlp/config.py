@@ -61,6 +61,10 @@ class PromptTemplates:
 
     Estos prompts instruyen al modelo sobre cómo convertir el texto en español
     a un JSON estructurado con el problema de optimización.
+
+    Utiliza técnica de few-shot learning con ejemplos concretos para mejorar
+    la capacidad del modelo de identificar variables y restricciones en
+    problemas complejos.
     """
 
     OPTIMIZATION_EXTRACTION_PROMPT = """Eres un analista experto en Programación Lineal. 
@@ -75,6 +79,64 @@ Instrucciones generales:
 - Organiza todo en un JSON válido (sin texto adicional).
 
 ------------------------------------------------------------
+EJEMPLOS DE APRENDIZAJE (Few-Shot):
+
+EJEMPLO 1 - Problema Simple (un lugar, múltiples productos):
+ENUNCIADO: "Una empresa fabrica mesas y sillas. Cada mesa genera $50 de ganancia y cada silla $30. 
+Hay 100 horas de carpintería disponibles. Cada mesa requiere 4 horas y cada silla 2 horas. 
+Maximizar la ganancia."
+
+RESPUESTA CORRECTA:
+{{
+  "objective_type": "maximize",
+  "variable_names": ["x1", "x2"],
+  "objective_coefficients": [50, 30],
+  "constraints": [
+    {{"coefficients": [4, 2], "operator": "<=", "rhs": 100}}
+  ],
+  "non_negativity": true
+}}
+
+EJEMPLO 2 - Problema Multi-Instalación (varias plantas, múltiples productos):
+ENUNCIADO: "Una empresa tiene 2 plantas. Planta 1 puede producir max 500 unidades, Planta 2 max 700 unidades. 
+Producen 3 productos: A, B, C con ganancias de $10, $15, $20 por unidad respectivamente (igual en ambas plantas). 
+Hay demanda máxima: producto A 300 unidades, B 400 unidades, C 600 unidades. Maximizar ganancia."
+
+RESPUESTA CORRECTA:
+{{
+  "objective_type": "maximize",
+  "variable_names": ["x11", "x12", "x13", "x21", "x22", "x23"],
+  "objective_coefficients": [10, 15, 20, 10, 15, 20],
+  "constraints": [
+    {{"coefficients": [1, 1, 1, 0, 0, 0], "operator": "<=", "rhs": 500}},
+    {{"coefficients": [0, 0, 0, 1, 1, 1], "operator": "<=", "rhs": 700}},
+    {{"coefficients": [1, 0, 0, 1, 0, 0], "operator": "<=", "rhs": 300}},
+    {{"coefficients": [0, 1, 0, 0, 1, 0], "operator": "<=", "rhs": 400}},
+    {{"coefficients": [0, 0, 1, 0, 0, 1], "operator": "<=", "rhs": 600}}
+  ],
+  "non_negativity": true
+}}
+
+EJEMPLO 3 - Problema de Mezclas (materiales que se venden o mezclan):
+ENUNCIADO: "Una refinería tiene 1000 barriles de petróleo crudo tipo 1 y 1500 de tipo 2. 
+Puede venderlos directamente a $40 y $35 por barril respectivamente, o mezclarlos en gasolina premium 
+(70% tipo1 + 30% tipo2) que se vende a $50 por barril. Maximizar ingresos."
+
+RESPUESTA CORRECTA:
+{{
+  "objective_type": "maximize",
+  "variable_names": ["x1", "x2", "x3"],
+  "objective_coefficients": [40, 35, 50],
+  "constraints": [
+    {{"coefficients": [1, 0, 0.7], "operator": "<=", "rhs": 1000}},
+    {{"coefficients": [0, 1, 0.3], "operator": "<=", "rhs": 1500}}
+  ],
+  "non_negativity": true
+}}
+
+------------------------------------------------------------
+AHORA ANALIZA EL SIGUIENTE PROBLEMA:
+
 ENUNCIADO:
 {problem_text}
 ------------------------------------------------------------
@@ -84,18 +146,24 @@ PASOS DE ANÁLISIS:
 1. DETERMINA EL TIPO DE PROBLEMA:
    - Si menciona "maximizar", "ganancia", "beneficio" → "maximize"
    - Si menciona "minimizar", "costo", "gasto" → "minimize"
+   
+   REFERENCIA: Todos los ejemplos anteriores son de maximización.
 
 2. DEFINE LAS VARIABLES - IDENTIFICA QUÉ OPTIMIZAR:
    
-   DETECCIÓN DE ESTRUCTURA:
-   - ¿El problema menciona múltiples PLANTAS/INSTALACIONES + múltiples PRODUCTOS?
-     → Usa xij donde i=planta, j=producto: ["x11","x12","x13","x21","x22","x23",...]
-   
-   - ¿El problema menciona materias primas QUE SE PUEDEN vender directas O mezclar?
-     → Una variable por materia prima + una por cada mezcla final
+   DETECCIÓN DE ESTRUCTURA (ver ejemplos above):
    
    - ¿Solo hay UN lugar de producción con varios productos?
      → Variables simples: ["x1", "x2", "x3"]
+     → VER EJEMPLO 1: 2 productos = 2 variables ["x1", "x2"]
+   
+   - ¿El problema menciona múltiples PLANTAS/INSTALACIONES + múltiples PRODUCTOS?
+     → Usa xij donde i=planta, j=producto: ["x11","x12","x13","x21","x22","x23",...]
+     → VER EJEMPLO 2: 2 plantas × 3 productos = 6 variables ["x11","x12","x13","x21","x22","x23"]
+   
+   - ¿El problema menciona materias primas QUE SE PUEDEN vender directas O mezclar?
+     → Una variable por materia prima + una por cada mezcla final
+     → VER EJEMPLO 3: 2 tipos de venta directa + 1 mezcla = 3 variables ["x1","x2","x3"]
    
    REGLA: Cuenta TODAS las decisiones independientes que se pueden tomar.
 
@@ -105,10 +173,30 @@ PASOS DE ANÁLISIS:
    - NO hagas operaciones matemáticas (NO escribas 24.83*3814)
    - Si las ganancias son iguales para todas las plantas: repite el valor
    - Los coeficientes van en el MISMO ORDEN que las variables
+   
+   REFERENCIA EJEMPLOS:
+   - Ejemplo 1: mesas $50, sillas $30 → [50, 30]
+   - Ejemplo 2: productos A,B,C = $10,$15,$20 en AMBAS plantas → [10,15,20,10,15,20]
+   - Ejemplo 3: venta directa $40,$35 + mezcla $50 → [40,35,50]
 
 4. RESTRICCIONES - IDENTIFICA LOS LÍMITES:
 
-   EJEMPLOS DE PATRONES COMUNES:
+   APRENDE DE LOS EJEMPLOS:
+   
+   EJEMPLO 1 - Recurso compartido simple:
+   - Carpintería: 4h × mesas + 2h × sillas ≤ 100h
+   - Coeficientes: [4, 2] ≤ 100
+   
+   EJEMPLO 2 - Capacidad + Demanda en multi-instalación:
+   - Capacidad planta 1: x11+x12+x13 ≤ 500 → [1,1,1,0,0,0] ≤ 500
+   - Capacidad planta 2: x21+x22+x23 ≤ 700 → [0,0,0,1,1,1] ≤ 700
+   - Demanda producto A: x11+x21 ≤ 300 → [1,0,0,1,0,0] ≤ 300
+   
+   EJEMPLO 3 - Disponibilidad de materiales con mezclas:
+   - Tipo 1: venta_directa + 70% mezcla ≤ 1000 → [1,0,0.7] ≤ 1000
+   - Tipo 2: venta_directa + 30% mezcla ≤ 1500 → [0,1,0.3] ≤ 1500
+   
+   PATRONES COMUNES A IDENTIFICAR:
    
    A) CAPACIDAD POR INSTALACIÓN:
    - Si planta 1 puede hacer max 750 unidades: [1,1,1,0,0,0] <= 750
@@ -124,7 +212,7 @@ PASOS DE ANÁLISIS:
    D) DISPONIBILIDAD DE MATERIALES:
    - Si hay 3814 barriles de gas1 disponibles: [1,0,0,0,coef_mezcla1,coef_mezcla2] <= 3814
    
-   IDENTIFICA estos patrones en TU problema específico.
+   IDENTIFICA estos patrones en TU problema específico comparando con los ejemplos.
 
 5. REGLAS CRÍTICAS:
    - CADA array "coefficients" DEBE tener EXACTAMENTE el mismo número de elementos que "variable_names"
@@ -132,6 +220,7 @@ PASOS DE ANÁLISIS:
    - Ejemplo: 6 variables → cada coefficients debe tener [a,b,c,d,e,f] (6 números)
    - VERIFICA que cada restricción tenga la longitud correcta antes de incluirla
    - NO agregues explicaciones, solo el JSON final.
+   - COMPARA tu análisis con los ejemplos few-shot antes de generar el JSON.
 
 ------------------------------------------------------------
 FORMATO DE SALIDA (solo JSON, nada más):
