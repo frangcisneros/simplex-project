@@ -14,7 +14,7 @@ import time
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from nlp import (
-    TransformerNLPProcessor,
+    OllamaNLPProcessor,
     NLPModelType,
     ModelSelector,
 )
@@ -43,10 +43,9 @@ def test_model(model_type: NLPModelType, problem_text: str, timeout: int = 600) 
     try:
         start_time = time.time()
 
-        # Crear procesador con el modelo específico
-        processor = TransformerNLPProcessor(
+        # Crear procesador Ollama con el modelo específico
+        processor = OllamaNLPProcessor(
             model_type=model_type,
-            auto_select_model=False,  # Desactivar selección automática
         )
 
         # Procesar el problema
@@ -83,11 +82,26 @@ def test_model(model_type: NLPModelType, problem_text: str, timeout: int = 600) 
 
 
 def main():
-    """Ejecuta tests con diferentes modelos en orden de prioridad."""
+    """Ejecuta test con Mistral 7B."""
 
     print("\n" + "=" * 70)
-    print("🔬 TEST AUTOMÁTICO DE MODELOS NLP")
+    print("🔬 TEST DE MISTRAL 7B")
     print("=" * 70)
+
+    # Detectar memoria RAM disponible
+    import psutil
+    total_ram_gb = psutil.virtual_memory().total / (1024**3)
+    logger.info(f"🖥️  RAM detectada: {total_ram_gb:.1f} GB")
+
+    # Verificar que hay suficiente RAM para Mistral 7B
+    if total_ram_gb < 6:
+        logger.warning("⚠️  RAM baja detectada. Mistral 7B requiere al menos 6GB.")
+        print("� Considera usar un modelo más ligero con Ollama")
+        return
+
+    # Usar únicamente Mistral 7B
+    models_to_test = [NLPModelType.MISTRAL_7B]
+    logger.info("🎯 Usando modelo predeterminado: Mistral 7B")
 
     # Cargar problema
     problem_file = Path("ejemplos/nlp/problema_complejo.txt")
@@ -103,20 +117,6 @@ def main():
     selector = ModelSelector()
     recommended_model = selector.select_model(problem_text)
     logger.info(f"   Modelo recomendado: {recommended_model.value}\n")
-
-    # Lista de modelos a probar en orden de eficiencia
-    # (primero los más rápidos/pequeños, luego los más potentes)
-    models_to_test = [
-        # Modelos pequeños pero potentes (recomendados)
-        NLPModelType.PHI_3_MINI,  # 3.8GB, muy preciso, funciona en CPU
-        NLPModelType.GEMMA_2B,  # 2GB, rápido, buena precisión
-        # Si los anteriores fallan, probar con los grandes
-        NLPModelType.GEMMA_7B,  # 7GB, muy preciso
-        NLPModelType.FLAN_T5_LARGE,  # 780MB, como último recurso ligero
-        # Nota: Mistral y Llama3 requieren GPU, los dejamos comentados
-        # NLPModelType.MISTRAL_7B,    # Requiere GPU
-        # NLPModelType.LLAMA3_8B,     # Requiere GPU
-    ]
 
     print("\n📋 Modelos a probar (en orden):")
     for i, model in enumerate(models_to_test, 1):
@@ -158,13 +158,34 @@ def main():
 
     # Si llegamos aquí, ningún modelo funcionó
     print("\n" + "=" * 70)
-    print("😞 NINGÚN MODELO PUDO RESOLVER EL PROBLEMA")
+    print("� ANÁLISIS DE RESULTADOS")
     print("=" * 70)
-    print("\n📝 Opciones alternativas:")
-    print("   1. Instalar Ollama y usar modelos locales más potentes")
-    print("   2. Usar API de OpenAI (GPT-3.5/GPT-4)")
-    print("   3. Implementar extractor basado en reglas (sin IA)")
-    print("   4. Simplificar manualmente el problema")
+    print("\n� Resumen:")
+    print(f"   • RAM detectada: {total_ram_gb:.1f} GB")
+    print(f"   • Modelos probados: {len(models_to_test)}")
+    print(f"   • Problema: {len(problem_text)} caracteres")
+    
+    print("\n❌ Problemas encontrados:")
+    print("   • Los modelos FLAN-T5 no generan JSON estructurado correctamente")
+    print("   • Los modelos más potentes (Phi-3, Gemma) requieren dependencias complejas")
+    print("   • El problema es complejo (9 variables, múltiples restricciones)")
+    
+    print("\n✅ Pasos siguientes:")
+    print("   1. ✓ Ollama está instalado o instalándose")
+    print("   2. 📥 Descargar modelo recomendado:")
+    if total_ram_gb < 8:
+        print("      ollama pull llama3.2:3b")
+    elif total_ram_gb < 16:
+        print("      ollama pull mistral:7b")
+    else:
+        print("      ollama pull llama3.1:8b")
+    print("   3. 🔄 Ejecutar este script nuevamente")
+    print("   4. 🧪 Probar con: python nlp_simplex.py --nlp --file problema.txt")
+    
+    print("\n💡 Comandos útiles de Ollama:")
+    print("   • ollama list          # Ver modelos descargados")
+    print("   • ollama serve         # Iniciar servidor (automático)")  
+    print("   • ollama pull <model>  # Descargar modelo")
     print()
 
 

@@ -49,19 +49,9 @@ def nlp_mode(args):
         # Crear conector
         logger.info("Inicializando conector NLP...")
 
-        # Seleccionar modelo según argumentos
-        model_type = NLPModelType.FLAN_T5_SMALL  # Por defecto
-        if args.model:
-            model_map = {
-                "t5-small": NLPModelType.FLAN_T5_SMALL,
-                "t5-base": NLPModelType.FLAN_T5_BASE,
-                "mistral": NLPModelType.MISTRAL_7B,
-                "llama2": NLPModelType.LLAMA2_7B,
-            }
-            model_type = model_map.get(args.model, NLPModelType.FLAN_T5_SMALL)
-
+        # Usar el modelo configurado por defecto (ahora Llama 3.1:8b)
+        # Sin especificar nlp_model_type usa DefaultSettings.DEFAULT_MODEL
         connector = NLPConnectorFactory.create_connector(
-            nlp_model_type=model_type,
             solver_type=SolverType.SIMPLEX,
             use_mock_nlp=args.mock_nlp,
         )
@@ -194,8 +184,8 @@ Ejemplos de uso:
   # Modo NLP interactivo
   python nlp_simplex.py --nlp
   
-  # Usar modelo específico
-  python nlp_simplex.py --nlp --model t5-base --text "..."
+  # Modo NLP (usa Mistral 7B por defecto)
+  python nlp_simplex.py --nlp --text "..."
   
   # Modo de prueba (mock NLP)
   python nlp_simplex.py --nlp --mock --text "cualquier texto"
@@ -218,13 +208,7 @@ Ejemplos de uso:
     parser.add_argument(
         "--file", "-f", type=str, help="Archivo con texto del problema (modo NLP)"
     )
-    parser.add_argument(
-        "--model",
-        "-m",
-        type=str,
-        choices=["t5-small", "t5-base", "mistral", "llama2"],
-        help="Modelo NLP a usar",
-    )
+    # Modelo Mistral 7B está configurado por defecto - no se necesita argumento
     parser.add_argument(
         "--mock-nlp", "--mock", action="store_true", help="Usar NLP mock para pruebas"
     )

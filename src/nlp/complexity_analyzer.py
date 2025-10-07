@@ -20,7 +20,7 @@ try:
 except ImportError:
     TORCH_AVAILABLE = False
 
-from .config import NLPModelType
+from .config import NLPModelType, DefaultSettings
 
 
 class ProblemComplexity(Enum):
@@ -206,73 +206,11 @@ class SystemAnalyzer:
 
 class ModelSelector:
     """
-    Selecciona el modelo óptimo basándose en la complejidad del problema
-    y las capacidades del sistema.
+    Selector simplificado que siempre usa Mistral 7B como modelo predeterminado.
 
-    Estrategia de selección:
-    - Problemas SIMPLE: Modelos T5 ligeros
-    - Problemas MEDIUM: Phi-3 o Gemma (pequeños pero potentes)
-    - Problemas COMPLEX: Modelos grandes (Mistral, Llama3) o Phi-3 si no hay GPU
+    Mistral 7B es el modelo óptimo que funciona para todos los tipos de problemas
+    con un buen equilibrio entre capacidad y eficiencia.
     """
-
-    # Matriz de selección: [complejidad][capacidad] -> modelo
-    MODEL_MATRIX = {
-        ProblemComplexity.SIMPLE: {
-            SystemCapability.LOW: NLPModelType.FLAN_T5_SMALL,
-            SystemCapability.MEDIUM: NLPModelType.FLAN_T5_BASE,
-            SystemCapability.HIGH: NLPModelType.PHI_3_MINI,  # Mejor precisión
-        },
-        ProblemComplexity.MEDIUM: {
-            SystemCapability.LOW: NLPModelType.FLAN_T5_BASE,
-            SystemCapability.MEDIUM: NLPModelType.PHI_3_MINI,  # Pequeño pero potente
-            SystemCapability.HIGH: NLPModelType.GEMMA_7B,  # Muy preciso
-        },
-        ProblemComplexity.COMPLEX: {
-            SystemCapability.LOW: NLPModelType.PHI_3_MINI,  # Mejor opción sin GPU
-            SystemCapability.MEDIUM: NLPModelType.GEMMA_7B,  # Balance GPU/precisión
-            SystemCapability.HIGH: NLPModelType.MISTRAL_7B,  # Máxima precisión
-        },
-    }
-
-    # Cadena de fallback: si un modelo falla, intentar con estos en orden
-    FALLBACK_CHAIN = {
-        # T5 models
-        NLPModelType.FLAN_T5_SMALL: [
-            NLPModelType.FLAN_T5_BASE,
-            NLPModelType.PHI_3_MINI,
-        ],
-        NLPModelType.FLAN_T5_BASE: [
-            NLPModelType.FLAN_T5_LARGE,
-            NLPModelType.PHI_3_MINI,
-        ],
-        NLPModelType.FLAN_T5_LARGE: [
-            NLPModelType.PHI_3_MINI,
-            NLPModelType.FLAN_T5_BASE,
-        ],
-        # Modelos pequeños pero potentes
-        NLPModelType.PHI_3_MINI: [
-            NLPModelType.GEMMA_2B,
-            NLPModelType.FLAN_T5_LARGE,
-        ],
-        NLPModelType.GEMMA_2B: [
-            NLPModelType.PHI_3_MINI,
-            NLPModelType.GEMMA_7B,
-        ],
-        NLPModelType.GEMMA_7B: [
-            NLPModelType.MISTRAL_7B,
-            NLPModelType.PHI_3_MINI,
-        ],
-        # Modelos grandes
-        NLPModelType.MISTRAL_7B: [
-            NLPModelType.LLAMA3_8B,
-            NLPModelType.GEMMA_7B,
-            NLPModelType.PHI_3_MINI,
-        ],
-        NLPModelType.LLAMA3_8B: [
-            NLPModelType.MISTRAL_7B,
-            NLPModelType.GEMMA_7B,
-        ],
-    }
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
@@ -284,26 +222,26 @@ class ModelSelector:
 
     def select_model(self, problem_text: str) -> NLPModelType:
         """
-        Selecciona el modelo óptimo para un problema dado.
+        Selecciona el modelo configurado por defecto para problemas de optimización.
 
         Args:
-            problem_text: Descripción del problema
+            problem_text: Descripción del problema (se mantiene por compatibilidad)
 
         Returns:
-            Modelo recomendado
+            El modelo configurado en DefaultSettings.DEFAULT_MODEL
         """
-        # Analizar complejidad del problema
+        # Analizar complejidad para logging (opcional)
         problem_complexity = self.complexity_analyzer.analyze_problem(problem_text)
 
-        # Obtener capacidad del sistema (con caché)
+        # Obtener capacidad del sistema para logging (opcional)
         if self._system_capability is None:
             self._system_capability = self.system_analyzer.analyze_system()
 
-        # Seleccionar modelo
-        model = self.MODEL_MATRIX[problem_complexity][self._system_capability]
+        # Usar el modelo configurado por defecto (ahora Llama 3.1:8b)
+        model = DefaultSettings.DEFAULT_MODEL
 
         self.logger.info(
-            f"Selected model: {model.value} "
+            f"Using default model: {model.value} "
             f"(problem: {problem_complexity.value}, system: {self._system_capability.value})"
         )
 
@@ -311,12 +249,13 @@ class ModelSelector:
 
     def get_fallback_models(self, current_model: NLPModelType) -> list[NLPModelType]:
         """
-        Obtiene la lista de modelos de respaldo si el actual falla.
+        No hay modelos de respaldo ya que solo se usa Mistral 7B.
 
         Args:
-            current_model: Modelo que falló
+            current_model: Modelo actual (ignorado)
 
         Returns:
-            Lista de modelos alternativos a intentar
+            Lista vacía - no hay respaldos
         """
-        return self.FALLBACK_CHAIN.get(current_model, [])
+        self.logger.info("No fallback models available - using only Mistral 7B")
+        return []

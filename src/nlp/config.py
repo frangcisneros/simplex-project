@@ -11,142 +11,46 @@ from typing import Dict, Any
 
 class NLPModelType(Enum):
     """
-    Modelos de lenguaje soportados para procesar texto en español.
+    Modelos disponibles para procesamiento de problemas de optimización.
 
-    Cada modelo tiene un balance diferente entre velocidad, precisión y uso de recursos.
-
-    Modelos locales (requieren descarga y RAM/GPU):
-    - FLAN-T5: Rápido pero limitado en precisión
-    - Mistral: Muy preciso pero requiere GPU
-    - Phi-3: Modelo pequeño pero potente de Microsoft
-    - Gemma: Modelo abierto de Google
-
-    APIs (requieren conexión a internet y API key):
-    - OpenAI GPT: Muy preciso, requiere pago
-    - Ollama: Modelos locales con API sencilla (gratuito)
+    Diferentes modelos pueden tener distintas capacidades para analizar
+    problemas matemáticos complejos y generar estructuras JSON correctas.
     """
 
-    # Modelos T5 (ligeros, rápidos, precisión limitada)
-    FLAN_T5_SMALL = "google/flan-t5-small"  # ~80MB, CPU ok, precisión baja
-    FLAN_T5_BASE = "google/flan-t5-base"  # ~250MB, CPU ok, precisión media-baja
-    FLAN_T5_LARGE = "google/flan-t5-large"  # ~780MB, CPU lento, precisión media
-
-    # Modelos pequeños pero potentes (nueva generación)
-    PHI_3_MINI = "microsoft/Phi-3-mini-4k-instruct"  # ~3.8GB, CPU ok, precisión alta
-    GEMMA_2B = "google/gemma-2b-it"  # ~2GB, CPU ok, precisión media-alta
-    GEMMA_7B = "google/gemma-7b-it"  # ~7GB, GPU recomendada, precisión muy alta
-
-    # Modelos grandes (requieren GPU, máxima precisión)
-    MISTRAL_7B = "mistralai/Mistral-7B-Instruct-v0.3"  # ~7GB GPU, precisión muy alta
-    LLAMA3_8B = "meta-llama/Meta-Llama-3-8B-Instruct"  # ~8GB GPU, precisión muy alta
-
-    # APIs (requieren internet y configuración)
-    OPENAI_GPT4 = "openai:gpt-4"  # API, máxima precisión
-    OPENAI_GPT35 = "openai:gpt-3.5-turbo"  # API, precisión alta, más barato
-    OLLAMA_LLAMA3 = "ollama:llama3"  # API local, gratuito
-    OLLAMA_MISTRAL = "ollama:mistral"  # API local, gratuito
+    MISTRAL_7B = "mistral:7b"  # Modelo predeterminado
+    LLAMA3_1_8B = "llama3.1:8b"  # Mejor razonamiento matemático
+    QWEN2_5_14B = "qwen2.5:14b"  # Especializado en matemáticas
+    LLAMA3_2_3B = "llama3.2:3b"  # Ligero pero capaz
 
 
 class ModelConfig:
     """
-    Configuraciones predefinidas para cada modelo de lenguaje.
+    Configuración optimizada para Mistral 7B.
 
-    Cada modelo tiene parámetros óptimos para:
-    - max_length: cuánto texto puede generar
-    - temperature: qué tan creativo es (0 = determinista, 1 = aleatorio)
-    - quantización: comprimir el modelo para usar menos memoria
+    Parámetros ajustados específicamente para generar JSON estructurado
+    de problemas de optimización lineal de forma determinística.
     """
 
     DEFAULT_CONFIGS: Dict[NLPModelType, Dict[str, Any]] = {
-        # Modelos T5
-        NLPModelType.FLAN_T5_SMALL: {
-            "max_length": 1024,
-            "max_new_tokens": 512,
-            "temperature": 0.3,
-            "do_sample": False,
-            "num_beams": 1,
-            "load_in_8bit": False,
-            "device_map": "auto",
-        },
-        NLPModelType.FLAN_T5_BASE: {
-            "max_length": 1024,
-            "max_new_tokens": 512,
-            "temperature": 0.3,
-            "do_sample": False,
-            "num_beams": 1,
-            "load_in_8bit": False,
-            "device_map": "auto",
-        },
-        NLPModelType.FLAN_T5_LARGE: {
-            "max_length": 1024,
-            "max_new_tokens": 512,
-            "temperature": 0.3,
-            "do_sample": False,
-            "num_beams": 1,
-            "load_in_8bit": True,
-            "device_map": "auto",
-        },
-        # Modelos pequeños pero potentes
-        NLPModelType.PHI_3_MINI: {
-            "max_length": 4096,
-            "max_new_tokens": 1024,
-            "temperature": 0.1,
-            "do_sample": True,
-            "top_p": 0.95,
-            "load_in_4bit": True,
-            "device_map": "auto",
-        },
-        NLPModelType.GEMMA_2B: {
-            "max_length": 8192,
-            "max_new_tokens": 1024,
-            "temperature": 0.1,
-            "do_sample": True,
-            "top_p": 0.95,
-            "load_in_8bit": True,
-            "device_map": "auto",
-        },
-        NLPModelType.GEMMA_7B: {
-            "max_length": 8192,
-            "max_new_tokens": 1024,
-            "temperature": 0.1,
-            "do_sample": True,
-            "top_p": 0.95,
-            "load_in_4bit": True,
-            "device_map": "auto",
-        },
-        # Modelos grandes
         NLPModelType.MISTRAL_7B: {
-            "max_length": 8192,
-            "max_new_tokens": 2048,
-            "temperature": 0.1,
-            "do_sample": True,
-            "top_p": 0.95,
-            "load_in_4bit": True,
-            "device_map": "auto",
+            "temperature": 0.0,  # Determinístico para JSON
+            "max_tokens": 1024,
+            "top_p": 0.8,
         },
-        NLPModelType.LLAMA3_8B: {
-            "max_length": 8192,
-            "max_new_tokens": 2048,
-            "temperature": 0.1,
-            "do_sample": True,
-            "top_p": 0.95,
-            "load_in_4bit": True,
-            "device_map": "auto",
+        NLPModelType.LLAMA3_1_8B: {
+            "temperature": 0.0,  # Determinístico para JSON
+            "max_tokens": 1536,  # Más espacio para problemas complejos
+            "top_p": 0.9,
         },
-        # APIs - configuración básica (se manejan diferente)
-        NLPModelType.OPENAI_GPT4: {
-            "max_tokens": 2048,
-            "temperature": 0.1,
+        NLPModelType.QWEN2_5_14B: {
+            "temperature": 0.0,  # Determinístico para JSON
+            "max_tokens": 2048,  # Máximo espacio para análisis complejo
+            "top_p": 0.9,
         },
-        NLPModelType.OPENAI_GPT35: {
-            "max_tokens": 2048,
-            "temperature": 0.1,
-        },
-        NLPModelType.OLLAMA_LLAMA3: {
-            "temperature": 0.1,
-        },
-        NLPModelType.OLLAMA_MISTRAL: {
-            "temperature": 0.1,
+        NLPModelType.LLAMA3_2_3B: {
+            "temperature": 0.0,  # Determinístico para JSON
+            "max_tokens": 1024,
+            "top_p": 0.8,
         },
     }
 
@@ -159,12 +63,101 @@ class PromptTemplates:
     a un JSON estructurado con el problema de optimización.
     """
 
-    OPTIMIZATION_EXTRACTION_PROMPT = """Task: Extract optimization problem as JSON.
+    OPTIMIZATION_EXTRACTION_PROMPT = """Eres un analista experto en Programación Lineal. 
+Tu tarea es LEER un enunciado en español y extraer su información estructurada
+en formato JSON. NO resuelvas el problema.
 
-Problem: {problem_text}
+Instrucciones generales:
+- Lee cuidadosamente el texto.
+- Identifica el tipo de problema (maximizar o minimizar).
+- Determina las variables de decisión, sus índices y significado.
+- Extrae los coeficientes numéricos (ganancias, recursos, demandas, etc.).
+- Organiza todo en un JSON válido (sin texto adicional).
 
-Return ONLY valid JSON in this exact format:
-{{"objective_type": "maximize", "objective_coefficients": [1, 2], "constraints": [{{"coefficients": [1, 1], "operator": "<=", "rhs": 10}}], "variable_names": ["x1", "x2"]}}"""
+------------------------------------------------------------
+ENUNCIADO:
+{problem_text}
+------------------------------------------------------------
+
+PASOS DE ANÁLISIS:
+
+1. DETERMINA EL TIPO DE PROBLEMA:
+   - Si menciona "maximizar", "ganancia", "beneficio" → "maximize"
+   - Si menciona "minimizar", "costo", "gasto" → "minimize"
+
+2. DEFINE LAS VARIABLES - IDENTIFICA QUÉ OPTIMIZAR:
+   
+   DETECCIÓN DE ESTRUCTURA:
+   - ¿El problema menciona múltiples PLANTAS/INSTALACIONES + múltiples PRODUCTOS?
+     → Usa xij donde i=planta, j=producto: ["x11","x12","x13","x21","x22","x23",...]
+   
+   - ¿El problema menciona materias primas QUE SE PUEDEN vender directas O mezclar?
+     → Una variable por materia prima + una por cada mezcla final
+   
+   - ¿Solo hay UN lugar de producción con varios productos?
+     → Variables simples: ["x1", "x2", "x3"]
+   
+   REGLA: Cuenta TODAS las decisiones independientes que se pueden tomar.
+
+3. FUNCIÓN OBJETIVO - EXTRAE LOS COEFICIENTES:
+   - Busca valores EXACTOS de ganancia/utilidad (para maximizar) o costo (para minimizar)
+   - USA SOLO números que aparecen explícitamente en el problema
+   - NO hagas operaciones matemáticas (NO escribas 24.83*3814)
+   - Si las ganancias son iguales para todas las plantas: repite el valor
+   - Los coeficientes van en el MISMO ORDEN que las variables
+
+4. RESTRICCIONES - IDENTIFICA LOS LÍMITES:
+
+   EJEMPLOS DE PATRONES COMUNES:
+   
+   A) CAPACIDAD POR INSTALACIÓN:
+   - Si planta 1 puede hacer max 750 unidades: [1,1,1,0,0,0] <= 750
+   - Si planta 2 puede hacer max 900 unidades: [0,0,0,1,1,1] <= 900
+   
+   B) RECURSOS POR TIPO:
+   - Si producto grande usa 20 unidades de recurso: [20,0,0,20,0,0] <= total_recurso
+   - Si producto mediano usa 15 unidades: [0,15,0,0,15,0] <= total_recurso
+   
+   C) DEMANDA MÁXIMA:
+   - Si demanda de producto 1 es 500: [1,0,0,1,0,0] <= 500 (suma todas plantas)
+   
+   D) DISPONIBILIDAD DE MATERIALES:
+   - Si hay 3814 barriles de gas1 disponibles: [1,0,0,0,coef_mezcla1,coef_mezcla2] <= 3814
+   
+   IDENTIFICA estos patrones en TU problema específico.
+
+5. REGLAS CRÍTICAS:
+   - CADA array "coefficients" DEBE tener EXACTAMENTE el mismo número de elementos que "variable_names"
+   - Si una variable no participa en una restricción, usa 0 en esa posición
+   - Ejemplo: 6 variables → cada coefficients debe tener [a,b,c,d,e,f] (6 números)
+   - VERIFICA que cada restricción tenga la longitud correcta antes de incluirla
+   - NO agregues explicaciones, solo el JSON final.
+
+------------------------------------------------------------
+FORMATO DE SALIDA (solo JSON, nada más):
+
+{{
+  "objective_type": "maximize",
+  "variable_names": ["x1", "x2", "x3"],
+  "objective_coefficients": [coef1, coef2, coef3],
+  "constraints": [
+    {{"coefficients": [a1, b1, c1], "operator": "<=", "rhs": limite1}},
+    {{"coefficients": [a2, b2, c2], "operator": ">=", "rhs": limite2}}
+  ],
+  "non_negativity": true
+}}
+
+NOTA: Si tienes N variables, cada coefficients debe tener exactamente N números.
+------------------------------------------------------------
+
+CRÍTICO - REGLAS DE SALIDA:
+- SOLO devuelve el JSON, SIN explicaciones, SIN texto adicional
+- NO uses comas en números: usa 13000, NO 13,000
+- NO hagas cálculos, usa valores exactos del problema
+- NO agregues comentarios ni markdown (```json)
+- La primera línea debe ser {{ y la última }}
+
+JSON (SOLO ESTO):"""
 
     VALIDATION_PROMPT = """
 Valida si el siguiente problema de optimización está bien formado y es resolvible:
@@ -196,13 +189,13 @@ class DefaultSettings:
     """
     Configuración por defecto del sistema NLP.
 
-    Define límites razonables para evitar problemas de memoria o rendimiento,
-    y establece umbrales de calidad para aceptar resultados del modelo.
+    Permite probar diferentes modelos para encontrar el que mejor
+    analiza problemas de optimización complejos.
     """
 
-    DEFAULT_MODEL = NLPModelType.FLAN_T5_SMALL  # El más rápido para empezar
-    MAX_PROCESSING_TIME = 30.0  # Tiempo máximo en segundos para procesar un problema
-    MIN_CONFIDENCE_SCORE = 0.7  # Qué tan seguro debe estar el modelo (0-1)
-    MAX_VARIABLES = 20  # Límite de variables para problemas manejables
-    MAX_CONSTRAINTS = 50  # Límite de restricciones para evitar problemas muy complejos
-    CACHE_SIZE = 100  # Cuántos resultados guardar en caché
+    DEFAULT_MODEL = NLPModelType.LLAMA3_1_8B  # Mejor modelo para problemas complejos
+    MAX_PROCESSING_TIME = 60.0  # Mayor tiempo para problemas complejos
+    MIN_CONFIDENCE_SCORE = 0.7  # Umbral de confianza estándar
+    MAX_VARIABLES = 50  # Soporte para problemas grandes
+    MAX_CONSTRAINTS = 100  # Más restricciones permitidas
+    CACHE_SIZE = 50  # Cache moderado

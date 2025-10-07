@@ -19,6 +19,7 @@ from .interfaces import (
     IModelValidator,
 )
 from .processor import TransformerNLPProcessor, MockNLPProcessor
+from .ollama_processor import OllamaNLPProcessor
 from .model_generator import SimplexModelGenerator, ModelValidator
 import sys
 from pathlib import Path
@@ -130,7 +131,10 @@ class NLPConnectorFactory:
         if use_mock_nlp:
             nlp_processor = MockNLPProcessor()
         else:
-            nlp_processor = TransformerNLPProcessor(nlp_model_type, custom_config)
+            # Usar Ollama por defecto (más simple y confiable)
+            nlp_processor = OllamaNLPProcessor(
+                nlp_model_type, custom_config=custom_config
+            )
 
         # Crear generador de modelo
         if solver_type == SolverType.SIMPLEX:

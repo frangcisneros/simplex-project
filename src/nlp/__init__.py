@@ -49,6 +49,7 @@ from .complexity_analyzer import (
     SystemCapability,
 )
 
+from .ollama_processor import OllamaNLPProcessor
 from .processor import TransformerNLPProcessor, MockNLPProcessor
 
 from .model_generator import (
@@ -88,6 +89,7 @@ __all__ = [
     "ProblemComplexity",
     "SystemCapability",
     # Processors
+    "OllamaNLPProcessor",
     "TransformerNLPProcessor",
     "MockNLPProcessor",
     # Model generators

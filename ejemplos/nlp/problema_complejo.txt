@@ -3,6 +3,3 @@ La cantidad de espacio disponible para almacenar material en proceso impone tamb
 Los pronósticos de mercado indican que si se dispone de ellas, se pueden vender 900, 1200 y 750 unidades diarias, correspondientes a los tamaños grande, mediano y chico que se producen en cada una de las plantas.
 Será necesario despedir algunos empleados en cada planta a menos que la mayor parte de esta capacidad en exceso se pueda usar con el nuevo producto. Para evitar despidos en lo posible, la gerencia ha decidido que las plantas deben tratar de usar su capacidad adicional con este nuevo producto.
 El gerente quiere saber cuántas unidades de cada tamaño debe producir en cada planta para maximizar la ganancia.
-a)	Formule un modelo de programación lineal para este problema.
-b)	Resuelva este modelo por el método simplex utilizando la PC.
-c)	Interprete la tabla final del simplex.
