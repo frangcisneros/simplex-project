@@ -100,7 +100,6 @@ class SimplexSolver:
 
             # Verificar si el problema es no acotado
             if self.tableau.is_unbounded(entering_col):
-                print("⚠️ [DEBUG] Resultado: columna sin coeficientes positivos → UNBOUNDED detectado")
                 return {
                     "status": "unbounded",
                     "message": "El problema es no acotado",
