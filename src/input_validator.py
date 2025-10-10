@@ -59,7 +59,7 @@ class InputValidator:
             if not InputValidator._is_finite_number(coeff):
                 return False, f"Coeficiente {i+1} de la función objetivo no es un número finito"
         
-        # ✅ CORRECCIÓN: Verificar que no todos los coeficientes sean cero
+        # Verificar que no todos los coeficientes sean cero
         if all(abs(coeff) < 1e-10 for coeff in c):
             return False, "Todos los coeficientes de la función objetivo son cero"
         
