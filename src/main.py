@@ -6,9 +6,9 @@ Coordina los módulos para resolver problemas de programación lineal.
 
 import sys
 import argparse
-from .solver import SimplexSolver
-from .file_parser import FileParser
-from .user_interface import UserInterface
+from solver import SimplexSolver
+from file_parser import FileParser
+from user_interface import UserInterface
 
 
 def main():
@@ -19,20 +19,20 @@ def main():
     try:
         # Obtener datos del problema
         if args.filename:
-            c, A, b, maximize = FileParser.parse_file(args.filename)
+            c, A, b, constraint_types, maximize = FileParser.parse_file(args.filename)
             print(f"=== SIMPLEX SOLVER - Resolviendo archivo: {args.filename} ===\n")
         elif args.interactive or len(sys.argv) == 1:
-            c, A, b, maximize = UserInterface.interactive_input()
+            c, A, b, constraint_types, maximize = UserInterface.interactive_input()
         else:
             parser.print_help()
             sys.exit(1)
         
         # Mostrar problema
-        UserInterface.display_problem(c, A, b, maximize)
+        UserInterface.display_problem(c, A, b, constraint_types, maximize)
         
         # Resolver problema
         solver = SimplexSolver()
-        result = solver.solve(c, A, b, maximize)
+        result = solver.solve(c, A, b, constraint_types, maximize)
         
         # Mostrar resultados
         UserInterface.display_result(result)

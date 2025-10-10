@@ -11,15 +11,15 @@ class UserInterface:
     """Maneja la interacción con el usuario y visualización de resultados."""
     
     @staticmethod
-    def interactive_input() -> Tuple[List[float], List[List[float]], List[float], bool]:
+    def interactive_input() -> Tuple[List[float], List[List[float]], List[float], List[str], bool]:
         """Recoge entrada del problema de forma interactiva."""
         print("=== SIMPLEX SOLVER - Modo Interactivo ===\n")
         
         maximize = UserInterface._get_optimization_type()
         c = UserInterface._get_objective_function()
-        A, b = UserInterface._get_constraints(len(c))
+        A, b, constraint_types = UserInterface._get_constraints(len(c))
         
-        return c, A, b, maximize
+        return c, A, b, constraint_types, maximize
     
     @staticmethod
     def _get_optimization_type() -> bool:
@@ -47,13 +47,15 @@ class UserInterface:
                 print("Error: Ingrese números válidos separados por espacios")
     
     @staticmethod
-    def _get_constraints(num_vars: int) -> Tuple[List[List[float]], List[float]]:
+    def _get_constraints(num_vars: int) -> Tuple[List[List[float]], List[float], List[str]]:
         """Solicita las restricciones al usuario."""
-        print(f"\nIngrese las restricciones (formato: a1 a2 ... a{num_vars} <= b):")
+        print(f"\nIngrese las restricciones (formato: a1 a2 ... a{num_vars} [<=|>=|=] b):")
+        print("Ejemplos: '2 1 <= 100' o '1 1 >= 20' o '1 0 = 5'")
         print("Escriba 'fin' cuando termine")
         
         A = []
         b = []
+        constraint_types = []
         
         while True:
             constraint = input(f"Restricción {len(A) + 1}: ").strip()
@@ -61,20 +63,34 @@ class UserInterface:
                 break
             
             try:
-                if "<=" not in constraint:
-                    print("Error: Use el formato 'a1 a2 ... <= b'")
+                # Detectar tipo de restricción
+                if '<=' in constraint:
+                    parts = constraint.split('<=')
+                    const_type = '<='
+                elif '>=' in constraint:
+                    parts = constraint.split('>=')
+                    const_type = '>='
+                elif '=' in constraint:
+                    parts = constraint.split('=')
+                    const_type = '='
+                else:
+                    print("Error: Use <=, >= o = en la restricción")
                     continue
                 
-                parts = constraint.split("<=")
+                if len(parts) != 2:
+                    print("Error: Formato inválido. Use 'a1 a2 ... <= b'")
+                    continue
+                
                 coeffs = list(map(float, parts[0].split()))
                 rhs = float(parts[1])
                 
                 if len(coeffs) != num_vars:
-                    print(f"Error: Debe ingresar {num_vars} coeficientes")
+                    print(f"Error: Debe ingresar exactamente {num_vars} coeficientes")
                     continue
                 
                 A.append(coeffs)
                 b.append(rhs)
+                constraint_types.append(const_type)
                 
             except ValueError:
                 print("Error: Formato inválido. Use números válidos.")
@@ -83,10 +99,11 @@ class UserInterface:
             print("Error: Debe ingresar al menos una restricción")
             sys.exit(1)
         
-        return A, b
+        return A, b, constraint_types
     
     @staticmethod
-    def display_problem(c: List[float], A: List[List[float]], b: List[float], maximize: bool) -> None:
+    def display_problem(c: List[float], A: List[List[float]], b: List[float], 
+                       constraint_types: List[str], maximize: bool) -> None:
         """Muestra el problema formateado."""
         print("\n" + "=" * 50)
         print("PROBLEMA A RESOLVER:")
@@ -106,7 +123,7 @@ class UserInterface:
         
         # Mostrar restricciones
         print("\nSujeto a:")
-        for i, (row, rhs) in enumerate(zip(A, b)):
+        for i, (row, rhs, const_type) in enumerate(zip(A, b, constraint_types)):
             print(f"  ", end="")
             for j, coeff in enumerate(row):
                 if j == 0:
@@ -114,7 +131,7 @@ class UserInterface:
                 else:
                     sign = " + " if coeff >= 0 else " "
                     print(f"{sign}{coeff}x{j+1}", end="")
-            print(f" <= {rhs}")
+            print(f" {const_type} {rhs}")
         
         print("  xi >= 0 para todo i")
         print("=" * 50)
@@ -129,10 +146,15 @@ class UserInterface:
         if result["status"] == "optimal":
             print("Estado: Solución óptima encontrada")
             print(f"Iteraciones: {result['iterations']}")
+            if "phase1_iterations" in result:
+                print(f"Iteraciones Fase 1: {result['phase1_iterations']}")
             print(f"Valor óptimo: {result['optimal_value']:.4f}")
             print("\nSolución:")
             for var, value in result["solution"].items():
                 print(f"  {var} = {value:.4f}")
+        elif result["status"] == "infeasible":
+            print("Estado: Problema no factible")
+            print(f"Mensaje: {result['message']}")
         else:
             print(f"Estado: {result['status']}")
             print(f"Mensaje: {result['message']}")
