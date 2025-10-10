@@ -6,6 +6,49 @@ Lee y parsea archivos con problemas de programación lineal.
 import sys
 from typing import List, Tuple, Optional
 
+# Agregar import del validador
+from input_validator import InputValidator
+
+
+class FileParser:
+    """Parser para archivos de problemas de programación lineal."""
+    
+    @staticmethod
+    def parse_file(filename: str) -> Tuple[List[float], List[List[float]], List[float], List[str], bool]:
+        """
+        Lee y parsea un archivo con el problema de programación lineal.
+        """
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f.readlines() if line.strip()]
+            
+            if not lines:
+                raise ValueError("Archivo vacío")
+            
+            maximize = FileParser._parse_optimization_type(lines[0])
+            c = FileParser._parse_objective_function(lines[1])
+            A, b, constraint_types = FileParser._parse_constraints(lines, len(c))
+            
+            # Validar el problema parseado
+            is_valid, error_msg = InputValidator.validate_problem(c, A, b, constraint_types, maximize)
+            if not is_valid:
+                raise ValueError(f"Problema en archivo inválido: {error_msg}")
+            
+            return c, A, b, constraint_types, maximize
+            
+        except FileNotFoundError:
+            raise FileNotFoundError(f"No se pudo encontrar el archivo {filename}")
+        except Exception as e:
+            raise ValueError(f"Error al leer el archivo: {e}")
+
+"""
+Módulo para procesamiento de archivos de entrada.
+Lee y parsea archivos con problemas de programación lineal.
+"""
+
+import sys
+from typing import List, Tuple, Optional
+
 
 class FileParser:
     """Parser para archivos de problemas de programación lineal."""

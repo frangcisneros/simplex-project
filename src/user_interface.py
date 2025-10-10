@@ -6,6 +6,9 @@ Contiene funciones para entrada interactiva y visualización de resultados.
 import sys
 from typing import List, Tuple
 
+# Agregar import del validador
+from input_validator import InputValidator
+
 
 class UserInterface:
     """Maneja la interacción con el usuario y visualización de resultados."""
@@ -19,6 +22,13 @@ class UserInterface:
         c = UserInterface._get_objective_function()
         A, b, constraint_types = UserInterface._get_constraints(len(c))
         
+        # Validar el problema completo
+        is_valid, error_msg = InputValidator.validate_problem(c, A, b, constraint_types, maximize)
+        if not is_valid:
+            print(f"\n❌ ERROR EN ENTRADA: {error_msg}")
+            print("Por favor, corrija los datos e intente nuevamente.")
+            sys.exit(1)
+        
         return c, A, b, constraint_types, maximize
     
     @staticmethod
@@ -31,20 +41,36 @@ class UserInterface:
             elif opt_type in ["min", "minimize", "minimizar"]:
                 return False
             else:
-                print("Por favor ingrese 'max' o 'min'")
+                print("❌ Por favor ingrese 'max' o 'min'")
     
     @staticmethod
     def _get_objective_function() -> List[float]:
         """Solicita la función objetivo al usuario."""
         while True:
             try:
-                c_input = input("Coeficientes (separados por espacios): ")
+                c_input = input("Coeficientes de la función objetivo (separados por espacios): ")
+                if not c_input.strip():
+                    print("❌ Error: Debe ingresar al menos un coeficiente")
+                    continue
+                    
                 c = list(map(float, c_input.split()))
-                if c:
-                    return c
-                print("Error: Debe ingresar al menos un coeficiente")
+                
+                # Validación básica de la función objetivo
+                if len(c) == 0:
+                    print("❌ Error: Debe ingresar al menos un coeficiente")
+                    continue
+                
+                # ✅ CORRECCIÓN: Verificar que no todos los coeficientes sean cero
+                if all(abs(coeff) < 1e-10 for coeff in c):
+                    print("❌ Error: Todos los coeficientes de la función objetivo son cero")
+                    continue
+                    
+                return c
+                
             except ValueError:
-                print("Error: Ingrese números válidos separados por espacios")
+                print("❌ Error: Ingrese números válidos separados por espacios")
+            except Exception as e:
+                print(f"❌ Error inesperado: {e}")
     
     @staticmethod
     def _get_constraints(num_vars: int) -> Tuple[List[List[float]], List[float], List[str]]:
@@ -57,9 +83,15 @@ class UserInterface:
         b = []
         constraint_types = []
         
+        constraint_count = 0
         while True:
-            constraint = input(f"Restricción {len(A) + 1}: ").strip()
-            if constraint.lower() == "fin":
+            constraint_count += 1
+            constraint = input(f"Restricción {constraint_count}: ").strip()
+            
+            if constraint.lower() == 'fin':
+                if constraint_count == 1:
+                    print("❌ Error: Debe ingresar al menos una restricción")
+                    continue
                 break
             
             try:
@@ -74,30 +106,57 @@ class UserInterface:
                     parts = constraint.split('=')
                     const_type = '='
                 else:
-                    print("Error: Use <=, >= o = en la restricción")
+                    print("❌ Error: Use <=, >= o = en la restricción")
+                    constraint_count -= 1
                     continue
                 
                 if len(parts) != 2:
-                    print("Error: Formato inválido. Use 'a1 a2 ... <= b'")
+                    print("❌ Error: Formato inválido. Use 'a1 a2 ... <= b'")
+                    constraint_count -= 1
                     continue
                 
-                coeffs = list(map(float, parts[0].split()))
-                rhs = float(parts[1])
+                # Limpiar y validar partes
+                lhs_str = parts[0].strip()
+                rhs_str = parts[1].strip()
                 
+                if not lhs_str or not rhs_str:
+                    print("❌ Error: Ambos lados de la restricción deben contener valores")
+                    constraint_count -= 1
+                    continue
+                
+                coeffs = list(map(float, lhs_str.split()))
+                rhs = float(rhs_str)
+                
+                # Validar número de coeficientes
                 if len(coeffs) != num_vars:
-                    print(f"Error: Debe ingresar exactamente {num_vars} coeficientes")
+                    print(f"❌ Error: Debe ingresar exactamente {num_vars} coeficientes")
+                    constraint_count -= 1
+                    continue
+                
+                # Validar que no todos los coeficientes sean cero
+                if all(abs(coeff) < 1e-10 for coeff in coeffs):
+                    print("❌ Error: Todos los coeficientes de la restricción son cero")
+                    constraint_count -= 1
+                    continue
+                
+                # Validar RHS para restricciones de igualdad
+                if const_type == '=' and rhs < 0:
+                    print("❌ Error: Las restricciones de igualdad no pueden tener RHS negativo")
+                    constraint_count -= 1
                     continue
                 
                 A.append(coeffs)
                 b.append(rhs)
                 constraint_types.append(const_type)
                 
-            except ValueError:
-                print("Error: Formato inválido. Use números válidos.")
-        
-        if not A:
-            print("Error: Debe ingresar al menos una restricción")
-            sys.exit(1)
+                print(f"✅ Restricción {constraint_count} agregada correctamente")
+                
+            except ValueError as e:
+                print(f"❌ Error: Formato inválido. Use números válidos. Detalles: {e}")
+                constraint_count -= 1
+            except Exception as e:
+                print(f"❌ Error inesperado: {e}")
+                constraint_count -= 1
         
         return A, b, constraint_types
     
@@ -108,6 +167,12 @@ class UserInterface:
         print("\n" + "=" * 50)
         print("PROBLEMA A RESOLVER:")
         print("=" * 50)
+        
+        # Primero validar el problema antes de mostrar
+        is_valid, error_msg = InputValidator.validate_problem(c, A, b, constraint_types, maximize)
+        if not is_valid:
+            print(f"❌ PROBLEMA INVÁLIDO: {error_msg}")
+            return
         
         obj_type = "Maximizar" if maximize else "Minimizar"
         print(f"{obj_type}: ", end="")
@@ -144,17 +209,20 @@ class UserInterface:
         print("=" * 50)
         
         if result["status"] == "optimal":
-            print("Estado: Solución óptima encontrada")
-            print(f"Iteraciones: {result['iterations']}")
+            print("✅ Estado: Solución óptima encontrada")
+            print(f"📊 Iteraciones: {result['iterations']}")
             if "phase1_iterations" in result:
-                print(f"Iteraciones Fase 1: {result['phase1_iterations']}")
-            print(f"Valor óptimo: {result['optimal_value']:.4f}")
-            print("\nSolución:")
-            for var, value in result["solution"].items():
-                print(f"  {var} = {value:.4f}")
+                print(f"📊 Iteraciones Fase 1: {result['phase1_iterations']}")
+            print(f"💰 Valor óptimo: {result['optimal_value']:.6f}")
+            print("\n📈 Solución:")
+            for var, value in sorted(result["solution"].items()):
+                print(f"  {var} = {value:.6f}")
         elif result["status"] == "infeasible":
-            print("Estado: Problema no factible")
-            print(f"Mensaje: {result['message']}")
+            print("❌ Estado: Problema no factible")
+            print(f"💡 Mensaje: {result['message']}")
+        elif result["status"] == "unbounded":
+            print("📈 Estado: Problema no acotado")
+            print(f"💡 Mensaje: {result['message']}")
         else:
-            print(f"Estado: {result['status']}")
-            print(f"Mensaje: {result['message']}")
+            print("⚠️ Estado: Error en la resolución")
+            print(f"❌ Mensaje: {result['message']}")

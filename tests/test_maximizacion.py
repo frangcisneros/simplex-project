@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tests para problemas de MAXIMIZACIÓN del método simplex.
 Contiene ejercicios con 2 y 3 variables con diferentes tipos de restricciones.
