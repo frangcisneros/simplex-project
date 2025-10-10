@@ -14,11 +14,90 @@ class SimplexSolver:
     def __init__(self):
         self.tableau = Tableau()
         self.max_iterations = 100
+        self.steps = []     # Historial de pasos para PDF
+    
+    def _solve_phase(self, maximize: bool) -> Dict[str, Any]:
+        """Resuelve una fase del método simplex."""
+        iteration = 0
+        
+        while iteration < self.max_iterations:
+            iteration += 1
+            print(f"\n--- Iteración {iteration} ---")
+            
+            # Verificar optimalidad
+            is_optimal = self.tableau.is_optimal(maximize)
+            
+            if is_optimal:
+                print("¡Solución óptima de la fase encontrada!")
+                return {"status": "optimal", "iterations": iteration}
+            
+            # Encontrar variable que entra
+            entering_col = self.tableau.get_entering_variable(maximize)
+            
+            if entering_col == -1:
+                print("No se encontró variable para entrar - solución óptima")
+                return {"status": "optimal", "iterations": iteration}
+            
+            print(f"Variable que entra: columna {entering_col + 1}")
+
+            # Verificar si el problema es no acotado
+            if self.tableau.is_unbounded(entering_col):
+                return {
+                    "status": "unbounded",
+                    "message": "El problema es no acotado",
+                    "iterations": iteration
+                }
+
+            # Encontrar variable que sale
+            leaving_row, pivot = self.tableau.get_leaving_variable(entering_col)
+            
+            if leaving_row == -1:
+                return {
+                    "status": "error",
+                    "message": "No se pudo encontrar variable para salir",
+                    "iterations": iteration
+                }
+            
+            print(f"Variable que sale: fila {leaving_row + 1}")
+            print(f"Elemento pivote: {pivot:.4f}")
+            
+            # Guardar el tableau antes del pivoteo para el reporte
+            tableau_before= self.tableau.tableau.copy()
+
+            # Realizar pivoteo
+            self.tableau.pivot(entering_col, leaving_row)
+            
+            print("Tableau después del pivoteo:")
+            self.tableau.print_tableau()
+        
+            # Guardar paso para reporte PDF
+            self.steps.append({
+                "iteration": iteration,
+                "entering_var": entering_col,
+                "leaving_var": leaving_row,
+                "pivot": pivot,
+                "tableau": self.tableau.tableau.copy(),
+                "basic_vars": self.tableau.basic_vars.copy(),
+                "pivot_coords_next": {
+                    "entering_col": entering_col,
+                    "leaving_row": leaving_row,
+                    "pivot": pivot,
+                    "tableau_before_pivot": tableau_before
+                }
+            })
+
+        return {
+            "status": "error", 
+            "message": "Demasiadas iteraciones",
+            "iterations": iteration
+        }
     
     def solve(self, c: list, A: list, b: list, constraint_types: list, maximize: bool = True) -> Dict[str, Any]:
         """
         Resuelve un problema de programación lineal usando el método simplex.
         """
+        self.steps.clear() # Limpiar historial de pasos
+
         # Construir tableau inicial
         self.tableau.build_initial_tableau(c, A, b, constraint_types, maximize)
         
@@ -67,67 +146,12 @@ class SimplexSolver:
                 "solution": solution,
                 "optimal_value": optimal_value,
                 "iterations": total_iterations,
+                "steps": self.steps
             }
             if self.tableau.artificial_vars:
                 result["phase1_iterations"] = phase1_iterations
             return result
         else:
             return {**phase2_result, "iterations": total_iterations}
-    
-    def _solve_phase(self, maximize: bool) -> Dict[str, Any]:
-        """Resuelve una fase del método simplex."""
-        iteration = 0
-        
-        while iteration < self.max_iterations:
-            iteration += 1
-            print(f"\n--- Iteración {iteration} ---")
-            
-            # Verificar optimalidad
-            is_optimal = self.tableau.is_optimal(maximize)
-            
-            if is_optimal:
-                print("¡Solución óptima de la fase encontrada!")
-                return {"status": "optimal", "iterations": iteration}
-            
-            # Encontrar variable que entra
-            entering_col = self.tableau.get_entering_variable(maximize)
-            
-            if entering_col == -1:
-                print("No se encontró variable para entrar - solución óptima")
-                return {"status": "optimal", "iterations": iteration}
-            
-            print(f"Variable que entra: columna {entering_col + 1}")
 
-            # Verificar si el problema es no acotado
-            if self.tableau.is_unbounded(entering_col):
-                print("⚠️ [DEBUG] Resultado: columna sin coeficientes positivos → UNBOUNDED detectado")
-                return {
-                    "status": "unbounded",
-                    "message": "El problema es no acotado",
-                    "iterations": iteration
-                }
-
-            # Encontrar variable que sale
-            leaving_row, pivot = self.tableau.get_leaving_variable(entering_col)
-            
-            if leaving_row == -1:
-                return {
-                    "status": "error",
-                    "message": "No se pudo encontrar variable para salir",
-                    "iterations": iteration
-                }
-            
-            print(f"Variable que sale: fila {leaving_row + 1}")
-            print(f"Elemento pivote: {pivot:.4f}")
-            
-            # Realizar pivoteo
-            self.tableau.pivot(entering_col, leaving_row)
-            
-            print("Tableau después del pivoteo:")
-            self.tableau.print_tableau()
         
-        return {
-            "status": "error", 
-            "message": "Demasiadas iteraciones",
-            "iterations": iteration
-        }
