@@ -1,0 +1,25 @@
+PROBLEMA: Compañía con 3 plantas que fabrican un producto en 3 tamaños. Maximizar ganancia.
+
+ESTRUCTURA: 3 plantas × 3 tamaños = 9 variables (cada planta produce cada tamaño)
+Variables: x11, x12, x13 (planta 1), x21, x22, x23 (planta 2), x31, x32, x33 (planta 3)
+
+GANANCIAS POR UNIDAD (iguales en todas las plantas):
+- Tamaño grande (j=1): $420
+- Tamaño mediano (j=2): $360  
+- Tamaño chico (j=3): $300
+
+CAPACIDADES POR PLANTA (suma de los 3 tamaños):
+- Planta 1: máximo 750 unidades
+- Planta 2: máximo 900 unidades
+- Planta 3: máximo 450 unidades
+
+ESPACIO DE ALMACENAMIENTO:
+Requerido por unidad: grande 20 pies², mediano 15 pies², chico 12 pies²
+Disponible: Planta 1: 13,000 pies², Planta 2: 12,000 pies², Planta 3: 5,000 pies²
+
+DEMANDA DE MERCADO (suma de las 3 plantas):
+- Grande: máximo 900 unidades totales
+- Mediano: máximo 1,200 unidades totales
+- Chico: máximo 750 unidades totales
+
+OBJETIVO: Maximizar ganancia total.

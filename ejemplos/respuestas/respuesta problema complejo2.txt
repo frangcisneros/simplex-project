@@ -1,0 +1,33 @@
+El plan de venta para maximizar los retornos de la refinería es el siguiente:
+
+Venta directa:
+
+Vender 377 barriles de gas 4 directamente.
+
+Producción de Avgas A:
+
+Producir un total de 7.331 barriles de avgas A.
+
+Para ello se deben mezclar:
+
+3.481 barriles de gas 1 
+
+2.666 barriles de gas 2 
+
+723 barriles de gas 3 
+
+462 barriles de gas 4 
+
+Producción de Avgas B:
+
+Producir un total de 4.088 barriles de avgas B.
+
+Para ello se deben mezclar:
+
+333 barriles de gas 1 
+
+3.293 barriles de gas 3 
+
+461 barriles de gas 4 
+
+La implementación de este plan de producción y venta resultará en una maximización de retornos de $308.270.

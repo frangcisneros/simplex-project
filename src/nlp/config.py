@@ -38,9 +38,9 @@ class ModelConfig:
             "top_p": 0.8,
         },
         NLPModelType.LLAMA3_1_8B: {
-            "temperature": 0.0,  # Determinístico para JSON
-            "max_tokens": 1536,  # Más espacio para problemas complejos
-            "top_p": 0.9,
+            "temperature": 0.1,  # Ligeramente creativo para problemas complejos
+            "max_tokens": 2048,  # Más espacio para análisis completo
+            "top_p": 0.95,
         },
         NLPModelType.QWEN2_5_14B: {
             "temperature": 0.0,  # Determinístico para JSON
@@ -71,6 +71,14 @@ class PromptTemplates:
 Tu tarea es LEER un enunciado en español y extraer su información estructurada
 en formato JSON. NO resuelvas el problema.
 
+🚨 REGLA CRÍTICA ABSOLUTA 🚨
+SI EL PROBLEMA MENCIONA "N PLANTAS" Y "M PRODUCTOS/TAMAÑOS":
+→ DEBES crear EXACTAMENTE N × M variables con nombres xij
+→ Donde i = número de planta (1, 2, 3...)
+→ Y j = número de producto/tamaño (1, 2, 3...)
+→ EJEMPLO: 3 plantas × 3 tamaños = 9 variables OBLIGATORIAS
+   ["x11", "x12", "x13", "x21", "x22", "x23", "x31", "x32", "x33"]
+
 Instrucciones generales:
 - Lee cuidadosamente el texto.
 - Identifica el tipo de problema (maximizar o minimizar).
@@ -97,10 +105,15 @@ RESPUESTA CORRECTA:
   "non_negativity": true
 }}
 
-EJEMPLO 2 - Problema Multi-Instalación (varias plantas, múltiples productos):
+EJEMPLO 2 - Problema Multi-Instalación (2 plantas, 3 productos):
 ENUNCIADO: "Una empresa tiene 2 plantas. Planta 1 puede producir max 500 unidades, Planta 2 max 700 unidades. 
 Producen 3 productos: A, B, C con ganancias de $10, $15, $20 por unidad respectivamente (igual en ambas plantas). 
 Hay demanda máxima: producto A 300 unidades, B 400 unidades, C 600 unidades. Maximizar ganancia."
+
+ANÁLISIS: 2 plantas × 3 productos = 6 variables
+- xij donde i=producto (1=A,2=B,3=C), j=planta (1 o 2)
+- La ganancia es IGUAL para cada producto sin importar la planta
+- Por tanto: [10,15,20] se REPITE para cada planta → [10,15,20, 10,15,20]
 
 RESPUESTA CORRECTA:
 {{
@@ -117,10 +130,73 @@ RESPUESTA CORRECTA:
   "non_negativity": true
 }}
 
-EJEMPLO 3 - Problema de Mezclas (materiales que se venden o mezclan):
+EJEMPLO 2B - Problema Multi-Instalación (3 plantas, 2 productos):
+ENUNCIADO: "Una fábrica tiene 3 plantas que producen productos tipo X e Y. 
+La ganancia por X es $80 y por Y es $60 (igual en todas las plantas).
+Capacidades: Planta 1 max 400 unidades, Planta 2 max 600 unidades, Planta 3 max 300 unidades.
+Demandas: producto X max 800, producto Y max 500. Maximizar ganancia."
+
+ANÁLISIS: 3 plantas × 2 productos = 6 variables
+- xij donde i=planta (1,2,3), j=producto (1=X, 2=Y)
+- Ganancia [80,60] se REPITE para cada planta → [80,60, 80,60, 80,60]
+
+RESPUESTA CORRECTA:
+{{
+  "objective_type": "maximize",
+  "variable_names": ["x11", "x12", "x21", "x22", "x31", "x32"],
+  "objective_coefficients": [80, 60, 80, 60, 80, 60],
+  "constraints": [
+    {{"coefficients": [1, 1, 0, 0, 0, 0], "operator": "<=", "rhs": 400}},
+    {{"coefficients": [0, 0, 1, 1, 0, 0], "operator": "<=", "rhs": 600}},
+    {{"coefficients": [0, 0, 0, 0, 1, 1], "operator": "<=", "rhs": 300}},
+    {{"coefficients": [1, 0, 1, 0, 1, 0], "operator": "<=", "rhs": 800}},
+    {{"coefficients": [0, 1, 0, 1, 0, 1], "operator": "<=", "rhs": 500}}
+  ],
+  "non_negativity": true
+}}
+
+EJEMPLO 2C - Problema Multi-Instalación (3 plantas, 3 productos):
+ENUNCIADO: "Una compañía tiene 3 plantas que fabrican 3 tamaños: grande, mediano, chico con ganancias de $420, $360, $300.
+Capacidades: Planta 1 max 750 unidades, Planta 2 max 900 unidades, Planta 3 max 450 unidades (sin importar tamaño).
+Demandas: grande max 900, mediano max 1200, chico max 750 unidades totales. Maximizar ganancia."
+
+ANÁLISIS: 3 plantas × 3 productos = 9 variables
+- xij donde i=planta (1,2,3), j=tamaño (1=grande, 2=mediano, 3=chico)
+- Ganancia [420,360,300] se REPITE para cada planta → [420,360,300, 420,360,300, 420,360,300]
+
+🚨 IMPORTANTE: TODAS las restricciones tienen 9 coeficientes (uno por cada variable)
+- Capacidad planta 1: [1,1,1, 0,0,0, 0,0,0] ← suma x11+x12+x13
+- Capacidad planta 2: [0,0,0, 1,1,1, 0,0,0] ← suma x21+x22+x23
+- Capacidad planta 3: [0,0,0, 0,0,0, 1,1,1] ← suma x31+x32+x33
+- Demanda grande: [1,0,0, 1,0,0, 1,0,0] ← suma x11+x21+x31
+- Demanda mediano: [0,1,0, 0,1,0, 0,1,0] ← suma x12+x22+x32
+- Demanda chico: [0,0,1, 0,0,1, 0,0,1] ← suma x13+x23+x33
+
+RESPUESTA CORRECTA:
+{{
+  "objective_type": "maximize",
+  "variable_names": ["x11", "x12", "x13", "x21", "x22", "x23", "x31", "x32", "x33"],
+  "objective_coefficients": [420, 360, 300, 420, 360, 300, 420, 360, 300],
+  "constraints": [
+    {{"coefficients": [1, 1, 1, 0, 0, 0, 0, 0, 0], "operator": "<=", "rhs": 750}},
+    {{"coefficients": [0, 0, 0, 1, 1, 1, 0, 0, 0], "operator": "<=", "rhs": 900}},
+    {{"coefficients": [0, 0, 0, 0, 0, 0, 1, 1, 1], "operator": "<=", "rhs": 450}},
+    {{"coefficients": [1, 0, 0, 1, 0, 0, 1, 0, 0], "operator": "<=", "rhs": 900}},
+    {{"coefficients": [0, 1, 0, 0, 1, 0, 0, 1, 0], "operator": "<=", "rhs": 1200}},
+    {{"coefficients": [0, 0, 1, 0, 0, 1, 0, 0, 1], "operator": "<=", "rhs": 750}}
+  ],
+  "non_negativity": true
+}}
+
+EJEMPLO 3 - Problema de Mezclas Simple (materiales que se venden o mezclan):
 ENUNCIADO: "Una refinería tiene 1000 barriles de petróleo crudo tipo 1 y 1500 de tipo 2. 
 Puede venderlos directamente a $40 y $35 por barril respectivamente, o mezclarlos en gasolina premium 
 (70% tipo1 + 30% tipo2) que se vende a $50 por barril. Maximizar ingresos."
+
+ANÁLISIS: Decisiones simples - venta directa o en mezcla
+- x1: barriles de tipo1 vendidos directamente
+- x2: barriles de tipo2 vendidos directamente
+- x3: barriles de mezcla premium producidos
 
 RESPUESTA CORRECTA:
 {{
@@ -130,6 +206,36 @@ RESPUESTA CORRECTA:
   "constraints": [
     {{"coefficients": [1, 0, 0.7], "operator": "<=", "rhs": 1000}},
     {{"coefficients": [0, 1, 0.3], "operator": "<=", "rhs": 1500}}
+  ],
+  "non_negativity": true
+}}
+
+EJEMPLO 4 - Problema de Mezclas Complejo (4 materias primas, 2 mezclas finales):
+ENUNCIADO: "Una refinería tiene 4 gasolinas base (G1, G2, G3, G4) con producciones de 100, 150, 200, 120 barriles.
+Puede venderlas directamente a $20, $22, $18, $25 por barril respectivamente.
+También puede mezclarlas para crear 2 productos premium:
+- Premium A (utilidad $30/barril): puede contener G1, G2, G3, G4 en cualquier proporción
+- Premium B (utilidad $28/barril): puede contener G1, G2, G3, G4 en cualquier proporción
+Maximizar retornos."
+
+ANÁLISIS: Problema complejo de mezclas con 4 materiales y 2 mezclas
+- 4 variables para venta directa: x1, x2, x3, x4 (cuánto vender de cada gasolina)
+- 2 variables para totales de mezclas: xA, xB (cuánto producir de Premium A y Premium B)
+- 8 variables para componentes: xG1A, xG2A, xG3A, xG4A (gases en Premium A), xG1B, xG2B, xG3B, xG4B (gases en Premium B)
+- Total: 4 + 2 + 8 = 14 variables
+
+RESPUESTA CORRECTA:
+{{
+  "objective_type": "maximize",
+  "variable_names": ["x1", "x2", "x3", "x4", "xA", "xB", "xG1A", "xG2A", "xG3A", "xG4A", "xG1B", "xG2B", "xG3B", "xG4B"],
+  "objective_coefficients": [20, 22, 18, 25, 30, 28, 0, 0, 0, 0, 0, 0, 0, 0],
+  "constraints": [
+    {{"coefficients": [0, 0, 0, 0, 1, 0, -1, -1, -1, -1, 0, 0, 0, 0], "operator": "=", "rhs": 0}},
+    {{"coefficients": [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, -1, -1, -1], "operator": "=", "rhs": 0}},
+    {{"coefficients": [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], "operator": "<=", "rhs": 100}},
+    {{"coefficients": [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0], "operator": "<=", "rhs": 150}},
+    {{"coefficients": [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0], "operator": "<=", "rhs": 200}},
+    {{"coefficients": [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1], "operator": "<=", "rhs": 120}}
   ],
   "non_negativity": true
 }}
@@ -153,31 +259,57 @@ PASOS DE ANÁLISIS:
    
    DETECCIÓN DE ESTRUCTURA (ver ejemplos above):
    
-   - ¿Solo hay UN lugar de producción con varios productos?
+   A) PROBLEMA SIMPLE - Un solo lugar, varios productos:
      → Variables simples: ["x1", "x2", "x3"]
      → VER EJEMPLO 1: 2 productos = 2 variables ["x1", "x2"]
    
-   - ¿El problema menciona múltiples PLANTAS/INSTALACIONES + múltiples PRODUCTOS?
-     → Usa xij donde i=planta, j=producto: ["x11","x12","x13","x21","x22","x23",...]
+   B) PROBLEMA MULTI-INSTALACIÓN - Varias plantas, múltiples productos:
+     → Usa xij donde i=planta, j=producto/tamaño
+     → FÓRMULA: N_plantas × M_productos = Total de variables
      → VER EJEMPLO 2: 2 plantas × 3 productos = 6 variables ["x11","x12","x13","x21","x22","x23"]
+     → VER EJEMPLO 2B: 3 plantas × 2 productos = 6 variables ["x11","x12","x21","x22","x31","x32"]
+     → VER EJEMPLO 2C: 3 plantas × 3 productos = 9 variables 
+       ["x11","x12","x13","x21","x22","x23","x31","x32","x33"]
    
-   - ¿El problema menciona materias primas QUE SE PUEDEN vender directas O mezclar?
-     → Una variable por materia prima + una por cada mezcla final
-     → VER EJEMPLO 3: 2 tipos de venta directa + 1 mezcla = 3 variables ["x1","x2","x3"]
+   C) PROBLEMA DE MEZCLAS SIMPLES - Materias primas que se venden O mezclan:
+     → VER EJEMPLO 3: 2 materias + 1 mezcla = 3 variables ["x1","x2","x3"]
    
-   REGLA: Cuenta TODAS las decisiones independientes que se pueden tomar.
+   D) PROBLEMA DE MEZCLAS COMPLEJAS - Múltiples materias, múltiples mezclas:
+     → ESTRUCTURA: ventas directas + totales de mezclas + componentes de cada mezcla
+     → VER EJEMPLO 4: 4 materias (gasolinas), 2 mezclas (premium A y B)
+       • 4 variables de venta directa (x1, x2, x3, x4)
+       • 2 variables de totales de mezclas (xA, xB)
+       • 8 variables de componentes (xG1A-xG4A para Premium A, xG1B-xG4B para Premium B)
+       • Total: 4 + 2 + 8 = 14 variables
+     → REGLA: N_materias + N_mezclas + (N_materias × N_mezclas) variables
+     → EJEMPLO: 4 materias + 2 mezclas + (4×2) = 4 + 2 + 8 = 14 vars
+   
+   REGLA CRÍTICA: Identifica el TIPO de problema primero, luego cuenta variables según su estructura.
 
 3. FUNCIÓN OBJETIVO - EXTRAE LOS COEFICIENTES:
    - Busca valores EXACTOS de ganancia/utilidad (para maximizar) o costo (para minimizar)
    - USA SOLO números que aparecen explícitamente en el problema
    - NO hagas operaciones matemáticas (NO escribas 24.83*3814)
-   - Si las ganancias son iguales para todas las plantas: repite el valor
-   - Los coeficientes van en el MISMO ORDEN que las variables
+   
+   REGLA CRÍTICA PARA MULTI-INSTALACIÓN:
+   - Si la ganancia/costo es IGUAL para todas las plantas:
+     → REPITE el valor para CADA planta
+   - La cantidad de coeficientes DEBE ser IGUAL a la cantidad de variables
    
    REFERENCIA EJEMPLOS:
-   - Ejemplo 1: mesas $50, sillas $30 → [50, 30]
-   - Ejemplo 2: productos A,B,C = $10,$15,$20 en AMBAS plantas → [10,15,20,10,15,20]
-   - Ejemplo 3: venta directa $40,$35 + mezcla $50 → [40,35,50]
+   - Ejemplo 1: mesas $50, sillas $30 → [50, 30] (2 coeficientes, 2 variables)
+   - Ejemplo 2: productos A,B,C = $10,$15,$20 en AMBAS plantas 
+     → [10,15,20, 10,15,20] (6 coeficientes, 6 variables)
+   - Ejemplo 2B: productos X,Y = $80,$60 en TRES plantas
+     → [80,60, 80,60, 80,60] (6 coeficientes, 6 variables)
+   - Ejemplo 2C: grande/mediano/chico = $420,$360,$300 en TRES plantas
+     → [420,360,300, 420,360,300, 420,360,300] (9 coeficientes, 9 variables)
+   - Ejemplo 3: venta directa $40,$35 + mezcla $50 
+     → [40,35,50] (3 coeficientes, 3 variables)
+   - Ejemplo 4: 4 gasolinas vendidas directamente ($20,$22,$18,$25) + 2 premiums ($30,$28) + componentes (0s)
+     → [20,22,18,25, 30,28, 0,0,0,0,0,0,0,0] (14 coeficientes, 14 variables)
+   
+   VERIFICACIÓN: len(objective_coefficients) == len(variable_names)
 
 4. RESTRICCIONES - IDENTIFICA LOS LÍMITES:
 
@@ -237,6 +369,26 @@ FORMATO DE SALIDA (solo JSON, nada más):
 }}
 
 NOTA: Si tienes N variables, cada coefficients debe tener exactamente N números.
+------------------------------------------------------------
+
+🚨 VALIDACIÓN FINAL ANTES DE GENERAR JSON:
+
+1. Cuenta tus variables: N = len(variable_names)
+
+2. Verifica función objetivo:
+   ✓ len(objective_coefficients) == N
+
+3. Verifica CADA restricción:
+   ✓ Para cada constraint: len(coefficients) == N
+   ✓ Si una variable no participa, pon 0 en su posición
+   
+4. Ejemplo de validación:
+   - Si tienes 9 variables: ["x11","x12","x13","x21","x22","x23","x31","x32","x33"]
+   - objective_coefficients debe tener 9 números: [420,360,300,420,360,300,420,360,300]
+   - CADA constraint debe tener 9 coeficientes: [1,1,1,0,0,0,0,0,0] o [1,0,0,1,0,0,1,0,0]
+   
+5. Si no pasas esta validación, RECONTRUYE tu JSON
+
 ------------------------------------------------------------
 
 CRÍTICO - REGLAS DE SALIDA:

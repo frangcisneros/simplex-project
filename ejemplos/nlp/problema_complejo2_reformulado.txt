@@ -1,0 +1,67 @@
+PROBLEMA: Una refinería tiene 4 tipos de gasolina base que puede vender directamente o mezclar para crear 2 productos premium. Necesita decidir el plan de venta y mezcla que maximice los retornos.
+
+GASOLINAS BASE (pueden venderse directamente o usarse en mezclas):
+- Gas 1: producción diaria 3,814 barriles, número de performance NP=107, presión de vapor PV=5
+- Gas 2: producción diaria 2,666 barriles, número de performance NP=93, presión de vapor PV=8
+- Gas 3: producción diaria 4,016 barriles, número de performance NP=87, presión de vapor PV=4
+- Gas 4: producción diaria 1,300 barriles, número de performance NP=108, presión de vapor PV=21
+
+UTILIDADES DE VENTA DIRECTA (precio venta - costo producción):
+- Gas 1: utilidad neta de $21.33 por barril (precio $24.83 - costo $3.50)
+- Gas 2: utilidad neta de $22.53 por barril (precio $24.83 - costo $2.30)
+- Gas 3: utilidad neta de $23.48 por barril (precio $24.83 - costo $1.35)
+- Gas 4: utilidad neta de $22.33 por barril (precio $24.83 - costo $2.50)
+
+PRODUCTOS PREMIUM (mezclas de las 4 gasolinas base):
+- Avgas A: utilidad neta de $26.45 por barril
+  * Requisitos de calidad: NP mínimo 100, PV máximo 7
+- Avgas B: utilidad neta de $25.91 por barril
+  * Requisitos de calidad: NP mínimo 91, PV máximo 6
+
+NOTA IMPORTANTE SOBRE MEZCLAS: El NP y el PV de cada mezcla es el promedio ponderado de los valores de las gasolinas que la componen. Por ejemplo, si mezclamos X barriles con NP=100 y Y barriles con NP=90, el NP de la mezcla es (100×X + 90×Y)/(X+Y).
+
+VARIABLES DE DECISIÓN (total: 14 variables):
+1. Venta directa de gasolinas base (4 variables):
+   - x1 = barriles de gas 1 vendidos directamente
+   - x2 = barriles de gas 2 vendidos directamente
+   - x3 = barriles de gas 3 vendidos directamente
+   - x4 = barriles de gas 4 vendidos directamente
+
+2. Producción de mezclas premium (2 variables):
+   - x5 = barriles totales de avgas A producidos
+   - x6 = barriles totales de avgas B producidos
+
+3. Composición de avgas A - cuánto de cada gas se usa (4 variables):
+   - x7 = barriles de gas 1 usados en avgas A
+   - x8 = barriles de gas 2 usados en avgas A
+   - x9 = barriles de gas 3 usados en avgas A
+   - x10 = barriles de gas 4 usados en avgas A
+
+4. Composición de avgas B - cuánto de cada gas se usa (4 variables):
+   - x11 = barriles de gas 1 usados en avgas B
+   - x12 = barriles de gas 2 usados en avgas B
+   - x13 = barriles de gas 3 usados en avgas B
+   - x14 = barriles de gas 4 usados en avgas B
+
+RESTRICCIONES:
+
+Balance de material (lo que se vende + lo que se usa en mezclas = producción disponible):
+- Gas 1: x1 + x7 + x11 = 3,814
+- Gas 2: x2 + x8 + x12 = 2,666
+- Gas 3: x3 + x9 + x13 = 4,016
+- Gas 4: x4 + x10 + x14 = 1,300
+
+Balance de mezclas (la suma de componentes debe igualar el total producido):
+- Avgas A: x7 + x8 + x9 + x10 = x5
+- Avgas B: x11 + x12 + x13 + x14 = x6
+
+Calidad de avgas A:
+- NP de avgas A ≥ 100: (107×x7 + 93×x8 + 87×x9 + 108×x10) / x5 ≥ 100
+- PV de avgas A ≤ 7: (5×x7 + 8×x8 + 4×x9 + 21×x10) / x5 ≤ 7
+
+Calidad de avgas B:
+- NP de avgas B ≥ 91: (107×x11 + 93×x12 + 87×x13 + 108×x14) / x6 ≥ 91
+- PV de avgas B ≤ 6: (5×x11 + 8×x12 + 4×x13 + 21×x14) / x6 ≤ 6
+
+OBJETIVO: Maximizar utilidad total = (ventas directas) + (ventas de mezclas)
+= 21.33×x1 + 22.53×x2 + 23.48×x3 + 22.33×x4 + 26.45×x5 + 25.91×x6

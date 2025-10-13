@@ -1,0 +1,69 @@
+Claro, aquí tienes la información que necesitas para cargar cada problema en un software de programación lineal.
+
+Problema 1: Compañía con tres plantas
+Para resolver este problema, debes ingresar los siguientes datos en el software:
+
+1. Variables de Decisión:
+Se definen 9 variables (Xij), donde "i" representa el tamaño del producto y "j" la planta de producción:
+
+X11: Unidades de producto grande producidas en la planta 1.
+
+X12: Unidades de producto grande producidas en la planta 2.
+
+X13: Unidades de producto grande producidas en la planta 3.
+
+X21: Unidades de producto mediano producidas en la planta 1.
+
+X22: Unidades de producto mediano producidas en la planta 2.
+
+X23: Unidades de producto mediano producidas en la planta 3.
+
+X31: Unidades de producto chico producidas en la planta 1.
+
+X32: Unidades de producto chico producidas en la planta 2.
+
+X33: Unidades de producto chico producidas en la planta 3.
+
+2. Función Objetivo (Maximizar Ganancia):
+El objetivo es maximizar la ganancia total, que se calcula de la siguiente manera:
+
+Maximizar Z = 420(X11 + X12 + X13) + 360(X21 + X22 + X23) + 300(X31 + X32 + X33)
+
+3. Restricciones:
+
+Restricciones de Mercado (Demanda):
+
+
+X11 + X12 + X13 ≤ 900 (Demanda de producto grande) 
+
+
+X21 + X22 + X23 ≤ 1200 (Demanda de producto mediano) 
+
+
+X31 + X32 + X33 ≤ 750 (Demanda de producto chico) 
+
+Restricciones de Espacio de Almacenamiento:
+
+
+20X11 + 15X21 + 12X31 ≤ 13000 (Espacio en planta 1) 
+
+
+20X12 + 15X22 + 12X32 ≤ 12000 (Espacio en planta 2) 
+
+
+20X13 + 15X23 + 12X33 ≤ 5000 (Espacio en planta 3) 
+
+Restricciones de Capacidad de Producción:
+
+
+X11 + X21 + X31 ≤ 750 (Capacidad de planta 1) 
+
+
+X12 + X22 + X32 ≤ 900 (Capacidad de planta 2) 
+
+
+X13 + X23 + X33 ≤ 450 (Capacidad de planta 3) 
+
+Restricción de No Negatividad:
+
+Todas las variables Xij deben ser mayores o iguales a cero (≥ 0).

@@ -21,6 +21,7 @@ from .interfaces import (
 from .processor import TransformerNLPProcessor, MockNLPProcessor
 from .ollama_processor import OllamaNLPProcessor
 from .model_generator import SimplexModelGenerator, ModelValidator
+from .problem_structure_detector import ProblemStructureDetector
 import sys
 from pathlib import Path
 
@@ -199,6 +200,7 @@ class NLPOptimizationConnector(INLPConnector):
         self.model_generator = model_generator
         self.solver = solver
         self.validator = validator
+        self.structure_detector = ProblemStructureDetector()
         self.logger = logging.getLogger(__name__)
 
     def process_and_solve(self, natural_language_text: str) -> Dict[str, Any]:
@@ -235,6 +237,16 @@ class NLPOptimizationConnector(INLPConnector):
                     "step_failed": "nlp_availability",
                 }
 
+            # Paso 1.5: Detectar estructura esperada del problema
+            self.logger.info("Step 0.5: Detecting problem structure")
+            expected_structure = self.structure_detector.detect_structure(
+                natural_language_text
+            )
+            self.logger.info(
+                f"Detected structure: {expected_structure['problem_type']}, "
+                f"expected {expected_structure['expected_variables']} variables"
+            )
+
             # Paso 2: Procesar texto con NLP
             self.logger.info("Step 1: Processing text with NLP")
             nlp_result = self.nlp_processor.process_text(natural_language_text)
@@ -255,6 +267,29 @@ class NLPOptimizationConnector(INLPConnector):
                     "step_failed": "problem_extraction",
                 }
 
+            # Validar estructura vs expectativa
+            problem_dict = {
+                "variable_names": nlp_result.problem.variable_names or [],
+                "objective_coefficients": nlp_result.problem.objective_coefficients,
+            }
+            is_structure_valid, structure_warnings = (
+                self.structure_detector.validate_extracted_variables(
+                    problem_dict, expected_structure
+                )
+            )
+
+            if not is_structure_valid:
+                self.logger.warning("Structure validation warnings:")
+                for warning in structure_warnings:
+                    self.logger.warning(f"  - {warning}")
+
+                # Si faltan variables, agregarlo a los warnings pero continuar
+                if structure_warnings:
+                    self.logger.warning(
+                        "⚠️ El modelo extrajo menos variables de las esperadas, "
+                        "pero se intentará resolver de todas formas."
+                    )
+
             if not self.validator.validate(nlp_result.problem):
                 validation_errors = self.validator.get_validation_errors(
                     nlp_result.problem
@@ -264,6 +299,9 @@ class NLPOptimizationConnector(INLPConnector):
                     "error": f"Validation failed: {', '.join(validation_errors)}",
                     "step_failed": "validation",
                     "validation_errors": validation_errors,
+                    "structure_warnings": (
+                        structure_warnings if not is_structure_valid else []
+                    ),
                 }
 
             # Paso 4: Generar modelo
@@ -293,6 +331,13 @@ class NLPOptimizationConnector(INLPConnector):
                     "validation": "completed",
                     "model_generation": "completed",
                     "optimization": "completed",
+                },
+                "structure_analysis": {
+                    "detected_type": expected_structure["problem_type"],
+                    "expected_variables": expected_structure["expected_variables"],
+                    "extracted_variables": len(nlp_result.problem.variable_names or []),
+                    "structure_valid": is_structure_valid,
+                    "warnings": structure_warnings if not is_structure_valid else [],
                 },
             }
 

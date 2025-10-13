@@ -49,11 +49,25 @@ def nlp_mode(args):
         # Crear conector
         logger.info("Inicializando conector NLP...")
 
-        # Usar el modelo configurado por defecto (ahora Llama 3.1:8b)
-        # Sin especificar nlp_model_type usa DefaultSettings.DEFAULT_MODEL
+        # Mapear nombre del modelo a NLPModelType
+        model_map = {
+            "llama3.1:8b": NLPModelType.LLAMA3_1_8B,
+            "qwen2.5:14b": NLPModelType.QWEN2_5_14B,
+            "mistral:7b": NLPModelType.MISTRAL_7B,
+        }
+
+        selected_model = model_map.get(args.model, NLPModelType.QWEN2_5_14B)
+
+        print(f"Usando modelo: {args.model}")
+        if args.model == "qwen2.5:14b":
+            print(
+                "  (Especializado en matemáticas - recomendado para problemas complejos)"
+            )
+
         connector = NLPConnectorFactory.create_connector(
             solver_type=SolverType.SIMPLEX,
             use_mock_nlp=args.mock_nlp,
+            nlp_model_type=selected_model,
         )
 
         # Verificar estado del conector
@@ -105,6 +119,26 @@ def nlp_mode(args):
         if result["success"]:
             print("✓ Procesamiento exitoso!")
 
+            # Mostrar análisis de estructura
+            if "structure_analysis" in result:
+                struct = result["structure_analysis"]
+                print(f"\nAnálisis de estructura del problema:")
+                print(f"  Tipo detectado: {struct['detected_type']}")
+                print(
+                    f"  Variables: extraídas={struct['extracted_variables']}, "
+                    f"esperadas={struct['expected_variables']}"
+                )
+
+                if not struct["structure_valid"]:
+                    print("\n⚠️ ADVERTENCIAS DE ESTRUCTURA:")
+                    for warning in struct["warnings"]:
+                        print(f"  - {warning}")
+                    print(
+                        "\nNOTA: El sistema intentó resolver con las variables extraídas."
+                    )
+                else:
+                    print("  ✓ Estructura válida")
+
             # Mostrar problema extraído
             if args.verbose and "extracted_problem" in result:
                 problem = result["extracted_problem"]
@@ -153,6 +187,11 @@ def nlp_mode(args):
                 print("\nErrores de validación:")
                 for error in result["validation_errors"]:
                     print(f"  - {error}")
+
+            if "structure_warnings" in result and result["structure_warnings"]:
+                print("\nAdvertencias de estructura:")
+                for warning in result["structure_warnings"]:
+                    print(f"  - {warning}")
 
     except KeyboardInterrupt:
         print("\n\nProcesamiento cancelado por el usuario.")
@@ -239,6 +278,14 @@ Ejemplos de uso:
     )
     parser.add_argument(
         "--mock-nlp", "--mock", action="store_true", help="Usar NLP mock para pruebas"
+    )
+    parser.add_argument(
+        "--model",
+        "-m",
+        type=str,
+        choices=["llama3.1:8b", "qwen2.5:14b", "mistral:7b"],
+        default="qwen2.5:14b",
+        help="Modelo de IA a usar (default: qwen2.5:14b, mejor para matemáticas)",
     )
 
     # Argumento para forzar modo clásico
