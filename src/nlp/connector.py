@@ -18,7 +18,7 @@ from .interfaces import (
     IOptimizationSolver,
     IModelValidator,
 )
-from .processor import TransformerNLPProcessor, MockNLPProcessor
+from .processor import MockNLPProcessor
 from .ollama_processor import OllamaNLPProcessor
 from .model_generator import SimplexModelGenerator, ModelValidator
 from .problem_structure_detector import ProblemStructureDetector
@@ -237,16 +237,6 @@ class NLPOptimizationConnector(INLPConnector):
                     "step_failed": "nlp_availability",
                 }
 
-            # Paso 1.5: Detectar estructura esperada del problema
-            self.logger.info("Step 0.5: Detecting problem structure")
-            expected_structure = self.structure_detector.detect_structure(
-                natural_language_text
-            )
-            self.logger.info(
-                f"Detected structure: {expected_structure['problem_type']}, "
-                f"expected {expected_structure['expected_variables']} variables"
-            )
-
             # Paso 2: Procesar texto con NLP
             self.logger.info("Step 1: Processing text with NLP")
             nlp_result = self.nlp_processor.process_text(natural_language_text)
@@ -258,8 +248,6 @@ class NLPOptimizationConnector(INLPConnector):
                     "step_failed": "nlp_processing",
                 }
 
-            # Paso 3: Validar problema extraído
-            self.logger.info("Step 2: Validating extracted problem")
             if nlp_result.problem is None:
                 return {
                     "success": False,
@@ -267,29 +255,8 @@ class NLPOptimizationConnector(INLPConnector):
                     "step_failed": "problem_extraction",
                 }
 
-            # Validar estructura vs expectativa
-            problem_dict = {
-                "variable_names": nlp_result.problem.variable_names or [],
-                "objective_coefficients": nlp_result.problem.objective_coefficients,
-            }
-            is_structure_valid, structure_warnings = (
-                self.structure_detector.validate_extracted_variables(
-                    problem_dict, expected_structure
-                )
-            )
-
-            if not is_structure_valid:
-                self.logger.warning("Structure validation warnings:")
-                for warning in structure_warnings:
-                    self.logger.warning(f"  - {warning}")
-
-                # Si faltan variables, agregarlo a los warnings pero continuar
-                if structure_warnings:
-                    self.logger.warning(
-                        "⚠️ El modelo extrajo menos variables de las esperadas, "
-                        "pero se intentará resolver de todas formas."
-                    )
-
+            # Paso 3: Validar el problema extraído
+            self.logger.info("Step 2: Validating extracted problem")
             if not self.validator.validate(nlp_result.problem):
                 validation_errors = self.validator.get_validation_errors(
                     nlp_result.problem
@@ -299,9 +266,6 @@ class NLPOptimizationConnector(INLPConnector):
                     "error": f"Validation failed: {', '.join(validation_errors)}",
                     "step_failed": "validation",
                     "validation_errors": validation_errors,
-                    "structure_warnings": (
-                        structure_warnings if not is_structure_valid else []
-                    ),
                 }
 
             # Paso 4: Generar modelo
@@ -313,6 +277,20 @@ class NLPOptimizationConnector(INLPConnector):
             solution = self.solver.solve(model)
 
             processing_time = time.time() - start_time
+
+            # (Opcional) Análisis de estructura post-mortem para logging o warnings
+            expected_structure = self.structure_detector.detect_structure(
+                natural_language_text
+            )
+            problem_dict = {
+                "variable_names": nlp_result.problem.variable_names or [],
+                "objective_coefficients": nlp_result.problem.objective_coefficients,
+            }
+            is_valid, warnings = self.structure_detector.validate_extracted_variables(
+                problem_dict, expected_structure
+            )
+            if not is_valid:
+                self.logger.warning(f"Structure mismatch detected: {warnings}")
 
             # Construir resultado completo
             result = {
@@ -326,18 +304,11 @@ class NLPOptimizationConnector(INLPConnector):
                 },
                 "nlp_confidence": nlp_result.confidence_score,
                 "processing_time": processing_time,
-                "pipeline_steps": {
-                    "nlp_processing": "completed",
-                    "validation": "completed",
-                    "model_generation": "completed",
-                    "optimization": "completed",
-                },
                 "structure_analysis": {
                     "detected_type": expected_structure["problem_type"],
                     "expected_variables": expected_structure["expected_variables"],
                     "extracted_variables": len(nlp_result.problem.variable_names or []),
-                    "structure_valid": is_structure_valid,
-                    "warnings": structure_warnings if not is_structure_valid else [],
+                    "warnings": warnings,
                 },
             }
 
@@ -348,7 +319,7 @@ class NLPOptimizationConnector(INLPConnector):
 
         except Exception as e:
             processing_time = time.time() - start_time
-            self.logger.error(f"Pipeline failed: {e}")
+            self.logger.error(f"Pipeline failed: {e}", exc_info=True)
 
             return {
                 "success": False,
@@ -356,136 +327,3 @@ class NLPOptimizationConnector(INLPConnector):
                 "step_failed": "unknown",
                 "processing_time": processing_time,
             }
-
-    def health_check(self) -> Dict[str, Any]:
-        """
-        Revisa si todos los componentes del sistema están funcionando.
-
-        Verifica que el procesador NLP esté disponible y que los demás componentes
-        se hayan instanciado correctamente. Útil para debugging y monitoreo.
-
-        Returns:
-            Dict con 'overall_status' (healthy/degraded/unhealthy) y detalles de cada componente
-        """
-        health = {"overall_status": "healthy", "components": {}}
-
-        try:
-            # Verificar NLP processor
-            health["components"]["nlp_processor"] = {
-                "status": (
-                    "healthy" if self.nlp_processor.is_available() else "unhealthy"
-                ),
-                "type": type(self.nlp_processor).__name__,
-            }
-
-            # Verificar otros componentes (por ahora asumimos que están bien si se instanciaron)
-            health["components"]["model_generator"] = {
-                "status": "healthy",
-                "type": type(self.model_generator).__name__,
-            }
-
-            health["components"]["solver"] = {
-                "status": "healthy",
-                "type": type(self.solver).__name__,
-            }
-
-            health["components"]["validator"] = {
-                "status": "healthy",
-                "type": type(self.validator).__name__,
-            }
-
-            # Determinar estado general
-            if any(
-                comp["status"] == "unhealthy" for comp in health["components"].values()
-            ):
-                health["overall_status"] = "degraded"
-
-        except Exception as e:
-            health["overall_status"] = "unhealthy"
-            health["error"] = str(e)
-
-        return health
-
-
-class ConfigurableNLPConnector:
-    """
-    Wrapper que permite reconfigurar el conector dinámicamente.
-
-    A diferencia del conector normal que se instancia con componentes fijos,
-    este permite cambiar el modelo NLP, el solver, etc. sin crear un objeto nuevo.
-    Útil para experimentación y testing de diferentes configuraciones.
-    """
-
-    def __init__(self):
-        self.connector: Optional[NLPOptimizationConnector] = None
-        self.logger = logging.getLogger(__name__)
-
-    def configure(
-        self,
-        nlp_model_type: NLPModelType = DefaultSettings.DEFAULT_MODEL,
-        solver_type: SolverType = SolverType.SIMPLEX,
-        use_mock_nlp: bool = False,
-        custom_config: Optional[Dict[str, Any]] = None,
-    ) -> bool:
-        """
-        Configura (o reconfigura) el conector con nuevos parámetros.
-
-        Usa la factory para crear un nuevo conector interno con la configuración
-        especificada, y hace un health check para asegurar que todo funciona.
-
-        Returns:
-            True si la configuración fue exitosa y el sistema está listo para usar
-        """
-        try:
-            self.connector = NLPConnectorFactory.create_connector(
-                nlp_model_type=nlp_model_type,
-                solver_type=solver_type,
-                use_mock_nlp=use_mock_nlp,
-                custom_config=custom_config,
-            )
-
-            # Verificar que todo esté funcionando
-            health = self.connector.health_check()
-            if health["overall_status"] in ["healthy", "degraded"]:
-                self.logger.info("Connector configured successfully")
-                return True
-            else:
-                self.logger.error(f"Connector unhealthy after configuration: {health}")
-                return False
-
-        except Exception as e:
-            self.logger.error(f"Error configuring connector: {e}")
-            return False
-
-    def process_and_solve(self, natural_language_text: str) -> Dict[str, Any]:
-        """
-        Procesa texto si el conector ya fue configurado.
-
-        Delega al conector interno. Si aún no se llamó configure(),
-        devuelve un error.
-        """
-        if not self.connector:
-            return {
-                "success": False,
-                "error": "Connector not configured. Call configure() first.",
-                "step_failed": "configuration",
-            }
-
-        return self.connector.process_and_solve(natural_language_text)
-
-    def get_status(self) -> Dict[str, Any]:
-        """
-        Devuelve el estado actual del conector.
-
-        Indica si está configurado y, si lo está, el health status de todos
-        los componentes internos.
-        """
-        if not self.connector:
-            return {"configured": False, "status": "not_configured"}
-
-        health = self.connector.health_check()
-        return {
-            "configured": True,
-            "status": health["overall_status"],
-            "components": health["components"],
-        }

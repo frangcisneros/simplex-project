@@ -9,10 +9,12 @@ import json
 import logging
 import requests
 import time
+import re
 from typing import Optional, Dict, Any
 
 from .interfaces import NLPResult, OptimizationProblem, INLPProcessor
 from .config import NLPModelType, DefaultSettings, PromptTemplates, ErrorMessages
+from .problem_structure_detector import ProblemStructureDetector
 
 
 class OllamaNLPProcessor(INLPProcessor):
@@ -49,6 +51,9 @@ class OllamaNLPProcessor(INLPProcessor):
 
         self.config = ModelConfig.DEFAULT_CONFIGS.get(self.model_type, {}).copy()
         self.config.update(self.custom_config)
+
+        # Inicializar el detector de estructura
+        self.structure_detector = ProblemStructureDetector()
 
     def is_available(self) -> bool:
         """
@@ -102,9 +107,17 @@ class OllamaNLPProcessor(INLPProcessor):
             )
 
         try:
-            # Generar prompt para el modelo
+            # 1. Analizar estructura para crear una pista para el modelo
+            structure = self.structure_detector.detect_structure(natural_language_text)
+            structure_hint = (
+                f"Se ha detectado un problema de tipo '{structure['problem_type']}'. "
+                f"Se esperan aproximadamente {structure['expected_variables']} variables."
+            )
+            self.logger.info(f"Generated hint for model: {structure_hint}")
+
+            # 2. Generar prompt para el modelo, inyectando la pista
             prompt = PromptTemplates.OPTIMIZATION_EXTRACTION_PROMPT.format(
-                problem_text=natural_language_text
+                problem_text=natural_language_text, structure_analysis=structure_hint
             )
 
             # Configurar petición a Ollama
@@ -177,69 +190,68 @@ class OllamaNLPProcessor(INLPProcessor):
 
     def _extract_optimization_problem(self, text: str) -> Optional[OptimizationProblem]:
         """
-        Extrae y valida el problema de optimización del texto generado.
+        Extrae y valida el problema de optimización del texto generado de forma robusta.
         """
         try:
-            # Buscar JSON en el texto usando diferentes patrones
-            import re
+            # 1. Buscar el inicio y fin del bloque JSON
+            start_index = text.find("{")
+            end_index = text.rfind("}")
 
-            # Patrones para encontrar JSON
-            patterns = [
-                r'\{[^{}]*"objective_type"[^{}]*\}',  # JSON simple
-                r"```json\s*(\{.*?\})\s*```",  # Bloque de código JSON
-                r"```\s*(\{.*?\})\s*```",  # Bloque de código sin especificar
-                r'(\{.*"objective_type".*\})',  # JSON multilinea
-            ]
+            if start_index == -1 or end_index == -1 or end_index < start_index:
+                self.logger.warning(
+                    "No se encontró un bloque JSON delimitado por llaves en la respuesta."
+                )
+                return None
 
-            for pattern in patterns:
-                matches = re.findall(pattern, text, re.DOTALL | re.IGNORECASE)
-                for match in matches:
-                    try:
-                        # Limpiar el JSON encontrado
-                        json_text = match.strip()
-                        if json_text.startswith("```"):
-                            json_text = (
-                                json_text.replace("```json", "")
-                                .replace("```", "")
-                                .strip()
-                            )
+            json_str = text[start_index : end_index + 1]
 
-                        # Parsear JSON
-                        data = json.loads(json_text)
+            # 2. (Opcional pero recomendado) Limpiar errores comunes antes de parsear
+            # Eliminar comas finales en arrays o diccionarios, que son un error común de JSON
+            json_str = re.sub(r",\s*([\]\}])", r"\1", json_str)
 
-                        # Validar estructura mínima
-                        if not all(
-                            key in data
-                            for key in [
-                                "objective_type",
-                                "objective_coefficients",
-                                "constraints",
-                            ]
-                        ):
-                            continue
+            self.logger.debug(
+                f"Intentando parsear el siguiente bloque JSON: {json_str[:300]}..."
+            )
 
-                        # Crear problema de optimización
-                        problem = OptimizationProblem(
-                            objective_type=data["objective_type"],
-                            objective_coefficients=data["objective_coefficients"],
-                            constraints=data["constraints"],
-                            variable_names=data.get("variable_names"),
-                        )
+            # 3. Parsear el JSON limpio
+            data = json.loads(json_str)
 
-                        self.logger.info(
-                            f"Successfully extracted optimization problem with {len(problem.objective_coefficients)} variables"
-                        )
-                        return problem
+            # 4. Validar la estructura mínima
+            if not all(
+                key in data
+                for key in [
+                    "objective_type",
+                    "objective_coefficients",
+                    "constraints",
+                ]
+            ):
+                self.logger.warning(
+                    "El JSON extraído no tiene la estructura requerida."
+                )
+                return None
 
-                    except (json.JSONDecodeError, KeyError, ValueError) as e:
-                        self.logger.debug(f"Failed to parse JSON match: {e}")
-                        continue
+            # 5. Crear el objeto OptimizationProblem
+            problem = OptimizationProblem(
+                objective_type=data["objective_type"],
+                objective_coefficients=data["objective_coefficients"],
+                constraints=data["constraints"],
+                variable_names=data.get("variable_names"),
+            )
 
-            self.logger.warning("No valid JSON found in model response")
+            self.logger.info(
+                f"Problema de optimización extraído con éxito con {len(problem.objective_coefficients)} variables."
+            )
+            return problem
+
+        except json.JSONDecodeError as e:
+            self.logger.error(
+                f"Error al decodificar el JSON extraído: {e}. Contenido: '{json_str[:300]}...'"
+            )
             return None
-
         except Exception as e:
-            self.logger.error(f"Error extracting optimization problem: {e}")
+            self.logger.error(
+                f"Error inesperado al extraer el problema de optimización: {e}"
+            )
             return None
 
     def _calculate_confidence(
@@ -276,58 +288,3 @@ class OllamaNLPProcessor(INLPProcessor):
 
         except Exception:
             return 0.3  # Confianza baja si hay errores
-
-    def get_available_models(self) -> list:
-        """
-        Obtiene la lista de modelos disponibles en Ollama.
-        """
-        try:
-            response = requests.get(f"{self.ollama_url}/api/tags", timeout=5)
-            if response.status_code == 200:
-                models = response.json().get("models", [])
-                return [model.get("name") for model in models]
-            return []
-        except Exception as e:
-            self.logger.error(f"Error getting available models: {e}")
-            return []
-
-    def pull_model(self, model_name: str) -> bool:
-        """
-        Descarga un modelo en Ollama.
-
-        Args:
-            model_name: Nombre del modelo a descargar (ej: "llama3.2:3b")
-
-        Returns:
-            True si se descargó correctamente, False si no
-        """
-        try:
-            self.logger.info(f"Downloading model: {model_name}")
-
-            response = requests.post(
-                f"{self.ollama_url}/api/pull",
-                json={"name": model_name},
-                stream=True,
-                timeout=1800,  # 30 minutos para descarga
-            )
-
-            if response.status_code == 200:
-                # Procesar respuesta streaming
-                for line in response.iter_lines():
-                    if line:
-                        try:
-                            data = json.loads(line)
-                            if data.get("status"):
-                                self.logger.info(f"Pull status: {data['status']}")
-                        except json.JSONDecodeError:
-                            continue
-
-                self.logger.info(f"Model {model_name} downloaded successfully")
-                return True
-            else:
-                self.logger.error(f"Failed to pull model: {response.status_code}")
-                return False
-
-        except Exception as e:
-            self.logger.error(f"Error pulling model: {e}")
-            return False
