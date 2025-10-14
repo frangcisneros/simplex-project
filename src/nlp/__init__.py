@@ -63,7 +63,6 @@ from .connector import (
     SimplexSolverAdapter,
     NLPConnectorFactory,
     NLPOptimizationConnector,
-    ConfigurableNLPConnector,
     SolverType,
 )
 
@@ -101,6 +100,5 @@ __all__ = [
     "SimplexSolverAdapter",
     "NLPConnectorFactory",
     "NLPOptimizationConnector",
-    "ConfigurableNLPConnector",
     "SolverType",
 ]

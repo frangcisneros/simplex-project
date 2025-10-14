@@ -24,12 +24,10 @@ def main():
     """
     # --- PASO 1: Elige el modelo y el archivo del problema ---
     # Puedes cambiar esto para probar diferentes modelos y problemas.
-    # Modelos recomendados para empezar: LLAMA3_1_8B o MISTRAL_7B
+    # Modelos disponibles: LLAMA3_1_8B (el que tienes) o MISTRAL_7B (más rápido si lo descargas)
     # Para los problemas complejos, podrías necesitar modelos más grandes.
-    modelo_a_usar = NLPModelType.LLAMA3_1_8B
-    archivo_problema = (
-        "problema_complejo.txt"  # Cambia a "problema_compolejo2.txt" para el segundo
-    )
+    modelo_a_usar = NLPModelType.LLAMA3_1_8B  # Usando el modelo disponible
+    archivo_problema = "../ejemplos/nlp/problema_complejo.txt"  # Cambia a "problema_compolejo2.txt" para el segundo
 
     logging.info(f"Usando el modelo: {modelo_a_usar.value}")
     logging.info(f"Cargando problema desde: {archivo_problema}")

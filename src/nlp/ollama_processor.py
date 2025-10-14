@@ -139,7 +139,7 @@ class OllamaNLPProcessor(INLPProcessor):
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
                 json=request_data,
-                timeout=300,  # 5 minutos máximo
+                timeout=600,  # 10 minutos máximo para problemas complejos
             )
 
             elapsed_time = time.time() - start_time
