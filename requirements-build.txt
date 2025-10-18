@@ -1,0 +1,2 @@
+# Dependencias para generar el ejecutable
+pyinstaller>=5.0
