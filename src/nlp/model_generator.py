@@ -77,6 +77,7 @@ class SimplexModelGenerator(IModelGenerator):
             # Construir matriz A y vector b
             A = []
             b = []
+            constraint_types = []
 
             for constraint in problem.constraints:
                 coeffs = constraint["coefficients"]
@@ -88,13 +89,18 @@ class SimplexModelGenerator(IModelGenerator):
                     # Convertir >= a <= multiplicando por -1
                     coeffs = [-coeff for coeff in coeffs]
                     rhs = -rhs
+                    constraint_types.append("<=")
                 elif operator == "=":
                     # Para igualdad, agregar dos restricciones (<= y >=)
                     A.append(coeffs)
                     b.append(rhs)
+                    constraint_types.append("<=")
                     A.append([-coeff for coeff in coeffs])
                     b.append(-rhs)
+                    constraint_types.append("<=")
                     continue
+                else:
+                    constraint_types.append(operator)
 
                 A.append(coeffs)
                 b.append(rhs)
@@ -116,6 +122,7 @@ class SimplexModelGenerator(IModelGenerator):
                 "maximize": maximize,
                 "variable_names": problem.variable_names,
                 "is_minimization": is_minimize,  # Para ajustar el resultado final
+                "constraint_types": constraint_types,
             }
 
             self.logger.info(

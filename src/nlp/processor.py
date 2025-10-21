@@ -581,14 +581,10 @@ class MockNLPProcessor(INLPProcessor):
     def process_text(self, natural_language_text: str) -> NLPResult:
         """
         Simula el procesamiento NLP con un problema de ejemplo.
-
-        Detecta algunas palabras clave como "maximizar" o "minimizar" para
-        decidir el tipo de objetivo, pero siempre devuelve el mismo problema
-        simple de 2 variables. Solo para testing.
+        Ahora detecta problemas de transporte y genera la cantidad correcta de variables.
         """
         self.logger.info("Using mock NLP processor")
 
-        # Ejemplo simple: detectar palabras clave
         text_lower = natural_language_text.lower()
 
         # Detectar tipo de optimización
@@ -599,7 +595,108 @@ class MockNLPProcessor(INLPProcessor):
         else:
             obj_type = "maximize"  # Por defecto
 
-        # Problema ejemplo simple
+        # Detectar problema de transporte: buscar "X almacenes" y "Y tiendas"
+        import re
+
+        almacenes = 0
+        tiendas = 0
+        almacenes_match = re.search(r"(\d+)\s+almacen", text_lower)
+        tiendas_match = re.search(r"(\d+)\s+tienda", text_lower)
+        if almacenes_match and tiendas_match:
+            almacenes = int(almacenes_match.group(1))
+            tiendas = int(tiendas_match.group(1))
+        if almacenes > 0 and tiendas > 0:
+            n_vars = almacenes * tiendas
+            variable_names = [f"x{i+1}" for i in range(n_vars)]
+            # Coeficientes y restricciones dummy
+            objective_coefficients = [1.0 for _ in range(n_vars)]
+            constraints = []
+            # Restricciones de oferta (una por almacén)
+            for i in range(almacenes):
+                coefs = [1.0 if j // tiendas == i else 0.0 for j in range(n_vars)]
+                constraints.append(
+                    {"coefficients": coefs, "operator": "<=", "rhs": 100.0}
+                )
+            # Restricciones de demanda (una por tienda)
+            for i in range(tiendas):
+                coefs = [1.0 if j % tiendas == i else 0.0 for j in range(n_vars)]
+                constraints.append(
+                    {"coefficients": coefs, "operator": ">=", "rhs": 50.0}
+                )
+            problem = OptimizationProblem(
+                objective_type=obj_type,
+                objective_coefficients=objective_coefficients,
+                constraints=constraints,
+                variable_names=variable_names,
+            )
+            return NLPResult(success=True, problem=problem, confidence_score=0.9)
+
+        # Problema de dieta
+        if "dieta" in text_lower or "alimento" in text_lower:
+            alimentos = re.findall(r"pan|pollo|vegetales|carne|arroz|leche", text_lower)
+            if not alimentos:
+                alimentos = ["pan", "pollo", "vegetales"]
+            n_vars = len(alimentos)
+            variable_names = alimentos
+            objective_coefficients = [2.0 for _ in range(n_vars)]
+            constraints = [
+                {
+                    "coefficients": [150.0, 300.0, 80.0][:n_vars],
+                    "operator": ">=",
+                    "rhs": 2000.0,
+                },  # calorías
+                {
+                    "coefficients": [5.0, 25.0, 3.0][:n_vars],
+                    "operator": ">=",
+                    "rhs": 50.0,
+                },  # proteína
+                {
+                    "coefficients": [3.0, 0.0, 8.0][:n_vars],
+                    "operator": ">=",
+                    "rhs": 30.0,
+                },  # fibra
+            ]
+            problem = OptimizationProblem(
+                objective_type="minimize",
+                objective_coefficients=objective_coefficients,
+                constraints=constraints,
+                variable_names=variable_names,
+            )
+            return NLPResult(success=True, problem=problem, confidence_score=0.9)
+
+        # Problema de producción
+        if (
+            "fabrica" in text_lower
+            or "produccion" in text_lower
+            or "carpinteria" in text_lower
+        ):
+            productos = re.findall(r"mesas|sillas|producto\s*[a-z]", text_lower)
+            if not productos:
+                productos = ["mesas", "sillas"]
+            n_vars = len(productos)
+            variable_names = productos
+            objective_coefficients = [80.0, 50.0][:n_vars]
+            constraints = [
+                {
+                    "coefficients": [4.0, 2.0][:n_vars],
+                    "operator": "<=",
+                    "rhs": 200.0,
+                },  # horas
+                {
+                    "coefficients": [6.0, 3.0][:n_vars],
+                    "operator": "<=",
+                    "rhs": 300.0,
+                },  # madera
+            ]
+            problem = OptimizationProblem(
+                objective_type="maximize",
+                objective_coefficients=objective_coefficients,
+                constraints=constraints,
+                variable_names=variable_names,
+            )
+            return NLPResult(success=True, problem=problem, confidence_score=0.9)
+
+        # Problema ejemplo simple (por defecto)
         problem = OptimizationProblem(
             objective_type=obj_type,
             objective_coefficients=[1.0, 2.0],
@@ -608,5 +705,4 @@ class MockNLPProcessor(INLPProcessor):
                 {"coefficients": [2.0, 1.0], "operator": "<=", "rhs": 15.0},
             ],
         )
-
         return NLPResult(success=True, problem=problem, confidence_score=0.8)

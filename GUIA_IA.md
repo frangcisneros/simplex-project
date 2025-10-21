@@ -1,12 +1,5 @@
 # Guía de uso de IA en Simplex Project
 
-## Estado actual ✅
-
-- ✅ **Ollama instalado y funcionando**
-- ✅ **Modelo Llama 3.1 8B descargado** (4.9 GB)
-- ✅ **Sistema básico de IA funcionando** (probado con Mock processor)
-- ⏳ **Prueba con Ollama en progreso...**
-
 ## Cómo usar la IA
 
 ### 1. Verificar que Ollama esté corriendo

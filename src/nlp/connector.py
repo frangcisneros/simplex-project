@@ -27,7 +27,7 @@ from pathlib import Path
 
 # Agregar la carpeta padre al path para importar solver
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from solver import SimplexSolver
+from src.solver import SimplexSolver
 from .config import NLPModelType, DefaultSettings, ErrorMessages
 
 
@@ -73,8 +73,22 @@ class SimplexSolverAdapter(IOptimizationSolver):
             if missing_keys:
                 raise ValueError(f"Missing required keys in model: {missing_keys}")
 
+            # DEBUG: Print model and constraint_types
+            print("=== DEBUG: Modelo generado para Simplex ===")
+            for k, v in model.items():
+                if k != "A":
+                    print(f"{k}: {v}")
+                else:
+                    print(f"A: [matriz {len(v)}x{len(v[0]) if v else 0}]")
+            print("constraint_types:", model.get("constraint_types"))
+            print("==========================================")
+
             result = self.simplex_solver.solve(
-                c=model["c"], A=model["A"], b=model["b"], maximize=model["maximize"]
+                c=model["c"],
+                A=model["A"],
+                b=model["b"],
+                constraint_types=model["constraint_types"],
+                maximize=model["maximize"],
             )
 
             # Enriquecer resultado con información adicional
