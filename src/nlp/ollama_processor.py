@@ -109,10 +109,39 @@ class OllamaNLPProcessor(INLPProcessor):
         try:
             # 1. Analizar estructura para crear una pista para el modelo
             structure = self.structure_detector.detect_structure(natural_language_text)
-            structure_hint = (
-                f"Se ha detectado un problema de tipo '{structure['problem_type']}'. "
-                f"Se esperan aproximadamente {structure['expected_variables']} variables."
-            )
+
+            # Generar hint específico según tipo de problema
+            problem_type = structure["problem_type"]
+            expected_vars = structure["expected_variables"]
+
+            if problem_type == "diet":
+                foods = structure.get("product_names", [])
+                structure_hint = (
+                    f"Este es un problema de DIETA ÓPTIMA. "
+                    f"Debes identificar {expected_vars} variables de decisión (alimentos): {', '.join(foods)}. "
+                    f"Las restricciones son requisitos nutricionales MÍNIMOS (>=). "
+                    f"El objetivo es MINIMIZAR el costo total."
+                )
+            elif problem_type == "transport":
+                routes = structure.get("product_names", [])
+                structure_hint = (
+                    f"Este es un problema de TRANSPORTE. "
+                    f"Debes identificar {expected_vars} variables de decisión (rutas de transporte). "
+                    f"Incluye restricciones de capacidad de almacenes (<=) y demanda de tiendas (>=). "
+                    f"El objetivo es MINIMIZAR el costo total de transporte."
+                )
+            elif problem_type == "multi_facility":
+                structure_hint = (
+                    f"Este es un problema MULTI-INSTALACIÓN. "
+                    f"Debes crear {expected_vars} variables (combinaciones planta×producto). "
+                    f"Asegúrate de incluir TODAS las combinaciones posibles."
+                )
+            else:
+                structure_hint = (
+                    f"Se ha detectado un problema de tipo '{problem_type}'. "
+                    f"Se esperan aproximadamente {expected_vars} variables."
+                )
+
             self.logger.info(f"Generated hint for model: {structure_hint}")
 
             # 2. Generar prompt para el modelo, inyectando la pista

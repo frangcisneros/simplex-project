@@ -1,7 +1,0 @@
-# Dependencias adicionales para spaCy NLP
-
-# spaCy - librería principal
-spacy>=3.5.0
-
-# Modelo base español (instalar con: python -m spacy download es_core_news_sm)
-# es-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.5.0/es_core_news_sm-3.5.0-py3-none-any.whl

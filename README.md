@@ -1,254 +1,269 @@
-# Simplex Solver con NLP
+x1 (mesas) = 25.0 unidades
 
-> **Resuelve problemas de optimización lineal escribiéndolos en español**
+# Simplex Solver con Inteligencia Artificial
 
-Este programa resuelve problemas de programación lineal usando el método Simplex. Incluye un sistema avanzado de **Procesamiento de Lenguaje Natural (NLP)** que te permite escribir problemas en español y obtener soluciones automáticamente.
+Sistema de optimización lineal que combina el algoritmo Simplex con modelos de lenguaje (Ollama) para resolver problemas de programación lineal descritos en español.
+
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 🚀 Inicio Rápido
+## Características
 
-### 1. Instalar Ollama (recomendado para NLP)
+- **IA Integrada**: Usa modelos de lenguaje (Llama 3.1, Mistral) para entender problemas en español
+- **Lenguaje Natural**: Describe problemas con texto normal, sin necesidad de fórmulas matemáticas
+- **Procesamiento Local**: Funciona completamente en tu computadora usando Ollama
+- **Múltiples Tipos de Problemas**: Producción, transporte, dieta, mezclas, asignación de recursos
+
+---
+
+## Instalación
+
+### 1. Clonar el repositorio
 
 ```bash
-# Descargar desde: https://ollama.ai
-# Luego instalar un modelo
+git clone https://github.com/frangcisneros/simplex-project
+cd simplex-project
+pip install -r requirements.txt
+```
+
+### 2. Instalar Ollama
+
+Descargar desde: https://ollama.ai/download
+
+Después de instalar:
+
+```bash
 ollama pull llama3.1:8b
 ```
 
-### 2. Instalar dependencias
+### 3. Probar el sistema
+
+```bash
+cd tests
+python test_nlp_system.py
+```
+
+---
+
+## Ejemplo de Uso
+
+**Entrada:**
+
+```
+Una carpintería fabrica mesas y sillas.
+Cada mesa da $80 de ganancia, cada silla $50.
+Hay 200 horas de trabajo disponibles.
+Cada mesa requiere 4 horas, cada silla 2 horas.
+¿Cuántas hacer para maximizar ganancia?
+```
+
+**Proceso:**
+
+1. La IA identifica 2 variables (mesas, sillas)
+2. Extrae la función objetivo (maximizar ganancia)
+3. Detecta las restricciones (200 horas disponibles)
+4. Resuelve el problema con el algoritmo Simplex
+
+**Salida:**
+
+```
+Solución óptima encontrada
+Valor óptimo: $4,000.00
+
+Variables:
+  mesas = 50.00
+  sillas = 0.00
+```
+
+---
+
+## Estructura del Proyecto
+
+```
+simplex-project/
+├── README.md
+├── requirements.txt
+│
+├── tests/
+│   └── test_nlp_system.py           # Suite completa de tests
+│
+├── src/
+│   ├── solver.py                    # Algoritmo Simplex
+│   └── nlp/                         # Sistema NLP
+│       ├── config.py                # Configuración
+│       ├── connector.py             # Orquestador principal
+│       ├── ollama_processor.py      # Procesador con Ollama
+│       ├── model_generator.py       # Generador de modelos
+│       ├── interfaces.py            # Interfaces
+│       ├── problem_structure_detector.py  # Detector de estructura
+│       └── complexity_analyzer.py   # Análisis de complejidad
+│
+└── ejemplos/nlp/                    # Ejemplos de problemas
+```
+
+---
+
+## Documentación
+
+- **ARQUITECTURA.md**: Diseño técnico del sistema
+- **GUIA_IA.md**: Guía detallada de instalación y uso
+- **ESTRUCTURA.md**: Organización de archivos
+- **LIMPIEZA.md**: Cambios recientes
+
+---
+
+## Uso
+
+### Desde Python
+
+```python
+from src.nlp import NLPConnectorFactory, NLPModelType
+
+# Crear conector
+connector = NLPConnectorFactory.create_connector(
+    nlp_model_type=NLPModelType.LLAMA3_1_8B
+)
+
+# Resolver problema
+resultado = connector.process_and_solve("""
+    Una empresa fabrica productos A y B.
+    A da $50 de ganancia, B da $40.
+    Cada A requiere 2 horas, cada B 1 hora.
+    Hay 100 horas disponibles.
+    Maximizar ganancia.
+""")
+
+# Mostrar resultado
+if resultado["success"]:
+    print(f"Valor óptimo: ${resultado['solution']['optimal_value']:.2f}")
+```
+
+### Tests Incluidos
+
+```bash
+# Ejecutar suite completa de tests
+cd tests
+python test_nlp_system.py
+```
+
+---
+
+## Modelos Soportados
+
+| Modelo      | Tamaño | Precisión | Recomendado Para                  |
+| ----------- | ------ | --------- | --------------------------------- |
+| llama3.1:8b | 4.9 GB | Alta      | Problemas complejos (recomendado) |
+| llama3.2:3b | 2.0 GB | Media     | Problemas simples                 |
+| mistral:7b  | 4.0 GB | Alta      | Uso general                       |
+| qwen2.5:14b | 8.0 GB | Muy Alta  | Problemas muy complejos           |
+
+**Instalación:**
+
+```bash
+ollama pull llama3.1:8b    # Modelo por defecto
+```
+
+---
+
+## Tipos de Problemas Soportados
+
+- **Producción**: Maximizar ganancias con recursos limitados
+- **Transporte**: Minimizar costos de distribución
+- **Dieta**: Optimizar nutrición con presupuesto
+- **Mezclas**: Combinar materias primas óptimamente
+- **Asignación**: Distribuir recursos eficientemente
+
+Ver ejemplos en carpeta `ejemplos/nlp/`
+
+---
+
+## Configuración
+
+### Cambiar Modelo
+
+Editar `src/nlp/config.py`:
+
+```python
+class DefaultSettings:
+    DEFAULT_MODEL = NLPModelType.LLAMA3_1_8B  # Cambiar aquí
+```
+
+### Ajustar Parámetros
+
+```python
+ModelConfig.DEFAULT_CONFIGS[NLPModelType.LLAMA3_1_8B] = {
+    "temperature": 0.1,  # Precisión (0-1)
+    "max_tokens": 2048,
+    "top_p": 0.9
+}
+```
+
+---
+
+## Solución de Problemas
+
+### Ollama no responde
+
+```bash
+# Verificar que está corriendo
+ollama list
+
+# Instalar modelo si falta
+ollama pull llama3.1:8b
+```
+
+### Modelo lento
+
+Primera vez es normal (30-60s para cargar). Si siempre es lento, usar un modelo más pequeño:
+
+```bash
+ollama pull llama3.2:3b
+```
+
+### Error de dependencias
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Resolver un problema
+Ver GUIA_IA.md para más ayuda.
 
-**El sistema detecta automáticamente el formato:**
+---
+
+## Testing
 
 ```bash
-# Lenguaje natural (detectado automáticamente)
-python nlp_simplex.py ejemplos/nlp/problema_complejo.txt
-
-# Formato clásico MAXIMIZE/MINIMIZE (detectado automáticamente)
-python nlp_simplex.py ejemplos/maximizar_basico.txt
-
-# O con texto directo
-python nlp_simplex.py --text "Maximizar 3x + 2y sujeto a x + y <= 4"
+# Suite completa de tests del sistema NLP
+cd tests
+python test_nlp_system.py
 ```
+
+Los tests incluyen:
+
+- Tests unitarios de cada componente
+- Tests de integración del pipeline completo
+- Tests de extremo a extremo con problemas reales
+- Validación de modelos y estructuras
 
 ---
 
-## 📖 Documentación Completa
+## Autor
 
-**Lee la guía completa para aprender todo sobre el sistema NLP:**
-
-👉 **[GUIA_NLP.md](GUIA_NLP.md)** - Guía completa del sistema NLP
-
-La guía incluye:
-
-- ✅ Instalación paso a paso
-- ✅ Ejemplos de uso
-- ✅ Configuración de modelos
-- ✅ Casos de uso complejos
-- ✅ Solución de problemas
-- ✅ Arquitectura del sistema
+- Francisco - [@frangcisneros](https://github.com/frangcisneros)
+- Emiliana
+- Marcelo
+- Guillermo
+- Lucia
 
 ---
 
-## 💡 Ejemplo Rápido
+## Soporte
 
-**Escribe en español:**
-
-```
-Una empresa fabrica mesas y sillas. Cada mesa genera $50 de ganancia
-y cada silla $30. Hay 100 horas de carpintería disponibles.
-Cada mesa requiere 4 horas y cada silla 2 horas.
-Maximizar la ganancia.
-```
-
-**El sistema automáticamente:**
-
-1. Identifica las variables (mesas, sillas)
-2. Extrae la función objetivo (maximizar ganancia)
-3. Encuentra las restricciones (horas disponibles)
-4. Resuelve el problema con Simplex
-5. Te muestra la solución óptima
-
-**Resultado:**
-
-```
-x1 = 25.0 (mesas)
-x2 = 0.0 (sillas)
-Ganancia máxima = $1,250
-```
+- Documentación: ARQUITECTURA.md | GUIA_IA.md
+- Issues: [GitHub Issues](https://github.com/frangcisneros/simplex-project/issues)
 
 ---
 
-## 🎯 Características Principales
-
-- 🧠 **Inteligencia Artificial** - Usa modelos de lenguaje (Llama, Mistral, Qwen)
-- 🎨 **Few-Shot Learning** - Aprende de ejemplos sin re-entrenar
-- 📝 **Lenguaje Natural** - Escribe problemas en español
-- 🔧 **Configurable** - Múltiples modelos disponibles
-- 📈 **Escalable** - Hasta 50 variables y 100 restricciones
-- 💰 **Gratis** - Usa Ollama localmente sin costo
-- 🔒 **Privado** - Todo se ejecuta en tu computadora
-
----
-
-## 📂 Estructura del Proyecto
-
-```
-simplex-project/
-├── nlp_simplex.py              # Script principal para NLP
-├── simplex.py                  # Solver clásico
-├── GUIA_NLP.md                 # 📖 GUÍA COMPLETA ⭐
-├── README.md                   # Este archivo
-├── requirements.txt            # Dependencias
-├── src/
-│   ├── solver.py              # Algoritmo Simplex
-│   └── nlp/                   # Sistema NLP
-│       ├── config.py          # Configuración y prompts
-│       ├── ollama_processor.py # Procesador con Ollama
-│       ├── processor.py       # Procesador con Transformers
-│       ├── model_generator.py # Generadores de modelos
-│       └── connector.py       # Orquestador
-└── ejemplos/
-    ├── nlp/                   # Ejemplos en lenguaje natural
-    │   ├── problema_simple.txt
-    │   └── problema_complejo.txt
-    └── *.txt                  # Ejemplos formato clásico
-```
-
----
-
-## 🤖 Modelos Soportados
-
-| Modelo              | Tamaño | Precisión  | Recomendado Para        |
-| ------------------- | ------ | ---------- | ----------------------- |
-| **Llama 3.1 8B** ⭐ | 4.7GB  | ⭐⭐⭐⭐⭐ | **Problemas complejos** |
-| Mistral 7B          | 4.1GB  | ⭐⭐⭐⭐   | Problemas generales     |
-| Qwen 2.5 14B        | 9GB    | ⭐⭐⭐⭐⭐ | Matemáticas avanzadas   |
-| Llama 3.2 3B        | 2GB    | ⭐⭐⭐     | Problemas simples       |
-
----
-
-## 📋 Ejemplos de Uso
-
-### Detección automática de formato
-
-```bash
-# El sistema detecta automáticamente si es lenguaje natural o formato clásico
-python nlp_simplex.py ejemplos/nlp/problema_complejo.txt
-python nlp_simplex.py ejemplos/maximizar_basico.txt
-```
-
-### Texto directo
-
-```bash
-python nlp_simplex.py --text "Maximizar 3x + 2y sujeto a x + y <= 4"
-```
-
-### Modo verbose (más información)
-
-```bash
-python nlp_simplex.py --verbose ejemplos/nlp/problema_complejo.txt
-```
-
-### Forzar formato específico
-
-```bash
-# Forzar NLP
-python nlp_simplex.py --nlp --file mi_problema.txt
-
-# Forzar clásico
-python nlp_simplex.py --classic archivo.txt
-```
-
----
-
-## 🔧 Configuración
-
-El sistema usa **Llama 3.1 8B** por defecto (mejor para problemas complejos).
-
-Para cambiar de modelo, edita `src/nlp/config.py`:
-
-```python
-DEFAULT_MODEL = NLPModelType.MISTRAL_7B  # Cambiar aquí
-```
-
----
-
-## 🐛 Solución de Problemas
-
-### "No se pudo conectar con Ollama"
-
-```bash
-# Verificar que Ollama está corriendo
-ollama list
-
-# Instalar el modelo
-ollama pull llama3.1:8b
-```
-
-### Más ayuda
-
-Consulta la **[Guía Completa](GUIA_NLP.md)** para:
-
-- Configuración avanzada
-- Solución de problemas detallada
-- Ejemplos complejos
-- Optimización de rendimiento
-
----
-
-## 📚 Recursos
-
-- **Guía Completa**: [GUIA_NLP.md](GUIA_NLP.md)
-- **Ollama**: https://ollama.ai
-- **Ejemplos**: Carpeta `ejemplos/nlp/`
-
----
-
-## ⭐ Características Avanzadas
-
-### Few-Shot Learning
-
-El sistema incluye ejemplos integrados en el prompt que enseñan al modelo cómo extraer información de diferentes tipos de problemas:
-
-1. Problemas simples (1 instalación, múltiples productos)
-2. Problemas multi-instalación (varias plantas, varios productos)
-3. Problemas de mezclas (materias primas que se combinan)
-
-**Beneficio:** Mejor precisión sin necesidad de re-entrenar el modelo.
-
-### Selección Automática de Modelos
-
-El sistema puede analizar la complejidad del problema y seleccionar automáticamente el modelo más adecuado.
-
-### Validación Automática
-
-Verifica que el problema extraído sea matemáticamente correcto antes de intentar resolverlo.
-
----
-
-## 🎓 Casos de Uso
-
-- ✅ Problemas de producción (maximizar ganancias)
-- ✅ Problemas de distribución (minimizar costos)
-- ✅ Problemas de mezclas (optimizar combinaciones)
-- ✅ Problemas de asignación (recursos limitados)
-
----
-
-## 📞 Ayuda
-
-Para aprender a usar el sistema completo, ver ejemplos detallados, configurar modelos, y solucionar problemas, consulta:
-
-### 👉 [GUIA_NLP.md](GUIA_NLP.md)
-
----
-
-**Última actualización:** Octubre 7, 2025  
-**Versión:** 2.0 con Few-Shot Learning y NLP
+_Versión 3.0 - Octubre 2025_

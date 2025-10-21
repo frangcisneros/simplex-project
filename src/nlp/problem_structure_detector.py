@@ -28,7 +28,7 @@ class ProblemStructureDetector:
 
         Returns:
             Dict con:
-            - problem_type: 'simple', 'multi_facility', 'blending_simple', 'blending_complex'
+            - problem_type: 'simple', 'multi_facility', 'blending_simple', 'blending_complex', 'diet', 'transport'
             - num_facilities: número de plantas/instalaciones
             - num_products: número de productos/tamaños
             - expected_variables: número esperado de variables
@@ -36,6 +36,43 @@ class ProblemStructureDetector:
             - product_names: lista de nombres de productos detectados
         """
         text = problem_text.lower()
+
+        # Detectar tipo especial primero
+        # Problema de dieta
+        diet_keywords = ["dieta", "alimento", "calorías", "proteína", "porción"]
+        if any(keyword in text for keyword in diet_keywords):
+            foods = self._detect_food_items(text)
+            if foods:
+                return {
+                    "problem_type": "diet",
+                    "num_facilities": 1,
+                    "num_products": len(foods),
+                    "expected_variables": len(foods),
+                    "facility_names": [],
+                    "product_names": foods,
+                    "has_blending": False,
+                }
+
+        # Problema de transporte
+        transport_keywords = [
+            "transporte",
+            "transportar",
+            "almacén",
+            "almacen",
+            "tienda",
+        ]
+        if any(keyword in text for keyword in transport_keywords):
+            routes = self._detect_transport_routes(text)
+            if routes:
+                return {
+                    "problem_type": "transport",
+                    "num_facilities": 1,
+                    "num_products": len(routes),
+                    "expected_variables": len(routes),
+                    "facility_names": [],
+                    "product_names": routes,
+                    "has_blending": False,
+                }
 
         # Detectar plantas/instalaciones
         facilities = self._detect_facilities(text)
@@ -125,6 +162,16 @@ class ProblemStructureDetector:
     def _detect_products(self, text: str) -> List[str]:
         """Detecta productos/tamaños mencionados en el texto."""
         products = []
+
+        # Detectar alimentos en problemas de dieta
+        food_items = self._detect_food_items(text)
+        if food_items:
+            return food_items
+
+        # Detectar rutas en problemas de transporte
+        transport_routes = self._detect_transport_routes(text)
+        if transport_routes:
+            return transport_routes
 
         # PRIMERO: Buscar "tres tamaños", "dos productos", etc. (más confiable)
         num_pattern = r"(tres|dos|cuatro|2|3|4)\s+(producto|tamaño|tipo)"
@@ -233,6 +280,78 @@ class ProblemStructureDetector:
                 blends = [f"mezcla_{m.upper()}" for m in sorted(set(matches))]
 
         return blends
+
+    def _detect_food_items(self, text: str) -> List[str]:
+        """Detecta alimentos en problemas de dieta."""
+        foods = []
+
+        # Palabras clave que indican problema de dieta
+        diet_keywords = [
+            "dieta",
+            "alimento",
+            "comida",
+            "porción",
+            "calorías",
+            "proteína",
+        ]
+        is_diet_problem = any(keyword in text for keyword in diet_keywords)
+
+        if not is_diet_problem:
+            return []
+
+        # Alimentos comunes
+        food_patterns = [
+            r"\b(pan|pollo|carne|pescado|vegetales?|verduras?|frutas?|arroz|pasta|leche|huevos?)\b",
+        ]
+
+        for pattern in food_patterns:
+            matches = re.findall(pattern, text)
+            foods.extend(matches)
+
+        # Eliminar duplicados y retornar
+        return list(set(foods))[:10] if foods else []
+
+    def _detect_transport_routes(self, text: str) -> List[str]:
+        """Detecta rutas en problemas de transporte."""
+        # Palabras clave que indican problema de transporte
+        transport_keywords = [
+            "transporte",
+            "transportar",
+            "almacén",
+            "almacen",
+            "tienda",
+            "ruta",
+            "envío",
+        ]
+        is_transport = any(keyword in text for keyword in transport_keywords)
+
+        if not is_transport:
+            return []
+
+        # Contar almacenes y tiendas
+        warehouses = []
+        stores = []
+
+        # Detectar "2 almacenes", "3 tiendas", etc.
+        warehouse_match = re.search(r"(\d+)\s+almacen", text)
+        if warehouse_match:
+            num_warehouses = int(warehouse_match.group(1))
+            warehouses = [f"almacen_{i+1}" for i in range(num_warehouses)]
+
+        store_match = re.search(r"(\d+)\s+tienda", text)
+        if store_match:
+            num_stores = int(store_match.group(1))
+            stores = [f"tienda_{chr(65+i)}" for i in range(num_stores)]  # A, B, C...
+
+        # Crear rutas (almacén × tienda)
+        if warehouses and stores:
+            routes = []
+            for w in warehouses:
+                for s in stores:
+                    routes.append(f"{w}_a_{s}")
+            return routes
+
+        return []
 
     def validate_extracted_variables(
         self, extracted_problem: Dict, structure: Dict

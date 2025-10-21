@@ -272,9 +272,18 @@ class NLPOptimizationConnector(INLPConnector):
             self.logger.info("Step 3: Generating optimization model")
             model = self.model_generator.generate_model(nlp_result.problem)
 
+            # Guardar si era un problema de minimización (para ajustar resultado)
+            was_minimization = model.get("is_minimization", False)
+
             # Paso 5: Resolver modelo
             self.logger.info("Step 4: Solving optimization model")
             solution = self.solver.solve(model)
+
+            # Si el problema original era de minimización, ajustar el valor óptimo
+            if was_minimization and solution.get("status") == "optimal":
+                if "optimal_value" in solution:
+                    solution["optimal_value"] = -solution["optimal_value"]
+                    self.logger.info(f"Adjusted optimal value for minimization problem")
 
             processing_time = time.time() - start_time
 

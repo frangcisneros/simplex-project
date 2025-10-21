@@ -50,9 +50,11 @@ class SimplexModelGenerator(IModelGenerator):
         Proceso:
         1. Extrae coeficientes c de la función objetivo
         2. Construye matriz A con coeficientes de restricciones
-        3. Convierte restricciones >= a <= (multiplicando por -1)
-        4. Divide restricciones = en dos restricciones (<= y >=)
+        3. Convierte TODAS las restricciones a forma estándar (<=)
+        4. Divide restricciones = en dos restricciones
         5. Valida que todas las dimensiones coincidan
+
+        Para minimización: se convierte a maximización (cambiar signo de c)
 
         Args:
             problem: Problema de optimización estructurado
@@ -63,7 +65,14 @@ class SimplexModelGenerator(IModelGenerator):
         try:
             # Extraer función objetivo
             c = problem.objective_coefficients
-            maximize = problem.objective_type == "maximize"
+            is_minimize = problem.objective_type == "minimize"
+
+            # Si es minimización, convertir a maximización negando los coeficientes
+            if is_minimize:
+                c = [-coeff for coeff in c]
+                maximize = True  # Ahora es maximización
+            else:
+                maximize = True
 
             # Construir matriz A y vector b
             A = []
@@ -74,12 +83,13 @@ class SimplexModelGenerator(IModelGenerator):
                 operator = constraint["operator"]
                 rhs = constraint["rhs"]
 
-                # Convertir restricciones >= a <= multiplicando por -1
+                # Convertir TODAS las restricciones a forma estándar (<=)
                 if operator == ">=":
+                    # Convertir >= a <= multiplicando por -1
                     coeffs = [-coeff for coeff in coeffs]
                     rhs = -rhs
                 elif operator == "=":
-                    # Para restricciones de igualdad, agregar dos restricciones
+                    # Para igualdad, agregar dos restricciones (<= y >=)
                     A.append(coeffs)
                     b.append(rhs)
                     A.append([-coeff for coeff in coeffs])
@@ -105,6 +115,7 @@ class SimplexModelGenerator(IModelGenerator):
                 "b": b,
                 "maximize": maximize,
                 "variable_names": problem.variable_names,
+                "is_minimization": is_minimize,  # Para ajustar el resultado final
             }
 
             self.logger.info(
