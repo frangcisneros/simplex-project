@@ -5,7 +5,7 @@ Contiene la lógica de iteración y control del método simplex.
 
 from typing import Dict, Any, List
 import numpy as np
-from tableau import Tableau
+from .tableau import Tableau
 
 
 class SimplexSolver:
