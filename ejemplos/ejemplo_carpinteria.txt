@@ -1,0 +1,5 @@
+MAXIMIZE
+80 50
+SUBJECT TO
+4 2 <= 200
+1 1 <= 60
