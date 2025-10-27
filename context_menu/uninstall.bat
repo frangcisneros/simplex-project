@@ -19,8 +19,9 @@ if %errorlevel% neq 0 (
 echo Eliminando entrada del Registro de Windows...
 echo.
 
-:: Eliminar la entrada del registro
-reg delete "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver" /f
+:: Eliminar las entradas del registro (Windows 10 y 11)
+reg delete "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver" /f 2>nul
+reg delete "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver" /f 2>nul
 
 echo.
 echo ===============================================

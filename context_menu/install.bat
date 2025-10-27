@@ -55,6 +55,24 @@ if %errorlevel% neq 0 (
 )
 echo.
 
+:: Detectar versión de Windows
+echo Detectando version de Windows...
+for /f "tokens=4-5 delims=. " %%i in ('ver') do set VERSION=%%i.%%j
+if "%VERSION%" == "10.0" (
+    for /f "tokens=3" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v CurrentBuild ^| findstr CurrentBuild') do set BUILD=%%a
+    if !BUILD! GEQ 22000 (
+        set "WIN_VERSION=11"
+        echo Windows 11 detectado ^(Build !BUILD!^)
+    ) else (
+        set "WIN_VERSION=10"
+        echo Windows 10 detectado ^(Build !BUILD!^)
+    )
+) else (
+    set "WIN_VERSION=10"
+    echo Windows %VERSION% detectado - usando modo Windows 10
+)
+echo.
+
 :: Verificar permisos de administrador
 net session >nul 2>&1
 if %errorlevel% neq 0 (
@@ -67,14 +85,24 @@ if %errorlevel% neq 0 (
 echo Agregando entrada al Registro de Windows...
 echo.
 
-:: Crear la entrada en el registro para archivos .txt
-:: Usamos el wrapper .bat en lugar de llamar directamente a Python
+:: Registrar para Windows 10 (funciona en todas las versiones)
+echo Registrando para compatibilidad con Windows 10...
 reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver" /ve /d "Resolver con Simplex Solver" /f
 reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver\command" /ve /d "\"%BAT_WRAPPER%\" \"%%1\"" /f
+
+:: Si es Windows 11, agregar también a SystemFileAssociations
+if "%WIN_VERSION%"=="11" (
+    echo Registrando para Windows 11...
+    reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver" /ve /d "Resolver con Simplex Solver" /f
+    reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver\command" /ve /d "\"%BAT_WRAPPER%\" \"%%1\"" /f
+)
 
 :: Si hay un icono, agregarlo
 if exist "%ICON_PATH%" (
     reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver" /v "Icon" /d "%ICON_PATH%" /f
+    if "%WIN_VERSION%"=="11" (
+        reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver" /v "Icon" /d "%ICON_PATH%" /f
+    )
     echo Icono configurado
 )
 
@@ -83,7 +111,14 @@ echo ===============================================
 echo  INSTALACION COMPLETADA EXITOSAMENTE
 echo ===============================================
 echo.
-echo El menu contextual ha sido instalado.
+echo El menu contextual ha sido instalado para Windows %WIN_VERSION%.
+echo.
+if "%WIN_VERSION%"=="11" (
+    echo NOTA: En Windows 11, si no ves la opcion al hacer clic derecho:
+    echo   1. Presiona Shift + Clic derecho
+    echo   2. O selecciona "Mostrar mas opciones"
+    echo.
+)
 echo Ahora puede hacer clic derecho en cualquier archivo .txt
 echo y seleccionar "Resolver con Simplex Solver"
 echo.
