@@ -1,0 +1,1 @@
+Un orfebre fabrica dos tipos de joyas. La unidad de tipo A se hace con 1 g de oro y 1,5 g de plata y se vende a 25 €. La de tipo B se vende a 30 € y lleva 1,5 g de oro y 1 g de plata. Si solo se dispone de 750 g de cada metal, ¿cuántas joyas ha de fabricar de cada tipo para obtener el máximo beneficio?

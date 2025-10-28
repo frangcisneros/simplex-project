@@ -21,7 +21,9 @@ echo.
 
 :: Eliminar las entradas del registro (Windows 10 y 11)
 reg delete "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver" /f 2>nul
+reg delete "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolverAI" /f 2>nul
 reg delete "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver" /f 2>nul
+reg delete "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolverAI" /f 2>nul
 
 echo.
 echo ===============================================

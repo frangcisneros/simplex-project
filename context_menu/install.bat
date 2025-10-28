@@ -13,6 +13,7 @@ set "SCRIPT_DIR=%~dp0"
 set "PROJECT_DIR=%SCRIPT_DIR%.."
 set "PYTHON_SCRIPT=%SCRIPT_DIR%solve_from_context.py"
 set "BAT_WRAPPER=%SCRIPT_DIR%run_solver.bat"
+set "BAT_WRAPPER_AI=%SCRIPT_DIR%run_solver_ai.bat"
 set "ICON_PATH=%SCRIPT_DIR%simplex_icon.ico"
 
 :: Verificar que existe el script de Python
@@ -26,6 +27,13 @@ if not exist "%PYTHON_SCRIPT%" (
 :: Verificar que existe el wrapper batch
 if not exist "%BAT_WRAPPER%" (
     echo ERROR: No se encontro el archivo run_solver.bat
+    echo Asegurese de ejecutar este script desde la carpeta context_menu.
+    pause
+    exit /b 1
+)
+
+if not exist "%BAT_WRAPPER_AI%" (
+    echo ERROR: No se encontro el archivo run_solver_ai.bat
     echo Asegurese de ejecutar este script desde la carpeta context_menu.
     pause
     exit /b 1
@@ -90,18 +98,27 @@ echo Registrando para compatibilidad con Windows 10...
 reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver" /ve /d "Resolver con Simplex Solver" /f
 reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver\command" /ve /d "\"%BAT_WRAPPER%\" \"%%1\"" /f
 
+:: Agregar opción con IA
+reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolverAI" /ve /d "Resolver con Simplex Solver (IA)" /f
+reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolverAI\command" /ve /d "\"%BAT_WRAPPER_AI%\" \"%%1\"" /f
+
 :: Si es Windows 11, agregar también a SystemFileAssociations
 if "%WIN_VERSION%"=="11" (
     echo Registrando para Windows 11...
     reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver" /ve /d "Resolver con Simplex Solver" /f
     reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver\command" /ve /d "\"%BAT_WRAPPER%\" \"%%1\"" /f
+    
+    reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolverAI" /ve /d "Resolver con Simplex Solver (IA)" /f
+    reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolverAI\command" /ve /d "\"%BAT_WRAPPER_AI%\" \"%%1\"" /f
 )
 
 :: Si hay un icono, agregarlo
 if exist "%ICON_PATH%" (
     reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver" /v "Icon" /d "%ICON_PATH%" /f
+    reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolverAI" /v "Icon" /d "%ICON_PATH%" /f
     if "%WIN_VERSION%"=="11" (
         reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver" /v "Icon" /d "%ICON_PATH%" /f
+        reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolverAI" /v "Icon" /d "%ICON_PATH%" /f
     )
     echo Icono configurado
 )
@@ -119,7 +136,10 @@ if "%WIN_VERSION%"=="11" (
     echo   2. O selecciona "Mostrar mas opciones"
     echo.
 )
-echo Ahora puede hacer clic derecho en cualquier archivo .txt
-echo y seleccionar "Resolver con Simplex Solver"
+echo Ahora puede hacer clic derecho en cualquier archivo .txt y ver:
+echo   - "Resolver con Simplex Solver" (metodo clasico)
+echo   - "Resolver con Simplex Solver (IA)" (usa lenguaje natural)
+echo.
+echo NOTA: Para usar IA, asegurese de tener Ollama instalado y corriendo.
 echo.
 pause
