@@ -8,7 +8,7 @@ import argparse
 import os
 from solver import SimplexSolver
 from file_parser import FileParser
-from user_interface import UserInterface
+from src.user_interface import UserInterface
 from input_validator import InputValidator  # Nuevo import
 from reporting_pdf import generate_pdf
 
