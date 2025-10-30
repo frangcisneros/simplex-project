@@ -6,7 +6,7 @@ import os
 from typing import Dict, Optional
 
 try:
-    from export import export_to_pdf
+    from src.export import export_to_pdf
 except Exception:
     # Si export.py no existe o falla la importación, lanzamos una excepción clara
     raise

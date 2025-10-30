@@ -36,6 +36,9 @@ def export_to_pdf(result: dict, filename: str):
         textColor=title_color
     )
 
+    # Color para resaltar texto en resumen y solución
+    highlight_color = "#595959"
+
     # --- Configuración inicial del layout ---
     left_margin = 30
     right_margin = 30
@@ -50,9 +53,6 @@ def export_to_pdf(result: dict, filename: str):
         problem = result["problem"]
         elements.append(Paragraph("Resumen del problema", custom_heading2_style))
         elements.append(Spacer(1, 4))
-
-        # Color
-        highlight_color = "#595959"
 
         # --- Función auxiliar para agregar espacio entre coeficiente y variable ---
         def add_space(expr: str) -> str:
