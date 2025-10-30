@@ -17,10 +17,12 @@ class SimplexSolver:
         self.steps = []  # Historial de pasos para PDF
 
     def _solve_phase(self, maximize: bool) -> Dict[str, Any]:
+        
         """Resuelve una fase del método simplex."""
-        iteration = 0
+        
+        iteration = -1  # Comienza en -1 para que la primera iteración sea 0
 
-        while iteration < self.max_iterations:
+        while iteration < self.max_iterations-1:
             iteration += 1
             print(f"\n--- Iteración {iteration} ---")
 
@@ -60,7 +62,7 @@ class SimplexSolver:
 
             print(f"Variable que sale: fila {leaving_row + 1}")
             print(f"Elemento pivote: {pivot:.4f}")
-
+            
             # Guardar paso para reporte PDF
             self.steps.append(
                 {
@@ -75,7 +77,7 @@ class SimplexSolver:
                     },
                 }
             )
-
+            
             # Realizar pivoteo
             self.tableau.pivot(entering_col, leaving_row)
 
@@ -118,18 +120,6 @@ class SimplexSolver:
         total_iterations = 0
         phase1_iterations = 0
 
-        # Guardar estado inicial para reporte
-        self.steps.append(
-            {
-                "iteration": 0,
-                "tableau": self.tableau.tableau.copy(),
-                "basic_vars": self.tableau.basic_vars.copy(),
-                "entering_var": None,
-                "leaving_var": None,
-                "pivot_coords_next": None,
-            }
-        )
-
         # Fase 1: Si hay variables artificiales
         if self.tableau.artificial_vars:
             print("\n=== FASE 1: Eliminando variables artificiales ===")
@@ -171,8 +161,8 @@ class SimplexSolver:
 
         if phase2_result["status"] == "optimal":
             solution, optimal_value = self.tableau.get_solution(maximize)
-
-            # Guardar estado final para reporte
+            
+            # Guardar estado final para reporte PDF
             self.steps.append(
                 {
                     "iteration": total_iterations,

@@ -1,4 +1,10 @@
-# export.py
+"""
+Módulo encargado de la exportación detallada de resultados a formato PDF.
+Implementa la lógica completa de generación del documento utilizando ReportLab. Incluyendo 
+formateo de texto, resumen del problema, tablas del método simplex, iteraciones, junto al estado
+y solución final del problema. Este módulo es invocado por `reporting_pdf.py`.
+"""
+
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, KeepTogether
@@ -8,13 +14,7 @@ from reportlab.lib.enums import TA_CENTER
 import re
 
 def export_to_pdf(result: dict, filename: str):
-    
-    """
-    Genera un PDF con:
-    - resumen del problema (usando result['problem']) 
-    - Estado y solución final
-    - Detalle de iteraciones (incluyendo tablas intermedias).
-    """
+    """Genera un PDF para `result` y lo guarda en `filename`."""
 
     doc = SimpleDocTemplate(filename, pagesize=letter)
     elements = []
@@ -172,10 +172,10 @@ def export_to_pdf(result: dict, filename: str):
             iter_num = step['iteration']
             
             # Detectar título de la iteración
-            if step["entering_var"] is None:
-                iter_title = f"Iteración {iter_num} – Estado inicial (tableau inicial)"
+            if iter_num == 0:
+                iter_title = f"Iteración 0 – Estado Inicial (tableau inicial)"
             elif idx == len(steps) - 1:
-                iter_title = f"Iteración {iter_num} – Estado final (tableau final)"
+                iter_title = f"Iteración {iter_num} – Estado Final (tableau final)"
             else:
                 iter_title = f"Iteración {iter_num}"
 
@@ -184,13 +184,6 @@ def export_to_pdf(result: dict, filename: str):
 
             # --- Título y subtítulo (a la izquierda) ---
             iteration_block.append(Paragraph(iter_title, styles['Heading3']))
-            if step["entering_var"] is not None:
-                entering_name = format_var_name(step['entering_var'], n_original_vars)
-                leaving_name  = format_var_name(step['leaving_var'], n_original_vars)
-                iteration_block.append(Paragraph(
-                    f"Variable que entra: {entering_name}, Variable que sale: {leaving_name}",
-                    styles['Normal']
-                ))
 
             # 3- Espacio antes de la tabla
             iteration_block.append(Spacer(1, 10))
@@ -199,6 +192,13 @@ def export_to_pdf(result: dict, filename: str):
             tableau_to_show = step["tableau"]
             m, n_plus = tableau_to_show.shape
             n = n_plus - 1  # columnas de variables (RHS no incluida)
+
+            # --- Ajuste de signos para problemas de maximización (solo visual) ---
+            maximize = result.get("maximize", True)
+            if maximize:
+                # Invertir los signos de la fila de la función objetivo antes de mostrar
+                tableau_to_show = tableau_to_show.copy()
+                tableau_to_show[-1, :] *= -1
 
             # Cabecera: VB + nombres (usando format_var_name para consistencia) + b
             header = ["VB"] + [format_var_name(i, n_original_vars) for i in range(n)] + ["b"]
@@ -209,7 +209,11 @@ def export_to_pdf(result: dict, filename: str):
             # Filas
             for row_idx, row in enumerate(tableau_to_show):
                 vb_name = format_var_name(basic_vars[row_idx], n_original_vars) if row_idx < len(basic_vars) else "z"
-                data_row = [vb_name] + [f"{val:.2f}" for val in row]
+                # Corrige los valores -0.00 al formatear
+                data_row = [vb_name] + [
+                    f"{0.00:.2f}" if abs(val) < 1e-9 else f"{val:.2f}"
+                    for val in row
+                ]
                 data.append(data_row)
 
             table = Table(data, repeatRows=1)
@@ -293,6 +297,17 @@ def export_to_pdf(result: dict, filename: str):
 
             # Agregar wrapper_table al bloque de iteración y mantener todo junto
             iteration_block.append(wrapper_table)
+
+            # Mostrar Variable que entra / sale debajo de la tabla
+            if step["entering_var"] is not None:
+                entering_name = format_var_name(step['entering_var'], n_original_vars)
+                leaving_name  = format_var_name(step['leaving_var'], n_original_vars)
+                iteration_block.append(Spacer(1, 5))   # pequeño margen antes del texto
+                iteration_block.append(Paragraph(
+                    f"Variable que entra: {entering_name}, Variable que sale: {leaving_name}",
+                    styles['Normal']
+                ))
+
             iteration_block.append(Spacer(1, 6))
 
             elements.append(KeepTogether(iteration_block))
