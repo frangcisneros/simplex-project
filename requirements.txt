@@ -17,6 +17,7 @@ PuLP
 coloredlogs
 tqdm
 requests
+tabulate
 
 # Development and testing
 pytest
