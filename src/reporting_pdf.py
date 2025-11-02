@@ -2,13 +2,16 @@
 Módulo encargado de la generación de reportes PDF.
 Encapsula la lógica de creación de carpetas, formateo mínimo y delega a `export.export_to_pdf`.
 """
+
 import os
 from typing import Dict, Optional
+from logging_system import logger
 
 try:
-    from src.export import export_to_pdf
-except Exception:
+    from export import export_to_pdf
+except Exception as e:
     # Si export.py no existe o falla la importación, lanzamos una excepción clara
+    logger.error(f"Error al importar módulo export: {str(e)}", exception=e)
     raise
 
 
@@ -23,7 +26,10 @@ def generate_pdf(result: Dict, filename: str, reports_dir: str = "reports") -> s
     Returns:
         La ruta completa del archivo generado.
     """
+    logger.info(f"Generando reporte PDF: {filename} en directorio: {reports_dir}")
+
     if not isinstance(result, dict):
+        logger.error("Resultado no es un diccionario válido")
         raise TypeError("result debe ser un diccionario con la estructura esperada")
 
     # Asegurar carpeta de salida
@@ -42,7 +48,13 @@ def generate_pdf(result: Dict, filename: str, reports_dir: str = "reports") -> s
         b = result.get("b")
         constraint_types = result.get("constraint_types")
         maximize = result.get("maximize")
-        if c is not None and A is not None and b is not None and constraint_types is not None:
+        if (
+            c is not None
+            and A is not None
+            and b is not None
+            and constraint_types is not None
+        ):
+
             def format_constraint(row, rhs, ctype):
                 coeffs = []
                 for j, coef in enumerate(row):
@@ -50,8 +62,10 @@ def generate_pdf(result: Dict, filename: str, reports_dir: str = "reports") -> s
                     coeffs.append(f"{sign}{coef}x{j+1}")
                 return " ".join(coeffs) + f" {ctype} {rhs}"
 
-            objective_str = ("Maximizar" if maximize else "Minimizar") + " z = " + " + ".join(
-                f"{coef}x{i+1}" for i, coef in enumerate(c)
+            objective_str = (
+                ("Maximizar" if maximize else "Minimizar")
+                + " z = "
+                + " + ".join(f"{coef}x{i+1}" for i, coef in enumerate(c))
             )
 
             constraints_str = [
@@ -63,8 +77,16 @@ def generate_pdf(result: Dict, filename: str, reports_dir: str = "reports") -> s
                 "objective_str": objective_str,
                 "constraints_str": constraints_str,
             }
+            logger.debug("Información del problema preparada para el reporte")
 
     # Delegar la generación del PDF al módulo export (reportlab)
-    export_to_pdf(result, output_path)
+    try:
+        export_to_pdf(result, output_path)
+        logger.info(f"Reporte PDF generado exitosamente: {output_path}")
+        logger.log_file_operation("generate_pdf", output_path, True)
+    except Exception as e:
+        logger.error(f"Error al generar PDF: {str(e)}", exception=e)
+        logger.log_file_operation("generate_pdf", output_path, False, str(e))
+        raise
 
     return output_path

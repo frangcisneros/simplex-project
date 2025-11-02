@@ -5,6 +5,7 @@ Script principal para ejecutar el Simplex Solver
 
 import sys
 import os
+
 """import argparse
 
 # Flags
