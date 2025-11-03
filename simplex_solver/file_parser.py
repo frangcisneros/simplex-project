@@ -8,8 +8,8 @@ import os
 from typing import List, Tuple, Optional
 
 # Agregar import del validador
-from input_validator import InputValidator
-from logging_system import logger
+from simplex_solver.input_validator import InputValidator
+from simplex_solver.logging_system import logger
 
 
 class FileParser:
@@ -42,9 +42,7 @@ class FileParser:
 
             logger.debug(f"Líneas leídas: {len(lines)}")
             maximize = FileParser._parse_optimization_type(lines[0])
-            logger.debug(
-                f"Tipo de optimización: {'Maximización' if maximize else 'Minimización'}"
-            )
+            logger.debug(f"Tipo de optimización: {'Maximización' if maximize else 'Minimización'}")
 
             c = FileParser._parse_objective_function(lines[1])
             logger.debug(f"Función objetivo parseada: {len(c)} variables")
@@ -60,18 +58,14 @@ class FileParser:
                 logger.error(f"Problema en archivo inválido: {error_msg}")
                 raise ValueError(f"Problema en archivo inválido: {error_msg}")
 
-            logger.info(
-                f"Archivo parseado exitosamente: {len(c)} vars, {len(A)} restricciones"
-            )
+            logger.info(f"Archivo parseado exitosamente: {len(c)} vars, {len(A)} restricciones")
             return c, A, b, constraint_types, maximize
 
         except FileNotFoundError as e:
             logger.log_file_operation("read", filename, False, str(e))
             raise
         except Exception as e:
-            logger.error(
-                f"Error al parsear archivo '{filename}': {str(e)}", exception=e
-            )
+            logger.error(f"Error al parsear archivo '{filename}': {str(e)}", exception=e)
             logger.log_file_operation("read", filename, False, str(e))
             raise ValueError(f"Error al leer el archivo: {e}")
 

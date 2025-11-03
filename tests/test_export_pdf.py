@@ -12,8 +12,8 @@ import tempfile
 # Agregar el directorio padre al path para importar módulos desde src/
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.solver import SimplexSolver
-from src.reporting_pdf import generate_pdf
+from simplex_solver.solver import SimplexSolver
+from simplex_solver.reporting_pdf import generate_pdf
 
 
 class TestPDFExport(unittest.TestCase):

@@ -12,8 +12,7 @@ from pathlib import Path
 from typing import List, Optional
 
 # Importar el analizador de sistema
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-from system_analyzer import SystemAnalyzer
+from simplex_solver.system_analyzer import SystemAnalyzer
 
 
 class Color:
@@ -41,6 +40,20 @@ def enable_ansi_colors():
             pass
 
 
+def is_admin():
+    """Verifica si el script se está ejecutando con permisos de administrador."""
+    if platform.system() == "Windows":
+        try:
+            import ctypes
+
+            return ctypes.windll.shell32.IsUserAnAdmin() != 0
+        except:
+            return False
+    else:
+        # En Unix/Linux, verificar si es root
+        return os.geteuid() == 0
+
+
 class SimplexInstaller:
     """Instalador interactivo del Simplex Solver."""
 
@@ -49,7 +62,72 @@ class SimplexInstaller:
         self.install_ollama = False
         self.selected_models = []
         self.install_context_menu = False
-        self.project_root = Path(__file__).parent.resolve()
+        self.is_admin = is_admin()  # Detectar si tiene permisos de administrador
+        self.installation_log = []  # Log de operaciones realizadas
+        # Detectar si estamos corriendo como .exe empaquetado
+        if getattr(sys, "frozen", False):
+            # Corriendo como .exe - PyInstaller extrae archivos a sys._MEIPASS
+            self.project_root = Path(sys._MEIPASS)
+        else:
+            # Corriendo como script normal
+            self.project_root = Path(__file__).parent.resolve()
+
+    def _find_python_executable(self) -> Optional[str]:
+        """Encuentra el ejecutable de Python en el sistema."""
+        # Si estamos corriendo como .exe, sys.executable apunta al .exe
+        # Necesitamos buscar el Python del sistema
+
+        # Intentar varios métodos para encontrar Python
+        possible_pythons = []
+
+        # 1. Buscar en PATH
+        try:
+            result = subprocess.run(
+                ["where", "python"] if os.name == "nt" else ["which", "python"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if result.returncode == 0:
+                pythons = result.stdout.strip().split("\n")
+                possible_pythons.extend([p.strip() for p in pythons if p.strip()])
+        except:
+            pass
+
+        # 2. Verificar rutas comunes en Windows
+        if os.name == "nt":
+            common_paths = [
+                Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Python",
+                Path("C:/Python314"),
+                Path("C:/Python313"),
+                Path("C:/Python312"),
+                Path("C:/Python311"),
+                Path("C:/Python310"),
+                Path("C:/Python39"),
+            ]
+
+            for base_path in common_paths:
+                if base_path.exists():
+                    python_exe = base_path / "python.exe"
+                    if python_exe.exists():
+                        possible_pythons.append(str(python_exe))
+
+        # 3. Si sys.executable no es un .exe del instalador, usarlo
+        if not sys.executable.endswith("SimplexInstaller.exe"):
+            possible_pythons.insert(0, sys.executable)
+
+        # Verificar que el Python encontrado funcione
+        for python_path in possible_pythons:
+            try:
+                result = subprocess.run(
+                    [python_path, "--version"], capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    return python_path
+            except:
+                continue
+
+        return None
 
     def clear_screen(self):
         """Limpia la pantalla de la consola."""
@@ -82,15 +160,18 @@ class SimplexInstaller:
         """Imprime un error."""
         print(f"{Color.RED}✗ {message}{Color.RESET}")
 
+    def log_operation(self, operation: str, success: bool, details: str = ""):
+        """Registra una operación en el log de instalación."""
+        status = "✓" if success else "✗"
+        self.installation_log.append(
+            {"operation": operation, "success": success, "details": details, "status": status}
+        )
+
     def ask_yes_no(self, question: str, default: bool = True) -> bool:
         """Pregunta sí/no al usuario."""
         options = "[S/n]" if default else "[s/N]"
         while True:
-            response = (
-                input(f"{Color.YELLOW}? {question} {options}: {Color.RESET}")
-                .strip()
-                .lower()
-            )
+            response = input(f"{Color.YELLOW}? {question} {options}: {Color.RESET}").strip().lower()
 
             if response == "":
                 return default
@@ -116,9 +197,7 @@ class SimplexInstaller:
                 if 1 <= choice <= len(options):
                     return choice - 1
                 else:
-                    self.print_warning(
-                        f"Por favor elige un número entre 1 y {len(options)}"
-                    )
+                    self.print_warning(f"Por favor elige un número entre 1 y {len(options)}")
             except ValueError:
                 self.print_warning("Por favor ingresa un número válido")
 
@@ -127,14 +206,26 @@ class SimplexInstaller:
         self.clear_screen()
         self.print_header("INSTALADOR DE SIMPLEX SOLVER")
 
-        print(
-            f"{Color.WHITE}Bienvenido al instalador interactivo del Simplex Solver.{Color.RESET}"
-        )
+        if self.is_admin:
+            print(f"{Color.GREEN}✓ Ejecutando con permisos de administrador{Color.RESET}")
+            print(f"{Color.GREEN}  El menú contextual se instalará automáticamente{Color.RESET}")
+        else:
+            print(f"{Color.YELLOW}⚠ Ejecutando sin permisos de administrador{Color.RESET}")
+            print(f"{Color.YELLOW}  El menú contextual no se podrá instalar{Color.RESET}")
+        print()
+        print(f"{Color.WHITE}Bienvenido al instalador interactivo del Simplex Solver.{Color.RESET}")
         print(f"{Color.WHITE}Este asistente te ayudará a:{Color.RESET}\n")
         print("  • Analizar las capacidades de tu sistema")
         print("  • Instalar Ollama (opcional)")
         print("  • Descargar modelos de IA recomendados")
-        print("  • Configurar el menú contextual de Windows")
+        print(
+            "  • Configurar el menú contextual de Windows"
+            + (
+                f" {Color.GREEN}(automático){Color.RESET}"
+                if self.is_admin
+                else f" {Color.YELLOW}(requiere admin){Color.RESET}"
+            )
+        )
         print("  • Instalar todas las dependencias necesarias")
 
         print(f"\n{Color.CYAN}Presiona Enter para continuar...{Color.RESET}")
@@ -148,9 +239,7 @@ class SimplexInstaller:
         # Mostrar información del sistema
         info = self.analyzer.get_system_info()
         for key, value in info.items():
-            print(
-                f"  {Color.WHITE}{key:20}{Color.RESET}: {Color.CYAN}{value}{Color.RESET}"
-            )
+            print(f"  {Color.WHITE}{key:20}{Color.RESET}: {Color.CYAN}{value}{Color.RESET}")
 
         # Verificar compatibilidad con Ollama
         print()
@@ -184,9 +273,7 @@ class SimplexInstaller:
             self.print_info("Puedes continuar sin Ollama usando solo el solver básico.")
             self.install_ollama = False
         else:
-            self.install_ollama = self.ask_yes_no(
-                "¿Deseas instalar Ollama?", default=True
-            )
+            self.install_ollama = self.ask_yes_no("¿Deseas instalar Ollama?", default=True)
 
     def select_ai_models(self):
         """Permite seleccionar los modelos de IA a instalar."""
@@ -198,9 +285,7 @@ class SimplexInstaller:
 
         recommendations = self.analyzer.get_model_recommendations()
 
-        print(
-            f"{Color.WHITE}Modelos disponibles (ordenados por tamaño):{Color.RESET}\n"
-        )
+        print(f"{Color.WHITE}Modelos disponibles (ordenados por tamaño):{Color.RESET}\n")
 
         # Mostrar modelos con información detallada
         for i, rec in enumerate(recommendations, 1):
@@ -224,15 +309,11 @@ class SimplexInstaller:
 
         while True:
             choice = (
-                input(f"\n{Color.YELLOW}Elige una opción (A/B/C): {Color.RESET}")
-                .strip()
-                .upper()
+                input(f"\n{Color.YELLOW}Elige una opción (A/B/C): {Color.RESET}").strip().upper()
             )
 
             if choice == "A":
-                self.selected_models = [
-                    rec.name for rec in recommendations if rec.recommended
-                ]
+                self.selected_models = [rec.name for rec in recommendations if rec.recommended]
                 if self.selected_models:
                     print(f"\n{Color.GREEN}Modelos seleccionados:{Color.RESET}")
                     for model in self.selected_models:
@@ -263,18 +344,12 @@ class SimplexInstaller:
         """Permite seleccionar modelos manualmente."""
         selected = []
 
-        print(
-            f"\n{Color.WHITE}Selecciona los modelos que deseas instalar:{Color.RESET}"
-        )
-        print(
-            f"{Color.CYAN}(Ingresa los números separados por comas, ej: 1,3,5){Color.RESET}"
-        )
+        print(f"\n{Color.WHITE}Selecciona los modelos que deseas instalar:{Color.RESET}")
+        print(f"{Color.CYAN}(Ingresa los números separados por comas, ej: 1,3,5){Color.RESET}")
 
         while True:
             try:
-                response = input(
-                    f"\n{Color.YELLOW}Números de modelos: {Color.RESET}"
-                ).strip()
+                response = input(f"\n{Color.YELLOW}Números de modelos: {Color.RESET}").strip()
 
                 if not response:
                     break
@@ -296,14 +371,12 @@ class SimplexInstaller:
                     break
 
             except ValueError:
-                self.print_warning(
-                    "Por favor ingresa números válidos separados por comas"
-                )
+                self.print_warning("Por favor ingresa números válidos separados por comas")
 
         return selected
 
     def ask_context_menu(self):
-        """Pregunta si desea instalar el menú contextual."""
+        """Pregunta si desea instalar el menú contextual (o instala automáticamente si es admin)."""
         self.clear_screen()
         self.print_header("MENÚ CONTEXTUAL DE WINDOWS")
 
@@ -316,9 +389,26 @@ class SimplexInstaller:
         print("  • Acceso rápido sin abrir la línea de comandos")
         print()
 
-        self.install_context_menu = self.ask_yes_no(
-            "¿Deseas instalar el menú contextual?", default=True
-        )
+        # Si estamos ejecutando como administrador, instalar automáticamente
+        if self.is_admin and platform.system() == "Windows":
+            self.print_success(
+                "✓ Ejecutando como administrador - El menú contextual se instalará automáticamente"
+            )
+            self.install_context_menu = True
+            print(f"\n{Color.CYAN}Presiona Enter para continuar...{Color.RESET}")
+            input()
+        else:
+            # Si no es admin, preguntar (aunque probablemente no se pueda instalar)
+            if platform.system() == "Windows" and not self.is_admin:
+                self.print_warning("⚠ No se detectaron permisos de administrador")
+                self.print_info(
+                    "  El menú contextual requiere permisos de administrador para instalarse"
+                )
+                print()
+
+            self.install_context_menu = self.ask_yes_no(
+                "¿Deseas instalar el menú contextual?", default=self.is_admin
+            )
 
     def show_installation_summary(self):
         """Muestra un resumen de lo que se va a instalar."""
@@ -366,6 +456,15 @@ class SimplexInstaller:
         """Instala las dependencias de Python."""
         self.print_section("Instalando Dependencias de Python")
 
+        # Detectar el ejecutable de Python del sistema
+        python_exe = self._find_python_executable()
+        if not python_exe:
+            self.print_error("No se pudo encontrar Python en el sistema")
+            self.print_info("Por favor, instala Python desde https://www.python.org/")
+            return False
+
+        self.print_info(f"Usando Python: {python_exe}")
+
         requirements_file = self.project_root / "requirements.txt"
 
         if not requirements_file.exists():
@@ -373,21 +472,68 @@ class SimplexInstaller:
             return False
 
         try:
-            self.print_info("Instalando dependencias básicas...")
-            cmd = [sys.executable, "-m", "pip", "install", "-r", str(requirements_file)]
+            # Leer las dependencias del archivo
+            with open(requirements_file, "r") as f:
+                packages = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            total_packages = len(packages)
+            self.print_info(f"Se instalarán {total_packages} paquetes...")
+            print()
 
-            if result.returncode == 0:
-                self.print_success("Dependencias instaladas correctamente")
+            # Instalar cada paquete y mostrar progreso
+            installed = 0
+            for i, package in enumerate(packages, 1):
+                # Barra de progreso
+                progress = int((i / total_packages) * 40)
+                bar = "█" * progress + "░" * (40 - progress)
+                percentage = int((i / total_packages) * 100)
+
+                print(
+                    f"\r  [{bar}] {percentage}% - Instalando: {package[:40]:<40}",
+                    end="",
+                    flush=True,
+                )
+
+                # Instalar el paquete
+                cmd = [python_exe, "-m", "pip", "install", package, "-q"]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+
+                if result.returncode == 0:
+                    installed += 1
+                else:
+                    print()  # Nueva línea
+                    self.print_warning(f"No se pudo instalar {package}")
+
+            print()  # Nueva línea después de la barra
+            print()
+
+            if installed == total_packages:
+                self.print_success(
+                    f"✓ {installed}/{total_packages} dependencias instaladas correctamente"
+                )
+                self.log_operation(
+                    "Dependencias Python", True, f"{installed}/{total_packages} paquetes"
+                )
+                return True
+            elif installed > 0:
+                self.print_warning(
+                    f"⚠ {installed}/{total_packages} dependencias instaladas (algunas fallaron)"
+                )
+                self.log_operation(
+                    "Dependencias Python",
+                    True,
+                    f"{installed}/{total_packages} paquetes (algunas fallaron)",
+                )
                 return True
             else:
-                self.print_error("Error al instalar dependencias")
-                print(result.stderr)
+                self.print_error("✗ No se pudieron instalar las dependencias")
+                self.log_operation("Dependencias Python", False, "Error al instalar paquetes")
                 return False
 
         except Exception as e:
+            print()  # Nueva línea
             self.print_error(f"Error: {e}")
+            self.log_operation("Dependencias Python", False, str(e))
             return False
 
     def install_ollama_component(self):
@@ -405,6 +551,7 @@ class SimplexInstaller:
 
             if result.returncode == 0:
                 self.print_success(f"Ollama ya está instalado: {result.stdout.strip()}")
+                self.log_operation("Ollama", True, "Ya instalado")
                 return True
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
@@ -426,9 +573,8 @@ class SimplexInstaller:
             except:
                 self.print_warning("No se pudo abrir el navegador automáticamente")
 
-        self.print_warning(
-            "Completa la instalación de Ollama y vuelve a ejecutar este instalador"
-        )
+        self.print_warning("Completa la instalación de Ollama y vuelve a ejecutar este instalador")
+        self.log_operation("Ollama", False, "No instalado - requiere instalación manual")
         return False
 
     def download_ai_models(self):
@@ -440,9 +586,7 @@ class SimplexInstaller:
 
         # Verificar que Ollama esté disponible
         try:
-            subprocess.run(
-                ["ollama", "--version"], capture_output=True, timeout=5, check=True
-            )
+            subprocess.run(["ollama", "--version"], capture_output=True, timeout=5, check=True)
         except (
             FileNotFoundError,
             subprocess.TimeoutExpired,
@@ -452,8 +596,11 @@ class SimplexInstaller:
             return False
 
         success = True
-        for model in self.selected_models:
-            self.print_info(f"Descargando {model}...")
+        total_models = len(self.selected_models)
+
+        for idx, model in enumerate(self.selected_models, 1):
+            print(f"\n{Color.CYAN}[{idx}/{total_models}] Descargando {model}...{Color.RESET}")
+            print("-" * 70)
 
             try:
                 # Mostrar progreso en tiempo real
@@ -461,23 +608,31 @@ class SimplexInstaller:
                     ["ollama", "pull", model],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    text=True,
+                    encoding="utf-8",
+                    errors="replace",  # Reemplaza caracteres inválidos en lugar de fallar
                     bufsize=1,
                 )
 
-                for line in process.stdout:
-                    print(f"  {line.rstrip()}")
+                if process.stdout:
+                    for line in process.stdout:
+                        # Limpiar y mostrar la línea con indentación
+                        clean_line = line.rstrip()
+                        if clean_line:
+                            print(f"  {clean_line}")
 
                 process.wait()
 
                 if process.returncode == 0:
-                    self.print_success(f"Modelo {model} descargado correctamente")
+                    self.print_success(f"✓ Modelo {model} descargado correctamente")
+                    self.log_operation(f"Modelo IA: {model}", True, "Descargado")
                 else:
-                    self.print_error(f"Error al descargar {model}")
+                    self.print_error(f"✗ Error al descargar {model}")
+                    self.log_operation(f"Modelo IA: {model}", False, "Error en descarga")
                     success = False
 
             except Exception as e:
-                self.print_error(f"Error al descargar {model}: {e}")
+                self.print_error(f"✗ Error al descargar {model}: {e}")
+                self.log_operation(f"Modelo IA: {model}", False, str(e))
                 success = False
 
         return success
@@ -489,43 +644,139 @@ class SimplexInstaller:
 
         self.print_section("Instalando Menú Contextual")
 
-        install_bat = self.project_root / "context_menu" / "install.bat"
+        # Verificar permisos de administrador
+        if not self.is_admin and platform.system() == "Windows":
+            self.print_error(
+                "Se requieren permisos de administrador para instalar el menú contextual"
+            )
+            self.print_info("Por favor, ejecuta el instalador como administrador")
+            self.log_operation("Menú Contextual", False, "Sin permisos de administrador")
+            return False
 
-        if not install_bat.exists():
-            self.print_error(f"No se encontró {install_bat}")
+        if platform.system() != "Windows":
+            self.print_error("El menú contextual solo está disponible en Windows")
+            self.log_operation("Menú Contextual", False, "Solo disponible en Windows")
             return False
 
         try:
-            self.print_info("Ejecutando instalador del menú contextual...")
-            self.print_warning("Esto requiere permisos de administrador")
+            self.print_info("Configurando menú contextual de Windows...")
+            print()
+            print(f"  {Color.CYAN}► Creando entradas en el registro{Color.RESET}")
+            print(f"  {Color.CYAN}► Configurando comandos del menú{Color.RESET}")
+            print()
 
-            # Ejecutar el batch con permisos de administrador
-            if platform.system() == "Windows":
-                subprocess.run(
-                    ["cmd", "/c", str(install_bat)],
-                    cwd=str(install_bat.parent),
-                    check=True,
+            # Rutas necesarias
+            context_menu_dir = self.project_root / "context_menu"
+            bat_wrapper = context_menu_dir / "run_solver.bat"
+            bat_wrapper_ai = context_menu_dir / "run_solver_ai.bat"
+
+            # Verificar que existen los archivos
+            if not bat_wrapper.exists():
+                self.print_error(f"No se encontró {bat_wrapper}")
+                self.log_operation(
+                    "Menú Contextual", False, f"Archivo no encontrado: run_solver.bat"
                 )
-
-                self.print_success("Menú contextual instalado correctamente")
-                return True
-            else:
-                self.print_error("El menú contextual solo está disponible en Windows")
                 return False
 
-        except subprocess.CalledProcessError as e:
-            self.print_error(f"Error al instalar el menú contextual: {e}")
-            return False
+            if not bat_wrapper_ai.exists():
+                self.print_error(f"No se encontró {bat_wrapper_ai}")
+                self.log_operation(
+                    "Menú Contextual", False, f"Archivo no encontrado: run_solver_ai.bat"
+                )
+                return False
+
+            # Crear las entradas del registro usando Python directamente
+            import winreg
+
+            # Configurar para archivos .txt
+            entries = [
+                # Opción normal
+                (r"txtfile\shell\SimplexSolver", "", "Resolver con Simplex Solver"),
+                (r"txtfile\shell\SimplexSolver\command", "", f'"{bat_wrapper}" "%1"'),
+                # Opción con IA
+                (r"txtfile\shell\SimplexSolverAI", "", "Resolver con Simplex Solver (IA)"),
+                (r"txtfile\shell\SimplexSolverAI\command", "", f'"{bat_wrapper_ai}" "%1"'),
+            ]
+
+            # Agregar entradas
+            for key_path, value_name, value_data in entries:
+                try:
+                    key = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, key_path)
+                    winreg.SetValueEx(key, value_name, 0, winreg.REG_SZ, value_data)
+                    winreg.CloseKey(key)
+                except Exception as e:
+                    self.print_error(f"Error al crear {key_path}: {e}")
+                    self.log_operation(
+                        "Menú Contextual", False, f"Error en registro: {str(e)[:100]}"
+                    )
+                    return False
+
+            print(f"  {Color.GREEN}✓ Entradas del registro creadas{Color.RESET}")
+            print(f"  {Color.GREEN}✓ Comandos configurados{Color.RESET}")
+            self.print_success("✓ Menú contextual instalado correctamente")
+            self.log_operation("Menú Contextual", True, "Registrado en Windows")
+            return True
+
         except Exception as e:
             self.print_error(f"Error inesperado: {e}")
+            self.log_operation("Menú Contextual", False, str(e))
             return False
 
     def show_completion(self):
-        """Muestra el mensaje de finalización."""
+        """Muestra el mensaje de finalización con log de instalación."""
         self.clear_screen()
         self.print_header("INSTALACIÓN COMPLETADA")
 
-        self.print_success("El Simplex Solver ha sido instalado correctamente")
+        # Mostrar log de instalación
+        print(
+            f"\n{Color.WHITE}═══ REGISTRO DE INSTALACIÓN ══════════════════════════════════════{Color.RESET}\n"
+        )
+
+        if self.installation_log:
+            for entry in self.installation_log:
+                status_color = Color.GREEN if entry["success"] else Color.RED
+                print(
+                    f"  {status_color}{entry['status']}{Color.RESET} {Color.WHITE}{entry['operation']:<30}{Color.RESET}",
+                    end="",
+                )
+                if entry["details"]:
+                    print(f" - {Color.CYAN}{entry['details']}{Color.RESET}")
+                else:
+                    print()
+        else:
+            print(f"  {Color.YELLOW}(No hay operaciones registradas){Color.RESET}")
+
+        print(
+            f"\n{Color.WHITE}══════════════════════════════════════════════════════════════════{Color.RESET}\n"
+        )
+
+        # Contar éxitos y fallos
+        total = len(self.installation_log)
+        successes = sum(1 for entry in self.installation_log if entry["success"])
+        failures = total - successes
+
+        if failures == 0:
+            self.print_success(
+                f"✓ Todas las operaciones completadas exitosamente ({successes}/{total})"
+            )
+        else:
+            self.print_warning(
+                f"⚠ {successes}/{total} operaciones exitosas, {failures} con problemas"
+            )
+
+            # Mostrar detalles de los errores
+            print(f"\n{Color.YELLOW}Detalles de los problemas:{Color.RESET}")
+            for entry in self.installation_log:
+                if not entry["success"]:
+                    print(
+                        f"  {Color.RED}•{Color.RESET} {Color.WHITE}{entry['operation']}{Color.RESET}"
+                    )
+                    if entry["details"]:
+                        # Mostrar detalles completos del error
+                        details_lines = entry["details"].split(" | ")
+                        for detail in details_lines:
+                            print(f"    {Color.CYAN}{detail}{Color.RESET}")
+            print()
 
         print(f"\n{Color.WHITE}Próximos pasos:{Color.RESET}\n")
 
@@ -533,9 +784,7 @@ class SimplexInstaller:
         print(f"   {Color.CYAN}python simplex.py --interactive{Color.RESET}")
 
         print(f"\n2. Para resolver un archivo:")
-        print(
-            f"   {Color.CYAN}python simplex.py ejemplos/ejemplo_maximizacion.txt{Color.RESET}"
-        )
+        print(f"   {Color.CYAN}python simplex.py ejemplos/ejemplo_maximizacion.txt{Color.RESET}")
 
         if self.install_ollama and self.selected_models:
             print(f"\n3. Para usar el modo IA:")
@@ -555,6 +804,10 @@ class SimplexInstaller:
         print(f"  • ejemplos/ - Problemas de ejemplo")
 
         print(f"\n{Color.GREEN}¡Gracias por usar Simplex Solver!{Color.RESET}\n")
+
+        # Esperar antes de cerrar
+        print(f"{Color.CYAN}Presiona Enter para cerrar el instalador...{Color.RESET}")
+        input()
 
     def run(self):
         """Ejecuta el instalador."""
@@ -583,22 +836,76 @@ class SimplexInstaller:
             self.clear_screen()
             self.print_header("PROCESO DE INSTALACIÓN")
 
+            # Calcular total de tareas
+            total_tasks = 1  # Dependencias siempre
+            if self.install_ollama:
+                total_tasks += 1
+                if self.selected_models:
+                    total_tasks += len(self.selected_models)
+            if self.install_context_menu:
+                total_tasks += 1
+
+            current_task = 0
+
+            def show_overall_progress(task_name, task_num, total):
+                """Muestra el progreso general."""
+                progress = int((task_num / total) * 50)
+                bar = "█" * progress + "░" * (50 - progress)
+                percentage = int((task_num / total) * 100)
+                print(
+                    f"\n{Color.CYAN}╔══════════════════════════════════════════════════════════════════════╗{Color.RESET}"
+                )
+                print(
+                    f"{Color.CYAN}║{Color.RESET} PROGRESO GENERAL: [{bar}] {percentage}%{' ' * (70 - 34 - len(str(percentage)))}║"
+                )
+                print(
+                    f"{Color.CYAN}║{Color.RESET} Tarea {task_num}/{total}: {task_name[:52]:<52}{' ' * (70 - 67)}║"
+                )
+                print(
+                    f"{Color.CYAN}╚══════════════════════════════════════════════════════════════════════╝{Color.RESET}\n"
+                )
+
             # Instalar dependencias de Python
+            current_task += 1
+            show_overall_progress("Instalando dependencias de Python", current_task, total_tasks)
             if not self.install_python_dependencies():
                 self.print_error("Fallo en la instalación de dependencias")
                 return False
 
             # Instalar Ollama
             if self.install_ollama:
+                current_task += 1
+                show_overall_progress("Verificando Ollama", current_task, total_tasks)
                 if not self.install_ollama_component():
                     self.print_warning("Continúa la instalación sin Ollama")
                 else:
                     # Descargar modelos
-                    self.download_ai_models()
+                    if self.selected_models:
+                        for idx, model in enumerate(self.selected_models, 1):
+                            current_task += 1
+                            show_overall_progress(
+                                f"Descargando modelo {model}", current_task, total_tasks
+                            )
+                            # La descarga ya muestra su propio progreso
+                        self.download_ai_models()
 
             # Instalar menú contextual
             if self.install_context_menu:
+                current_task += 1
+                show_overall_progress("Instalando menú contextual", current_task, total_tasks)
                 self.install_context_menu_component()
+
+            # Mostrar completado
+            print(
+                f"\n{Color.CYAN}╔══════════════════════════════════════════════════════════════════════╗{Color.RESET}"
+            )
+            print(f"{Color.CYAN}║{Color.RESET} PROGRESO GENERAL: [{'█' * 50}] 100%{' ' * 13}║")
+            print(
+                f"{Color.CYAN}║{Color.RESET} {Color.GREEN}✓ TODAS LAS TAREAS COMPLETADAS{Color.RESET}{' ' * 39}║"
+            )
+            print(
+                f"{Color.CYAN}╚══════════════════════════════════════════════════════════════════════╝{Color.RESET}\n"
+            )
 
             # Paso 8: Finalización
             self.show_completion()
@@ -606,9 +913,7 @@ class SimplexInstaller:
             return True
 
         except KeyboardInterrupt:
-            print(
-                f"\n\n{Color.YELLOW}Instalación cancelada por el usuario{Color.RESET}"
-            )
+            print(f"\n\n{Color.YELLOW}Instalación cancelada por el usuario{Color.RESET}")
             return False
         except Exception as e:
             self.print_error(f"Error inesperado: {e}")

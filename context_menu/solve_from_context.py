@@ -10,14 +10,13 @@ from pathlib import Path
 
 # Obtener el directorio raíz del proyecto (parent de context_menu)
 PROJECT_ROOT = Path(__file__).parent.parent
-SRC_DIR = PROJECT_ROOT / "src"
-sys.path.insert(0, str(SRC_DIR))
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from solver import SimplexSolver
-from file_parser import FileParser
-from user_interface import UserInterface
-from input_validator import InputValidator
-from reporting_pdf import generate_pdf
+from simplex_solver.solver import SimplexSolver
+from simplex_solver.file_parser import FileParser
+from simplex_solver.user_interface import UserInterface
+from simplex_solver.input_validator import InputValidator
+from simplex_solver.reporting_pdf import generate_pdf
 
 
 def solve_from_file(filepath):
@@ -38,9 +37,7 @@ def solve_from_file(filepath):
         c, A, b, constraint_types, maximize = FileParser.parse_file(filepath)
 
         # Validar el problema
-        is_valid, error_msg = InputValidator.validate_problem(
-            c, A, b, constraint_types, maximize
-        )
+        is_valid, error_msg = InputValidator.validate_problem(c, A, b, constraint_types, maximize)
         if not is_valid:
             print(f"\n❌ ERROR: {error_msg}")
             print("El problema no puede ser resuelto. Por favor, corrija los datos.")

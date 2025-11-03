@@ -13,7 +13,6 @@ import tempfile
 # Agregar el directorio raíz al path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT / "context_menu"))
 
 
@@ -62,12 +61,7 @@ SUBJECT TO
 
                 # Verificar que se imprimieron mensajes clave
                 printed_text = " ".join(
-                    [
-                        str(arg)
-                        for call in mock_print.call_args_list
-                        for arg in call[0]
-                        if call[0]
-                    ]
+                    [str(arg) for call in mock_print.call_args_list for arg in call[0] if call[0]]
                 )
 
                 self.assertIn("SIMPLEX SOLVER", printed_text)
@@ -93,12 +87,7 @@ SUBJECT TO
                 solve_from_context.solve_from_file(filepath)
 
                 printed_text = " ".join(
-                    [
-                        str(arg)
-                        for call in mock_print.call_args_list
-                        for arg in call[0]
-                        if call[0]
-                    ]
+                    [str(arg) for call in mock_print.call_args_list for arg in call[0] if call[0]]
                 )
 
                 self.assertIn("SIMPLEX SOLVER", printed_text)
@@ -228,7 +217,7 @@ class TestContextMenuExamples(unittest.TestCase):
 
     def test_ejemplos_are_parseable(self):
         """Verifica que los ejemplos se pueden parsear correctamente."""
-        from src.file_parser import FileParser
+        from simplex_solver.file_parser import FileParser
 
         ejemplos = [
             "ejemplo_maximizacion.txt",
@@ -240,9 +229,7 @@ class TestContextMenuExamples(unittest.TestCase):
             ejemplo_path = self.ejemplos_dir / ejemplo
             if ejemplo_path.exists():
                 try:
-                    c, A, b, constraint_types, maximize = FileParser.parse_file(
-                        str(ejemplo_path)
-                    )
+                    c, A, b, constraint_types, maximize = FileParser.parse_file(str(ejemplo_path))
 
                     # Verificar que los datos parseados son válidos
                     self.assertIsNotNone(c, f"{ejemplo}: c no debe ser None")
@@ -252,9 +239,7 @@ class TestContextMenuExamples(unittest.TestCase):
                         constraint_types,
                         f"{ejemplo}: constraint_types no debe ser None",
                     )
-                    self.assertIsInstance(
-                        maximize, bool, f"{ejemplo}: maximize debe ser bool"
-                    )
+                    self.assertIsInstance(maximize, bool, f"{ejemplo}: maximize debe ser bool")
 
                 except Exception as e:
                     self.fail(f"{ejemplo} falló al parsear: {e}")

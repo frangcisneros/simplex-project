@@ -8,16 +8,14 @@ from typing import List, Tuple
 
 # Agregar import del validador
 
-from src.input_validator import InputValidator
+from simplex_solver.input_validator import InputValidator
 
 
 class UserInterface:
     """Maneja la interacción con el usuario y visualización de resultados."""
 
     @staticmethod
-    def interactive_input() -> (
-        Tuple[List[float], List[List[float]], List[float], List[str], bool]
-    ):
+    def interactive_input() -> Tuple[List[float], List[List[float]], List[float], List[str], bool]:
         """Recoge entrada del problema de forma interactiva."""
         print("=== SIMPLEX SOLVER - Modo Interactivo ===\n")
 
@@ -26,9 +24,7 @@ class UserInterface:
         A, b, constraint_types = UserInterface._get_constraints(len(c))
 
         # Validar el problema completo
-        is_valid, error_msg = InputValidator.validate_problem(
-            c, A, b, constraint_types, maximize
-        )
+        is_valid, error_msg = InputValidator.validate_problem(c, A, b, constraint_types, maximize)
         if not is_valid:
             print(f"\n ERROR EN ENTRADA: {error_msg}")
             print("Por favor, corrija los datos e intente nuevamente.")
@@ -40,9 +36,7 @@ class UserInterface:
     def _get_optimization_type() -> bool:
         """Solicita el tipo de optimización al usuario."""
         while True:
-            opt_type = (
-                input("¿Desea maximizar o minimizar? (max/min): ").lower().strip()
-            )
+            opt_type = input("¿Desea maximizar o minimizar? (max/min): ").lower().strip()
             if opt_type in ["max", "maximize", "maximizar"]:
                 return True
             elif opt_type in ["min", "minimize", "minimizar"]:
@@ -55,9 +49,7 @@ class UserInterface:
         """Solicita la función objetivo al usuario."""
         while True:
             try:
-                c_input = input(
-                    "Coeficientes de la función objetivo (separados por espacios): "
-                )
+                c_input = input("Coeficientes de la función objetivo (separados por espacios): ")
                 if not c_input.strip():
                     print("Error: Debe ingresar al menos un coeficiente")
                     continue
@@ -71,9 +63,7 @@ class UserInterface:
 
                 # Verificar que no todos los coeficientes sean cero
                 if all(abs(coeff) < 1e-10 for coeff in c):
-                    print(
-                        "Error: Todos los coeficientes de la función objetivo son cero"
-                    )
+                    print("Error: Todos los coeficientes de la función objetivo son cero")
                     continue
 
                 return c
@@ -88,9 +78,7 @@ class UserInterface:
         num_vars: int,
     ) -> Tuple[List[List[float]], List[float], List[str]]:
         """Solicita las restricciones al usuario."""
-        print(
-            f"\nIngrese las restricciones (formato: a1 a2 ... a{num_vars} [<=|>=|=] b):"
-        )
+        print(f"\nIngrese las restricciones (formato: a1 a2 ... a{num_vars} [<=|>=|=] b):")
         print("Ejemplos: '2 1 <= 100' o '1 1 >= 20' o '1 0 = 5'")
         print("Escriba 'fin' cuando termine")
 
@@ -156,9 +144,7 @@ class UserInterface:
 
                 # Validar RHS para restricciones de igualdad
                 if const_type == "=" and rhs < 0:
-                    print(
-                        "Error: Las restricciones de igualdad no pueden tener RHS negativo"
-                    )
+                    print("Error: Las restricciones de igualdad no pueden tener RHS negativo")
                     constraint_count -= 1
                     continue
 
@@ -191,9 +177,7 @@ class UserInterface:
         print("=" * 50)
 
         # Primero validar el problema antes de mostrar
-        is_valid, error_msg = InputValidator.validate_problem(
-            c, A, b, constraint_types, maximize
-        )
+        is_valid, error_msg = InputValidator.validate_problem(c, A, b, constraint_types, maximize)
         if not is_valid:
             print(f"PROBLEMA INVÁLIDO: {error_msg}")
             return

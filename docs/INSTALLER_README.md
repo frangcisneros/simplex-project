@@ -64,6 +64,14 @@ python installer.py
 SimplexInstaller.exe
 ```
 
+> **⚠️ Importante**: El instalador requiere **permisos de administrador** para:
+>
+> - Instalar el menú contextual de Windows (modifica el registro)
+> - Instalar paquetes de Python globalmente
+> - Garantizar que Ollama se configure correctamente
+>
+> Cuando ejecutes `SimplexInstaller.exe`, Windows solicitará automáticamente estos permisos.
+
 ### Flujo del Instalador
 
 1. **Pantalla de Bienvenida**

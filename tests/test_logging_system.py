@@ -8,7 +8,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.logging_system import logger, LogLevel
+from simplex_solver.logging_system import logger, LogLevel
 
 
 def test_logging_system():

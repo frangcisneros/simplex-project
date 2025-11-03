@@ -22,12 +22,7 @@ from .processor import MockNLPProcessor
 from .ollama_processor import OllamaNLPProcessor
 from .model_generator import SimplexModelGenerator, ModelValidator
 from .problem_structure_detector import ProblemStructureDetector
-import sys
-from pathlib import Path
-
-# Agregar la carpeta padre al path para importar solver
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from src.solver import SimplexSolver
+from simplex_solver.solver import SimplexSolver
 from .config import NLPModelType, DefaultSettings, ErrorMessages
 
 
@@ -147,9 +142,7 @@ class NLPConnectorFactory:
             nlp_processor = MockNLPProcessor()
         else:
             # Usar Ollama por defecto (más simple y confiable)
-            nlp_processor = OllamaNLPProcessor(
-                nlp_model_type, custom_config=custom_config
-            )
+            nlp_processor = OllamaNLPProcessor(nlp_model_type, custom_config=custom_config)
 
         # Crear generador de modelo
         if solver_type == SolverType.SIMPLEX:
@@ -272,9 +265,7 @@ class NLPOptimizationConnector(INLPConnector):
             # Paso 3: Validar el problema extraído
             self.logger.info("Step 2: Validating extracted problem")
             if not self.validator.validate(nlp_result.problem):
-                validation_errors = self.validator.get_validation_errors(
-                    nlp_result.problem
-                )
+                validation_errors = self.validator.get_validation_errors(nlp_result.problem)
                 return {
                     "success": False,
                     "error": f"Validation failed: {', '.join(validation_errors)}",
@@ -302,9 +293,7 @@ class NLPOptimizationConnector(INLPConnector):
             processing_time = time.time() - start_time
 
             # (Opcional) Análisis de estructura post-mortem para logging o warnings
-            expected_structure = self.structure_detector.detect_structure(
-                natural_language_text
-            )
+            expected_structure = self.structure_detector.detect_structure(natural_language_text)
             problem_dict = {
                 "variable_names": nlp_result.problem.variable_names or [],
                 "objective_coefficients": nlp_result.problem.objective_coefficients,
@@ -335,9 +324,7 @@ class NLPOptimizationConnector(INLPConnector):
                 },
             }
 
-            self.logger.info(
-                f"Pipeline completed successfully in {processing_time:.2f}s"
-            )
+            self.logger.info(f"Pipeline completed successfully in {processing_time:.2f}s")
             return result
 
         except Exception as e:

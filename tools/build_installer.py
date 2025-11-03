@@ -21,9 +21,7 @@ def install_pyinstaller():
     except ImportError:
         print("PyInstaller no encontrado. Instalando...")
         try:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "pyinstaller"]
-            )
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
             print("✓ PyInstaller instalado correctamente")
             return True
         except subprocess.CalledProcessError:
@@ -56,7 +54,6 @@ block_cipher = None
 added_files = [
     ('requirements.txt', '.'),
     ('context_menu', 'context_menu'),
-    ('ejemplos', 'ejemplos'),
     ('docs', 'docs'),
     ('README.md', '.'),
 ]
@@ -72,6 +69,7 @@ a = Analysis(
         'numpy.lib.format',
         'psutil',
         'psutil._psutil_windows',
+        'tabulate',
     ],
     hookspath=[],
     hooksconfig={},
@@ -115,6 +113,8 @@ exe = EXE(
     target_arch=None,
     cofile=None,
     icon=None,
+    manifest='installer.manifest',
+    uac_admin=True,
 )
 """
 
@@ -132,7 +132,6 @@ block_cipher = None
 
 # Incluir todos los archivos necesarios
 added_files = [
-    ('ejemplos', 'ejemplos'),
     ('docs', 'docs'),
     ('README.md', '.'),
 ]
@@ -261,7 +260,6 @@ def create_distribution_package():
     files_to_copy = [
         ("README.md", "README.md"),
         ("requirements.txt", "requirements.txt"),
-        ("ejemplos", "ejemplos"),
         ("docs", "docs"),
     ]
 
@@ -298,7 +296,7 @@ Después de la instalación:
    SimplexSolver.exe --interactive
 
 2. Resolver un archivo:
-   SimplexSolver.exe ejemplos\\ejemplo_maximizacion.txt
+   SimplexSolver.exe archivo_problema.txt
 
 3. Modo IA (requiere Ollama instalado):
    SimplexSolver.exe --ai "tu problema en lenguaje natural"
@@ -311,7 +309,6 @@ DOCUMENTACIÓN:
 - README.md: Guía completa del proyecto
 - docs\\GUIA_IA.md: Guía del sistema de IA
 - docs\\CONTEXT_MENU_GUIDE.md: Guía del menú contextual
-- ejemplos\\: Problemas de ejemplo
 
 SOPORTE:
 --------
@@ -331,19 +328,13 @@ https://github.com/frangcisneros/simplex-project
 def main():
     """Función principal del script de construcción."""
     print("=" * 70)
-    print(" " * 15 + "SIMPLEX SOLVER - BUILD SYSTEM")
+    print(" " * 15 + "SIMPLEX SOLVER - BUILD INSTALLER")
     print("=" * 70)
 
     # Verificar que estamos en el directorio correcto
-    if not os.path.exists("simplex.py"):
-        print("✗ Error: No se encontró simplex.py en el directorio actual")
-        print(
-            "  Asegúrate de ejecutar este script desde el directorio raíz del proyecto"
-        )
-        sys.exit(1)
-
     if not os.path.exists("installer.py"):
         print("✗ Error: No se encontró installer.py en el directorio actual")
+        print("  Asegúrate de ejecutar este script desde el directorio raíz del proyecto")
         sys.exit(1)
 
     # Paso 1: Instalar PyInstaller
@@ -356,47 +347,29 @@ def main():
     # Paso 3: Crear archivos .spec
     print("\n--- Creando archivos de configuración ---")
     create_installer_spec()
-    create_solver_spec()
 
-    # Paso 4: Construir ejecutables
-    print("\n--- Construyendo ejecutables ---")
-
-    success = True
+    # Paso 4: Construir ejecutable del instalador
+    print("\n--- Construyendo SimplexInstaller.exe ---")
 
     # Construir instalador
     if not build_executable("simplex_installer.spec", "SimplexInstaller"):
-        success = False
-    else:
-        verify_executable(Path("dist/SimplexInstaller.exe"), "SimplexInstaller")
-
-    # Construir solver
-    if not build_executable("simplex_solver.spec", "SimplexSolver"):
-        success = False
-    else:
-        verify_executable(Path("dist/SimplexSolver.exe"), "SimplexSolver")
-
-    if not success:
-        print("\n✗ Algunas compilaciones fallaron")
+        print("\n✗ Compilación falló")
         sys.exit(1)
 
-    # Paso 5: Crear paquete de distribución
-    package_dir = create_distribution_package()
+    verify_executable(Path("dist/SimplexInstaller.exe"), "SimplexInstaller")
 
     # Resumen final
     print("\n" + "=" * 70)
     print("✓ PROCESO COMPLETADO EXITOSAMENTE")
     print("=" * 70)
-    print(f"\nPaquete de distribución: {package_dir}")
-    print("\nArchivos generados:")
-    print(f"  • SimplexInstaller.exe - Instalador interactivo")
-    print(f"  • SimplexSolver.exe - Aplicación principal")
-    print(f"  • INSTALACION.txt - Instrucciones")
-    print(f"  • Ejemplos y documentación incluidos")
+    print(f"\nArchivo generado:")
+    print(
+        f"  • dist/SimplexInstaller.exe - Instalador interactivo ({Path('dist/SimplexInstaller.exe').stat().st_size / (1024*1024):.1f} MB)"
+    )
 
     print("\nPróximos pasos:")
-    print("  1. Prueba el instalador: .\\dist\\SimplexSolver\\SimplexInstaller.exe")
-    print("  2. Distribuye la carpeta completa: dist\\SimplexSolver\\")
-    print("  3. O crea un archivo ZIP para distribuir más fácilmente")
+    print("  1. Prueba el instalador: .\\dist\\SimplexInstaller.exe")
+    print("  2. Distribuye el archivo SimplexInstaller.exe")
 
 
 if __name__ == "__main__":

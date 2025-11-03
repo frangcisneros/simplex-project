@@ -9,7 +9,7 @@ import os
 # Agregar el directorio padre al path para importar los módulos
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.input_validator import InputValidator
+from simplex_solver.input_validator import InputValidator
 
 
 def run_validation_tests():

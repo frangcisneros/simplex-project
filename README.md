@@ -24,7 +24,9 @@ Sistema de optimización lineal que combina el algoritmo Simplex con modelos de 
 **Con el Instalador Interactivo** (Windows):
 
 1. Descarga el paquete de distribución
-2. Ejecuta `SimplexInstaller.exe`
+2. Ejecuta `SimplexInstaller.exe` **como administrador**
+   - El instalador solicita permisos de administrador automáticamente
+   - Necesarios para instalar el menú contextual de Windows
 3. El instalador:
    - Analiza automáticamente las capacidades de tu PC
    - Recomienda modelos de IA compatibles con tu hardware
@@ -99,49 +101,70 @@ Variables:
 ```
 simplex-project/
 ├── README.md
-├── requirements.txt
+├── pyproject.toml                   # Configuración del proyecto
+├── requirements.txt                 # Dependencias runtime
+├── requirements-full.txt            # Todas las dependencias
+├── requirements-dev.txt             # Herramientas de desarrollo
+├── requirements-build.txt           # Herramientas de compilación
 ├── simplex.py                       # Script principal
+├── installer.py                     # Instalador interactivo
 │
-├── src/                             # Código fuente
+├── simplex_solver/                  # Paquete principal (antes src/)
 │   ├── solver.py                    # Algoritmo Simplex
 │   ├── file_parser.py               # Parser de archivos
 │   ├── user_interface.py            # Interfaz de usuario
 │   ├── reporting_pdf.py             # Generación de reportes
+│   ├── core/                        # Lógica del algoritmo
+│   │   └── algorithm.py
+│   ├── utils/                       # Utilidades
+│   │   └── tableau.py
 │   └── nlp/                         # Sistema NLP
 │       ├── connector.py             # Orquestador principal
 │       ├── ollama_processor.py      # Procesador con Ollama
 │       ├── model_generator.py       # Generador de modelos
 │       └── ...
 │
-├── context_menu/                    # 🆕 Menú contextual de Windows
+├── context_menu/                    # Menú contextual de Windows
 │   ├── solve_from_context.py       # Script del menú contextual
 │   ├── install.bat                  # Instalador
 │   ├── uninstall.bat                # Desinstalador
 │   └── README.md                    # Documentación
 │
-├── ejemplos/                        # 🆕 Archivos de ejemplo
+├── ejemplos/                        # Archivos de ejemplo
 │   ├── ejemplo_maximizacion.txt
 │   ├── ejemplo_minimizacion.txt
 │   ├── ejemplo_carpinteria.txt
 │   └── README.md
 │
 ├── tests/                           # Suite de tests
-│   └── test_nlp_system.py
+│   ├── test_nlp_system.py
+│   ├── test_maximizacion.py
+│   └── test_minimizacion.py
+│
+├── tools/                           # Scripts de construcción
+│   ├── build_installer.py           # Genera SimplexInstaller.exe
+│   └── build_exe.py                 # Helper de PyInstaller
 │
 └── docs/                            # Documentación
+    ├── GUIA_IA.md                   # Guía de IA y modelos
     ├── CONTEXT_MENU_GUIDE.md        # Guía del menú contextual
-    └── BUILD_INSTRUCTIONS.md
+    ├── INSTALLER_README.md          # Guía del instalador
+    ├── BUILD_INSTRUCTIONS.md        # Instrucciones de compilación
+    ├── HISTORY_SYSTEM.md            # Sistema de historial
+    └── LOGGING_SYSTEM.md            # Sistema de logs
 ```
 
 ---
 
 ## Documentación
 
-- **ARQUITECTURA.md**: Diseño técnico del sistema
-- **GUIA_IA.md**: Guía detallada de instalación y uso
-- **docs/CONTEXT_MENU_GUIDE.md**: Guía del menú contextual de Windows
-- **ESTRUCTURA.md**: Organización de archivos
-- **LIMPIEZA.md**: Cambios recientes
+- **[GUIA_IA.md](docs/GUIA_IA.md)**: Guía completa de instalación y uso con IA
+- **[CONTEXT_MENU_GUIDE.md](docs/CONTEXT_MENU_GUIDE.md)**: Guía del menú contextual de Windows
+- **[INSTALLER_README.md](docs/INSTALLER_README.md)**: Documentación del instalador interactivo
+- **[ADMIN_PERMISSIONS.md](docs/ADMIN_PERMISSIONS.md)**: Permisos de administrador en el instalador
+- **[BUILD_INSTRUCTIONS.md](docs/BUILD_INSTRUCTIONS.md)**: Instrucciones para compilar el proyecto
+- **[HISTORY_SYSTEM.md](docs/HISTORY_SYSTEM.md)**: Sistema de historial de problemas
+- **[LOGGING_SYSTEM.md](docs/LOGGING_SYSTEM.md)**: Sistema de logging
 
 ---
 
@@ -169,7 +192,7 @@ simplex-project/
 ### Desde Python
 
 ```python
-from src.nlp import NLPConnectorFactory, NLPModelType
+from simplex_solver.nlp import NLPConnectorFactory, NLPModelType
 
 # Crear conector
 connector = NLPConnectorFactory.create_connector(
@@ -225,8 +248,7 @@ ollama pull llama3.1:8b    # Modelo por defecto
 - **Mezclas**: Combinar materias primas óptimamente
 - **Asignación**: Distribuir recursos eficientemente
 
-Ver ejemplos de archivos .txt en carpeta [`ejemplos/`](ejemplos/)  
-Ver ejemplos de lenguaje natural en carpeta `ejemplos/nlp/`
+Ver ejemplos de archivos .txt en carpeta [`ejemplos/`](ejemplos/)
 
 ---
 
@@ -234,7 +256,7 @@ Ver ejemplos de lenguaje natural en carpeta `ejemplos/nlp/`
 
 ### Cambiar Modelo
 
-Editar `src/nlp/config.py`:
+Editar `simplex_solver/nlp/config.py`:
 
 ```python
 class DefaultSettings:
@@ -283,6 +305,24 @@ Ver GUIA_IA.md para más ayuda.
 
 ---
 
+## Compilar el Instalador
+
+Para generar `SimplexInstaller.exe`, consulta la [Guía de Compilación](docs/BUILD_INSTRUCTIONS.md).
+
+**Resumen rápido:**
+
+```bash
+# Opción 1: Script completo con interfaz
+python tools/build_installer.py
+
+# Opción 2: Script simplificado
+python tools/build_exe.py
+```
+
+El ejecutable se generará en `dist/SimplexInstaller.exe`.
+
+---
+
 ## Testing
 
 ```bash
@@ -312,8 +352,9 @@ Los tests incluyen:
 
 ## Soporte
 
-- Documentación: ARQUITECTURA.md | GUIA_IA.md
-- Issues: [GitHub Issues](https://github.com/frangcisneros/simplex-project/issues)
+- **Documentación completa**: Ver carpeta [`docs/`](docs/)
+- **Guía de IA**: [docs/GUIA_IA.md](docs/GUIA_IA.md)
+- **Issues**: [GitHub Issues](https://github.com/frangcisneros/simplex-project/issues)
 
 ---
 

@@ -1,2 +1,4 @@
-# Dependencias para generar el ejecutable
-pyinstaller>=5.0
+# Build dependencies for creating standalone executables
+# Install with: pip install -r requirements-build.txt
+
+pyinstaller>=6.0.0

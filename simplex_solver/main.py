@@ -1,6 +1,6 @@
 """
-Simplex Solver - Programa principal.
-Coordina los módulos para resolver problemas de programación lineal.
+Simplex Solver - Main program.
+Coordinates modules to solve linear programming problems.
 """
 
 import sys
@@ -8,13 +8,13 @@ import argparse
 import os
 import time
 import json
-from solver import SimplexSolver
-from file_parser import FileParser
-from src.user_interface import UserInterface
-from input_validator import InputValidator  # Nuevo import
-from reporting_pdf import generate_pdf
-from logging_system import logger, LogLevel
-from problem_history import show_history_menu
+from simplex_solver.solver import SimplexSolver
+from simplex_solver.file_parser import FileParser
+from simplex_solver.user_interface import UserInterface
+from simplex_solver.input_validator import InputValidator
+from simplex_solver.reporting_pdf import generate_pdf
+from simplex_solver.logging_system import logger, LogLevel
+from simplex_solver.problem_history import show_history_menu
 
 
 def main():
@@ -34,9 +34,7 @@ def main():
             if temp_file:
                 # Usuario quiere re-resolver un problema del historial
                 print(f"\n=== RE-RESOLVIENDO PROBLEMA DEL HISTORIAL ===\n")
-                logger.info(
-                    f"Re-resolviendo problema desde archivo temporal: {temp_file}"
-                )
+                logger.info(f"Re-resolviendo problema desde archivo temporal: {temp_file}")
                 args.filename = temp_file
             else:
                 # Usuario salió del menú de historial
@@ -70,9 +68,7 @@ def main():
         print("\n Validando problema...")
         logger.info("Iniciando validación del problema")
         logger.debug(f"Variables: {len(c)}, Restricciones: {len(A)}")
-        is_valid, error_msg = InputValidator.validate_problem(
-            c, A, b, constraint_types, maximize
-        )
+        is_valid, error_msg = InputValidator.validate_problem(c, A, b, constraint_types, maximize)
         if not is_valid:
             logger.error(f"Validación fallida: {error_msg}")
             print(f"ERROR: {error_msg}")
@@ -185,12 +181,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Simplex Solver - Resuelve problemas de programación lineal"
     )
-    parser.add_argument(
-        "filename", nargs="?", help="Archivo con el problema a resolver"
-    )
-    parser.add_argument(
-        "--interactive", "-i", action="store_true", help="Modo interactivo"
-    )
+    parser.add_argument("filename", nargs="?", help="Archivo con el problema a resolver")
+    parser.add_argument("--interactive", "-i", action="store_true", help="Modo interactivo")
     parser.add_argument(
         "--pdf",
         "-p",

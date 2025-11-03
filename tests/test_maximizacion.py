@@ -10,8 +10,8 @@ import os
 # Agregar el directorio padre al path para importar los módulos
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.solver import SimplexSolver
-from src.user_interface import UserInterface
+from simplex_solver.solver import SimplexSolver
+from simplex_solver.user_interface import UserInterface
 
 
 class TestMaximizationProblems(unittest.TestCase):

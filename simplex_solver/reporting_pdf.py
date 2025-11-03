@@ -5,10 +5,10 @@ Encapsula la lógica de creación de carpetas, formateo mínimo y delega a `expo
 
 import os
 from typing import Dict, Optional
-from src.logging_system import logger
+from simplex_solver.logging_system import logger
 
 try:
-    from src.export import export_to_pdf
+    from simplex_solver.export import export_to_pdf
 except Exception as e:
     # Si export.py no existe o falla la importación, lanzamos una excepción clara
     logger.error(f"Error al importar módulo export: {str(e)}", exception=e)
@@ -48,12 +48,7 @@ def generate_pdf(result: Dict, filename: str, reports_dir: str = "reports") -> s
         b = result.get("b")
         constraint_types = result.get("constraint_types")
         maximize = result.get("maximize")
-        if (
-            c is not None
-            and A is not None
-            and b is not None
-            and constraint_types is not None
-        ):
+        if c is not None and A is not None and b is not None and constraint_types is not None:
 
             def format_constraint(row, rhs, ctype):
                 coeffs = []

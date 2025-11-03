@@ -10,13 +10,13 @@ from pathlib import Path
 # Agregar src al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.nlp.config import NLPModelType, DefaultSettings
-from src.nlp.connector import NLPConnectorFactory, SolverType
-from src.nlp.interfaces import OptimizationProblem
-from src.nlp.model_generator import SimplexModelGenerator, ModelValidator
-from src.nlp.processor import MockNLPProcessor
-from src.nlp.problem_structure_detector import ProblemStructureDetector
-from src.nlp.complexity_analyzer import ComplexityAnalyzer, ProblemComplexity
+from simplex_solver.nlp.config import NLPModelType, DefaultSettings
+from simplex_solver.nlp.connector import NLPConnectorFactory, SolverType
+from simplex_solver.nlp.interfaces import OptimizationProblem
+from simplex_solver.nlp.model_generator import SimplexModelGenerator, ModelValidator
+from simplex_solver.nlp.processor import MockNLPProcessor
+from simplex_solver.nlp.problem_structure_detector import ProblemStructureDetector
+from simplex_solver.nlp.complexity_analyzer import ComplexityAnalyzer, ProblemComplexity
 
 
 class TestProblemStructureDetector(unittest.TestCase):

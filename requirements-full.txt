@@ -1,0 +1,15 @@
+# Complete installation with AI/NLP and optimization capabilities
+# Install with: pip install -r requirements-full.txt
+
+# Core dependencies
+-r requirements.txt
+
+# AI/NLP dependencies
+torch>=2.0.0
+transformers>=4.30.0
+accelerate>=0.20.0
+bitsandbytes>=0.41.0
+sentencepiece>=0.1.99
+
+# Alternative optimization solvers
+PuLP>=2.7.0
