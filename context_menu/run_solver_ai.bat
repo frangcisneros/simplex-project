@@ -1,25 +1,47 @@
 @echo off
 :: Wrapper batch para resolver con IA desde el menú contextual
 
+:: Verificar que se pasó un argumento
+if "%~1"=="" (
+    echo ERROR: No se proporciono un archivo
+    pause
+    exit /b 1
+)
+
 :: Obtener la ruta del archivo que se pasó como argumento
 set "INPUT_FILE=%~1"
 
 :: Obtener la ruta del proyecto (parent de context_menu)
 set "SCRIPT_DIR=%~dp0"
 set "PROJECT_DIR=%SCRIPT_DIR%.."
+set "PYTHON_SCRIPT=%SCRIPT_DIR%solve_from_context_ai.py"
 
-:: Cambiar al directorio del proyecto y ejecutar con NLP
+:: Verificar que existe el script de Python
+if not exist "%PYTHON_SCRIPT%" (
+    echo ERROR: No se encontro el script solve_from_context_ai.py
+    echo Ruta esperada: %PYTHON_SCRIPT%
+    pause
+    exit /b 1
+)
+
+:: Cambiar al directorio del proyecto
 cd /d "%PROJECT_DIR%"
 
-echo ===============================================
-echo  SIMPLEX SOLVER - Resolviendo con IA
-echo ===============================================
-echo.
-echo Archivo: %INPUT_FILE%
-echo Procesando con modelo de lenguaje...
-echo.
+:: Verificar que Python está disponible
+where python >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERROR: Python no esta disponible en el PATH del sistema
+    echo Por favor, instale Python o agregelo al PATH
+    pause
+    exit /b 1
+)
 
-:: Leer el contenido del archivo y procesarlo con IA
-python -c "import sys; sys.path.insert(0, 'src'); from nlp import NLPConnectorFactory, NLPModelType; connector = NLPConnectorFactory.create_connector(NLPModelType.LLAMA3_1_8B); content = open(r'%INPUT_FILE%', 'r', encoding='utf-8').read(); result = connector.process_and_solve(content); print('\n' + '='*50); print('RESULTADO'); print('='*50); print(f'Estado: {\"Exitoso\" if result[\"success\"] else \"Error\"}'); print(f'Mensaje: {result.get(\"message\", \"\")}'); sol = result.get('solution', {}); print(f'Valor optimo: {sol.get(\"optimal_value\", \"N/A\")}'); print('\nVariables:'); vars_dict = sol.get('variables', {}); [print(f'  {k} = {v}') for k, v in vars_dict.items()]; print('='*50)"
+:: Ejecutar el script de Python con el archivo como argumento
+python "%PYTHON_SCRIPT%" "%INPUT_FILE%"
 
-pause
+:: El script ya tiene su propio pause al final, pero por si acaso
+if %errorlevel% neq 0 (
+    echo.
+    echo Hubo un error al ejecutar el script
+    pause
+)
