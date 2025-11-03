@@ -19,7 +19,23 @@ Sistema de optimización lineal que combina el algoritmo Simplex con modelos de 
 
 ## Instalación
 
-### 1. Clonar el repositorio
+### 🚀 Instalación Rápida (Recomendado)
+
+**Con el Instalador Interactivo** (Windows):
+
+1. Descarga el paquete de distribución
+2. Ejecuta `SimplexInstaller.exe`
+3. El instalador:
+   - Analiza automáticamente las capacidades de tu PC
+   - Recomienda modelos de IA compatibles con tu hardware
+   - Te guía en la instalación de todos los componentes
+   - Configura el menú contextual de Windows (opcional)
+
+Ver [Guía del Instalador](docs/INSTALLER_README.md) para más detalles.
+
+### 📦 Instalación Manual
+
+#### 1. Clonar el repositorio
 
 ```bash
 git clone https://github.com/frangcisneros/simplex-project
@@ -27,7 +43,7 @@ cd simplex-project
 pip install -r requirements.txt
 ```
 
-### 2. Instalar Ollama
+#### 2. Instalar Ollama (opcional, para funcionalidades de IA)
 
 Descargar desde: https://ollama.ai/download
 
@@ -37,7 +53,7 @@ Después de instalar:
 ollama pull llama3.1:8b
 ```
 
-### 3. Probar el sistema
+#### 3. Probar el sistema
 
 ```bash
 cd tests
