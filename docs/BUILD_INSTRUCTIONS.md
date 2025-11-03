@@ -1,24 +1,43 @@
-# Simplex Solver - Generación de Ejecutable
+# Simplex Solver - Build Instructions
 
-Este documento describe cómo generar un archivo .exe del Simplex Solver.
+Este documento describe cómo generar los ejecutables del Simplex Solver.
 
-## Método Automático (Recomendado)
+## 🚀 Método Recomendado: Script Unificado
 
-Usa el script automatizado `build_exe.py`:
+Usa el nuevo script consolidado `tools/build.py` que sigue principios SOLID:
 
 ```bash
-python build_exe.py
+# Generar el instalador
+python tools/build.py --installer
+
+# Generar el solver
+python tools/build.py --solver
+
+# Generar ambos
+python tools/build.py --all
+
+# Limpiar archivos de compilación
+python tools/build.py --clean
 ```
 
-Este script:
+## 📦 Scripts Generados
 
-1. Instala PyInstaller automáticamente si es necesario
-2. Limpia compilaciones anteriores
-3. Crea un archivo .spec optimizado
-4. Genera el ejecutable
-5. Verifica que funcione correctamente
+El sistema de build genera:
 
-## Método Manual
+1. **SimplexInstaller.exe** - Instalador interactivo con:
+
+   - Detección automática de capacidades del sistema
+   - Instalación opcional de Ollama y modelos de IA
+   - Configuración del menú contextual de Windows
+   - ~40-50 MB
+
+2. **SimplexSolver.exe** - Solver standalone con:
+   - Modo interactivo
+   - Resolución desde archivos
+   - Generación de reportes PDF
+   - ~30-40 MB
+
+## ⚙️ Método Manual (Para desarrollo avanzado)
 
 Si prefieres hacerlo paso a paso:
 
@@ -28,74 +47,180 @@ Si prefieres hacerlo paso a paso:
 pip install -r requirements-build.txt
 ```
 
-### 2. Generar el ejecutable
+### 2. Generar archivos .spec personalizados
+
+El sistema de build ahora genera automáticamente archivos `.spec` optimizados.
+Puedes encontrar ejemplos en el código de `tools/build.py`.
+
+### 3. Compilar con PyInstaller
 
 ```bash
-pyinstaller --onefile --name SimplexSolver --exclude-module test --exclude-module tests --exclude-module unittest --exclude-module doctest --exclude-module tkinter --console simplex.py
+pyinstaller SimplexInstaller.spec --clean
+# o
+pyinstaller SimplexSolver.spec --clean
 ```
 
-### 3. Opciones adicionales de PyInstaller
+## 📋 Archivos Incluidos/Excluidos
 
-- `--onefile`: Crea un solo archivo ejecutable
-- `--name SimplexSolver`: Nombre del ejecutable
-- `--exclude-module`: Excluye módulos innecesarios
-- `--console`: Mantiene la ventana de consola (necesario para input interactivo)
-- `--noconsole`: Oculta la consola (solo si no necesitas input del usuario)
-- `--icon=icon.ico`: Agrega un icono personalizado
+### Instalador (SimplexInstaller.exe)
 
-## Archivos Incluidos en el .exe
+**Incluye:**
 
-El ejecutable incluye solo:
+- `installer.py` (punto de entrada)
+- `simplex_solver/` (todo el paquete)
+- `context_menu/` (scripts del menú contextual)
+- `docs/` (documentación)
+- `requirements.txt`
+- `README.md`
+
+**Excluye:**
+
+- Tests
+- `tkinter`, `matplotlib`, `PIL`
+- Módulos de desarrollo
+
+### Solver (SimplexSolver.exe)
+
+**Incluye:**
 
 - `simplex.py` (punto de entrada)
-- `src/solver.py` (lógica principal)
-- Dependencias necesarias (numpy)
+- `simplex_solver/` (paquete completo)
+- Documentación básica
 
-**Excluye automáticamente:**
+**Excluye:**
 
-- Archivos de documentación (`docs/`)
-- Archivos de ejemplo (`ejemplos/`)
-- Tests
-- Módulos innecesarios del sistema
+- Context menu (solo en instalador)
+- Tests y herramientas de desarrollo
 
-## Uso del Ejecutable
+## 🎯 Uso de los Ejecutables
 
-Una vez generado, puedes usar el ejecutable de estas formas:
+### SimplexInstaller.exe
+
+```bash
+# Ejecutar instalador interactivo
+.\SimplexInstaller.exe
+
+# El instalador guiará el proceso:
+# 1. Detecta capacidades del sistema
+# 2. Ofrece instalar Ollama (opcional)
+# 3. Permite elegir modelos de IA
+# 4. Configura menú contextual de Windows
+```
+
+### SimplexSolver.exe
 
 ```bash
 # Modo interactivo
-SimplexSolver.exe --interactive
+.\SimplexSolver.exe --interactive
 
 # Desde archivo
-SimplexSolver.exe ejemplos/maximizar_basico.txt
+.\SimplexSolver.exe ejemplos/ejemplo_maximizacion.txt
+
+# Ver historial
+.\SimplexSolver.exe --history
 
 # Ver ayuda
-SimplexSolver.exe --help
+.\SimplexSolver.exe --help
 ```
 
-## Tamaño del Ejecutable
+## 📊 Tamaño de los Ejecutables
 
-El ejecutable típicamente tiene un tamaño de:
+El tamaño típico de los ejecutables:
 
-- **30-50 MB**: Incluye Python runtime y numpy
-- Para reducir el tamaño, considera usar `--exclude-module` con más módulos
+- **SimplexInstaller.exe**: ~40-50 MB
 
-## Troubleshooting
+  - Incluye Python runtime
+  - Sistema completo de instalación
+  - Todas las dependencias (numpy, psutil, tabulate)
+
+- **SimplexSolver.exe**: ~30-40 MB
+  - Incluye Python runtime
+  - Solver completo
+  - Sistema de logs e historial
+
+### Para reducir el tamaño:
+
+- Usa más exclusiones en el archivo `.spec`
+- Considera UPX compression (ya habilitado por defecto)
+- Excluye módulos opcionales no utilizados
+
+## 🔧 Troubleshooting
+
+### Error: "PyInstaller not found"
+
+El sistema lo instala automáticamente, pero si falla:
+
+```bash
+pip install pyinstaller
+```
 
 ### Error: "No module named numpy"
 
-- Asegúrate de que numpy esté instalado: `pip install numpy`
+Instala las dependencias:
+
+```bash
+pip install -r requirements.txt
+```
 
 ### Ejecutable muy grande
 
-- Usa más exclusiones: `--exclude-module matplotlib --exclude-module scipy`
+1. Verifica las exclusiones en `tools/build.py`
+2. Considera agregar más módulos a la lista de exclusión
+3. UPX está habilitado por defecto para comprimir
 
 ### Error de permisos
 
-- Ejecuta como administrador o desde un directorio con permisos de escritura
+- Ejecuta desde un directorio con permisos de escritura
+- Para el instalador, se recomienda ejecutar como administrador
 
-### Antivirus detecta como amenaza
+### Antivirus bloquea el ejecutable
 
-- Es común con ejecutables de PyInstaller
-- Agrega excepción en tu antivirus
+- Común con ejecutables de PyInstaller (falsos positivos)
+- Agrega una excepción en tu antivirus
+- Firma el ejecutable con un certificado digital (producción)
+
+### Build falla en Windows
+
+1. Verifica que Python esté en el PATH
+2. Asegúrate de tener permisos de escritura en `dist/` y `build/`
+3. Cierra el ejecutable si está corriendo
+4. Ejecuta `python tools/build.py --clean` primero
+
+## 📝 Scripts Legacy (Deprecated)
+
+Los siguientes scripts están **obsoletos** y se mantienen solo para compatibilidad:
+
+- ❌ `build_exe.py` → Usar `tools/build.py --solver`
+- ❌ `tools/build_installer.py` → Usar `tools/build.py --installer`
+
+El nuevo sistema unificado `tools/build.py` combina toda la funcionalidad
+y es más fácil de mantener siguiendo principios SOLID.
+
+## 🚀 Workflow Recomendado
+
+```bash
+# 1. Limpiar builds anteriores
+python tools/build.py --clean
+
+# 2. Generar ambos ejecutables
+python tools/build.py --all
+
+# 3. Los ejecutables estarán en dist/
+#    - dist/SimplexInstaller.exe
+#    - dist/SimplexSolver.exe
+
+# 4. Probar el instalador
+cd dist
+.\SimplexInstaller.exe
+
+# 5. Probar el solver
+.\SimplexSolver.exe --interactive
+```
+
+## 📚 Referencias
+
+- [PyInstaller Documentation](https://pyinstaller.org/)
+- [Tools README](../tools/README.md) - Documentación de herramientas
+- [Installer Guide](INSTALLER_README.md) - Guía del instalador
+- [Project README](../README.md) - Documentación principal
 - Considera firmar el ejecutable digitalmente para distribución

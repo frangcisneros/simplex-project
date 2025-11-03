@@ -98,10 +98,15 @@ SUBJECT TO
         """Test manejo de archivo inválido."""
         import solve_from_context
 
+        # Mock de input para evitar que se detenga esperando entrada del usuario
         with patch("builtins.input", return_value=""):
             with patch("builtins.print"):
-                with self.assertRaises(SystemExit):
+                # Debe salir con error (sys.exit(1))
+                with self.assertRaises(SystemExit) as cm:
                     solve_from_context.solve_from_file("archivo_inexistente.txt")
+
+                # Verificar que el código de salida es 1 (error)
+                self.assertEqual(cm.exception.code, 1)
 
     def test_solve_from_context_invalid_format(self):
         """Test manejo de formato inválido."""
@@ -112,10 +117,15 @@ SUBJECT TO
 
         import solve_from_context
 
+        # Mock de input para evitar que se detenga esperando entrada del usuario
         with patch("builtins.input", return_value=""):
             with patch("builtins.print"):
-                with self.assertRaises(SystemExit):
+                # Debe salir con error (sys.exit(1))
+                with self.assertRaises(SystemExit) as cm:
                     solve_from_context.solve_from_file(filepath)
+
+                # Verificar que el código de salida es 1 (error)
+                self.assertEqual(cm.exception.code, 1)
 
 
 class TestContextMenuScripts(unittest.TestCase):
@@ -129,6 +139,11 @@ class TestContextMenuScripts(unittest.TestCase):
         """Verifica que el script solve_from_context.py existe."""
         script_path = self.context_menu_dir / "solve_from_context.py"
         self.assertTrue(script_path.exists(), "solve_from_context.py debe existir")
+
+    def test_solve_from_context_ai_exists(self):
+        """Verifica que el script solve_from_context_ai.py existe."""
+        script_path = self.context_menu_dir / "solve_from_context_ai.py"
+        self.assertTrue(script_path.exists(), "solve_from_context_ai.py debe existir")
 
     def test_run_solver_bat_exists(self):
         """Verifica que el wrapper run_solver.bat existe."""
@@ -157,7 +172,7 @@ class TestContextMenuScripts(unittest.TestCase):
             content = f.read()
 
         self.assertIn("python", content.lower(), "Debe ejecutar python")
-        self.assertIn("simplex.py", content, "Debe llamar a simplex.py")
+        self.assertIn("solve_from_context.py", content, "Debe llamar a solve_from_context.py")
         self.assertIn("pause", content.lower(), "Debe tener pause al final")
 
     def test_install_bat_content(self):

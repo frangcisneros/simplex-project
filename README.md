@@ -141,15 +141,19 @@ simplex-project/
 │   ├── test_maximizacion.py
 │   └── test_minimizacion.py
 │
-├── tools/                           # Scripts de construcción
-│   ├── build_installer.py           # Genera SimplexInstaller.exe
-│   └── build_exe.py                 # Helper de PyInstaller
+├── tools/                           # 🔧 Herramientas de desarrollo
+│   ├── build.py                     # Sistema unificado de build (NUEVO)
+│   ├── logs.py                      # Gestión unificada de logs (NUEVO)
+│   ├── history.py                   # Gestión de historial (NUEVO)
+│   ├── test_installer.py            # Tests del instalador
+│   └── README.md                    # Guía de herramientas
 │
-└── docs/                            # Documentación
+└── docs/                            # 📚 Documentación
     ├── GUIA_IA.md                   # Guía de IA y modelos
     ├── CONTEXT_MENU_GUIDE.md        # Guía del menú contextual
     ├── INSTALLER_README.md          # Guía del instalador
     ├── BUILD_INSTRUCTIONS.md        # Instrucciones de compilación
+    ├── CONSOLIDATION_SUMMARY.md     # Resumen de consolidación (NUEVO)
     ├── HISTORY_SYSTEM.md            # Sistema de historial
     └── LOGGING_SYSTEM.md            # Sistema de logs
 ```
@@ -158,11 +162,20 @@ simplex-project/
 
 ## Documentación
 
+### 📚 Guías de Usuario
+
 - **[GUIA_IA.md](docs/GUIA_IA.md)**: Guía completa de instalación y uso con IA
 - **[CONTEXT_MENU_GUIDE.md](docs/CONTEXT_MENU_GUIDE.md)**: Guía del menú contextual de Windows
 - **[INSTALLER_README.md](docs/INSTALLER_README.md)**: Documentación del instalador interactivo
-- **[ADMIN_PERMISSIONS.md](docs/ADMIN_PERMISSIONS.md)**: Permisos de administrador en el instalador
+
+### 🔧 Guías de Desarrollo
+
 - **[BUILD_INSTRUCTIONS.md](docs/BUILD_INSTRUCTIONS.md)**: Instrucciones para compilar el proyecto
+- **[CONSOLIDATION_SUMMARY.md](docs/CONSOLIDATION_SUMMARY.md)**: Resumen de mejoras y consolidación
+- **[tools/README.md](tools/README.md)**: Guía de herramientas de desarrollo
+
+### 📊 Sistemas
+
 - **[HISTORY_SYSTEM.md](docs/HISTORY_SYSTEM.md)**: Sistema de historial de problemas
 - **[LOGGING_SYSTEM.md](docs/LOGGING_SYSTEM.md)**: Sistema de logging
 
@@ -305,21 +318,62 @@ Ver GUIA_IA.md para más ayuda.
 
 ---
 
-## Compilar el Instalador
+## 🔨 Compilar Ejecutables
 
-Para generar `SimplexInstaller.exe`, consulta la [Guía de Compilación](docs/BUILD_INSTRUCTIONS.md).
-
-**Resumen rápido:**
+Para generar los ejecutables, usa el **sistema unificado de build** (NUEVO):
 
 ```bash
-# Opción 1: Script completo con interfaz
-python tools/build_installer.py
+# Generar el instalador
+python tools/build.py --installer
 
-# Opción 2: Script simplificado
-python tools/build_exe.py
+# Generar el solver
+python tools/build.py --solver
+
+# Generar ambos
+python tools/build.py --all
+
+# Limpiar artifacts de compilación
+python tools/build.py --clean
 ```
 
-El ejecutable se generará en `dist/SimplexInstaller.exe`.
+Los ejecutables se generarán en `dist/`:
+
+- `dist/SimplexInstaller.exe` - Instalador interactivo
+- `dist/SimplexSolver.exe` - Solver standalone
+
+📖 **Guía completa**: [docs/BUILD_INSTRUCTIONS.md](docs/BUILD_INSTRUCTIONS.md)  
+🔧 **Herramientas**: [tools/README.md](tools/README.md)
+
+---
+
+## 🛠️ Herramientas de Desarrollo
+
+El proyecto incluye herramientas consolidadas siguiendo principios SOLID:
+
+### Build System
+
+```bash
+python tools/build.py --all     # Compilar todo
+python tools/build.py --clean   # Limpiar artifacts
+```
+
+### Log Management
+
+```bash
+python tools/logs.py            # Visor interactivo
+python tools/logs.py --stats    # Estadísticas rápidas
+python tools/logs.py --verify   # Verificar integridad
+```
+
+### History Management
+
+```bash
+python tools/history.py         # Menú interactivo
+python tools/history.py --test  # Test del sistema
+python tools/history.py --stats # Estadísticas
+```
+
+📖 **Documentación completa**: [tools/README.md](tools/README.md)
 
 ---
 
@@ -358,4 +412,12 @@ Los tests incluyen:
 
 ---
 
-_Versión 3.0 - Octubre 2025_
+_Versión 3.1 - Noviembre 2025_
+
+**Novedades v3.1:**
+
+- ✨ Sistema de build unificado siguiendo principios SOLID
+- 🔧 Herramientas consolidadas para desarrollo
+- 📚 Documentación mejorada y reorganizada
+- 🗑️ Eliminación de código duplicado (-50% de scripts)
+- Ver [CONSOLIDATION_SUMMARY.md](docs/CONSOLIDATION_SUMMARY.md) para detalles
