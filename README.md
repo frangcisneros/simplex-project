@@ -1,5 +1,3 @@
-x1 (mesas) = 25.0 unidades
-
 # Simplex Solver con Inteligencia Artificial
 
 Sistema de optimización lineal que combina el algoritmo Simplex con modelos de lenguaje (Ollama) para resolver problemas de programación lineal descritos en español.
@@ -15,6 +13,7 @@ Sistema de optimización lineal que combina el algoritmo Simplex con modelos de 
 - **Lenguaje Natural**: Describe problemas con texto normal, sin necesidad de fórmulas matemáticas
 - **Procesamiento Local**: Funciona completamente en tu computadora usando Ollama
 - **Múltiples Tipos de Problemas**: Producción, transporte, dieta, mezclas, asignación de recursos
+- **🆕 Menú Contextual de Windows**: Resuelve problemas con clic derecho en archivos .txt
 
 ---
 
@@ -85,22 +84,37 @@ Variables:
 simplex-project/
 ├── README.md
 ├── requirements.txt
+├── simplex.py                       # Script principal
 │
-├── tests/
-│   └── test_nlp_system.py           # Suite completa de tests
-│
-├── src/
+├── src/                             # Código fuente
 │   ├── solver.py                    # Algoritmo Simplex
+│   ├── file_parser.py               # Parser de archivos
+│   ├── user_interface.py            # Interfaz de usuario
+│   ├── reporting_pdf.py             # Generación de reportes
 │   └── nlp/                         # Sistema NLP
-│       ├── config.py                # Configuración
 │       ├── connector.py             # Orquestador principal
 │       ├── ollama_processor.py      # Procesador con Ollama
 │       ├── model_generator.py       # Generador de modelos
-│       ├── interfaces.py            # Interfaces
-│       ├── problem_structure_detector.py  # Detector de estructura
-│       └── complexity_analyzer.py   # Análisis de complejidad
+│       └── ...
 │
-└── ejemplos/nlp/                    # Ejemplos de problemas
+├── context_menu/                    # 🆕 Menú contextual de Windows
+│   ├── solve_from_context.py       # Script del menú contextual
+│   ├── install.bat                  # Instalador
+│   ├── uninstall.bat                # Desinstalador
+│   └── README.md                    # Documentación
+│
+├── ejemplos/                        # 🆕 Archivos de ejemplo
+│   ├── ejemplo_maximizacion.txt
+│   ├── ejemplo_minimizacion.txt
+│   ├── ejemplo_carpinteria.txt
+│   └── README.md
+│
+├── tests/                           # Suite de tests
+│   └── test_nlp_system.py
+│
+└── docs/                            # Documentación
+    ├── CONTEXT_MENU_GUIDE.md        # Guía del menú contextual
+    └── BUILD_INSTRUCTIONS.md
 ```
 
 ---
@@ -109,12 +123,32 @@ simplex-project/
 
 - **ARQUITECTURA.md**: Diseño técnico del sistema
 - **GUIA_IA.md**: Guía detallada de instalación y uso
+- **docs/CONTEXT_MENU_GUIDE.md**: Guía del menú contextual de Windows
 - **ESTRUCTURA.md**: Organización de archivos
 - **LIMPIEZA.md**: Cambios recientes
 
 ---
 
 ## Uso
+
+### 🖱️ Menú Contextual de Windows (¡NUEVO!)
+
+**Resuelve problemas de Simplex con solo un clic derecho:**
+
+1. **Instala el menú contextual** (solo una vez):
+
+   - Navega a la carpeta `context_menu/`
+   - Haz clic derecho en `install.bat`
+   - Selecciona "Ejecutar como administrador"
+
+2. **Usa el menú contextual**:
+   - Crea un archivo `.txt` con tu problema de Simplex (ver ejemplos en `ejemplos/`)
+   - Haz clic derecho en el archivo
+   - Selecciona "Resolver con Simplex Solver"
+   - ¡Listo! Se abrirá una ventana con la solución
+
+📖 **Guía completa**: [docs/CONTEXT_MENU_GUIDE.md](docs/CONTEXT_MENU_GUIDE.md)  
+📁 **Ejemplos**: [ejemplos/](ejemplos/)
 
 ### Desde Python
 
@@ -175,7 +209,8 @@ ollama pull llama3.1:8b    # Modelo por defecto
 - **Mezclas**: Combinar materias primas óptimamente
 - **Asignación**: Distribuir recursos eficientemente
 
-Ver ejemplos en carpeta `ejemplos/nlp/`
+Ver ejemplos de archivos .txt en carpeta [`ejemplos/`](ejemplos/)  
+Ver ejemplos de lenguaje natural en carpeta `ejemplos/nlp/`
 
 ---
 
