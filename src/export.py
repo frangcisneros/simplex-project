@@ -64,6 +64,9 @@ def export_to_pdf(result: dict, filename: str):
             540 - left_margin - right_margin
         )  # ancho utilizable para todo el documento(tener en cuenta márgenes)
 
+        # Color para resaltado
+        highlight_color = "#595959"
+
         # Título
         elements.append(Paragraph("Reporte Simplex Solver", custom_title_style))
         elements.append(Spacer(1, 12))
@@ -73,9 +76,6 @@ def export_to_pdf(result: dict, filename: str):
             problem = result["problem"]
             elements.append(Paragraph("Resumen del problema", custom_heading2_style))
             elements.append(Spacer(1, 4))
-
-            # Color
-            highlight_color = "#595959"
 
             # --- Función auxiliar para agregar espacio entre coeficiente y variable ---
             def add_space(expr: str) -> str:

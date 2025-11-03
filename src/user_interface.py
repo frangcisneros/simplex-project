@@ -7,7 +7,7 @@ import sys
 from typing import List, Tuple
 
 # Agregar import del validador
-from input_validator import InputValidator
+from src.input_validator import InputValidator
 
 
 class UserInterface:

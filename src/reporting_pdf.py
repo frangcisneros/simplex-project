@@ -5,10 +5,10 @@ Encapsula la lógica de creación de carpetas, formateo mínimo y delega a `expo
 
 import os
 from typing import Dict, Optional
-from logging_system import logger
+from src.logging_system import logger
 
 try:
-    from export import export_to_pdf
+    from src.export import export_to_pdf
 except Exception as e:
     # Si export.py no existe o falla la importación, lanzamos una excepción clara
     logger.error(f"Error al importar módulo export: {str(e)}", exception=e)
