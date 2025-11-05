@@ -23,6 +23,8 @@ tests/
 ├── test_e2e_solver.py               # Tests end-to-end del solver completo
 ├── test_e2e_nlp_pipeline.py         # Tests end-to-end del pipeline NLP
 ├── test_stress_solver.py            # Tests de estrés y rendimiento
+├── test_debug_mode.py               # Tests del modo verbose (niveles 0, 1, 2)
+├── test_verbose_mode.py             # Tests adicionales del modo verbose
 ├── test_nlp_system_pytest.py        # Tests completos del sistema NLP (pytest)
 ├── test_maximizacion_pytest.py      # Tests de problemas de maximización (pytest)
 ├── test_minimizacion_pytest.py      # Tests de problemas de minimización (pytest)
@@ -385,6 +387,6 @@ def test_multiple_cases(c, A, b, constraint_types, description):
 
 ---
 
-**Total de Tests**: 157 tests (156 passed, 1 skipped)  
-**Cobertura**: ~52% del código  
-**Tiempo de Ejecución**: ~34 segundos (todos los tests)
+**Total de Tests**: 164 tests (163 passed, 1 skipped)  
+**Cobertura**: ~53% del código  
+**Tiempo de Ejecución**: ~18 segundos (todos los tests)

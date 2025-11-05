@@ -1,5 +1,8 @@
-"""Input/output operations for problem parsing and file handling."""
+"""
+Input/output operations package.
 
-from simplex_solver.io.parser import FileParser
+This package is reserved for future I/O operations.
+Currently, file parsing is handled by simplex_solver.file_parser module.
+"""
 
-__all__ = ["FileParser"]
+__all__ = []

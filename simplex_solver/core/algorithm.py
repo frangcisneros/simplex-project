@@ -22,7 +22,8 @@ class SimplexSolver:
         self.tableau = Tableau()
         self.max_iterations = 100
         self.steps = []  # History of steps for PDF generation
-    
+        self.verbose_level = 0  # Verbosity level for logging iterations
+
     def _get_basic_solution(self, maximize: bool) -> tuple:
         """
         Devuelve (solution_dict, optimal_value_float).
@@ -68,19 +69,22 @@ class SimplexSolver:
             if is_optimal:
                 logger.info(f"Optimal solution found at iteration {iteration}")
 
-            # Mensaje explicativo en consola
-            print("\nCondición de optimalidad alcanzada:")
-            print("No existen coeficientes en la fila objetivo que mejoren la función (criterio del tableau).")
+                if self.verbose_level > 0:
+                    logger.info(
+                        "Optimality condition reached: no coefficients in objective row improve the function"
+                    )
 
-            # Intentar mostrar solución final de la fase
-            try:
-                final_solution, final_value = self._get_basic_solution(maximize)
-                print("\nSolución final de la fase:")
-                for var, val in final_solution.items():
-                    print(f"  {var} = {val:.4f}")
-                print(f"Valor óptimo (estimado): {final_value:.4f}\n")
-            except Exception as e:
-                logger.debug(f"No se pudo imprimir solución final: {e}")
+                if self.verbose_level > 1:
+                    try:
+                        final_solution, final_value = self._get_basic_solution(maximize)
+                        solution_str = ", ".join(
+                            [f"{var}={val:.4f}" for var, val in final_solution.items()]
+                        )
+                        logger.info(
+                            f"Final solution of phase: {solution_str}, Optimal value: {final_value:.4f}"
+                        )
+                    except Exception as e:
+                        logger.debug(f"Could not log final solution: {e}")
 
                 return {"status": "optimal", "iterations": iteration}
 
@@ -92,6 +96,8 @@ class SimplexSolver:
                 return {"status": "optimal", "iterations": iteration}
 
             logger.debug(f"Entering variable: column {entering_col + 1}")
+            if self.verbose_level > 1:
+                logger.info(f"Entering variable: column {entering_col + 1}")
 
             # Check if problem is unbounded
             if self.tableau.is_unbounded(entering_col):
@@ -114,6 +120,8 @@ class SimplexSolver:
                 }
 
             logger.debug(f"Leaving variable: row {leaving_row + 1}, pivot: {pivot:.4f}")
+            if self.verbose_level > 1:
+                logger.info(f"Leaving variable: row {leaving_row + 1}, pivot: {pivot:.4f}")
 
             # Store step for PDF report
             self.steps.append(
@@ -134,17 +142,18 @@ class SimplexSolver:
             self.tableau.pivot(entering_col, leaving_row)
             logger.debug(f"Pivot completed: [{leaving_row}, {entering_col}]")
 
-            # DEBUG: Mostrar la nueva solución básica después del pivoteo
-            try:
-                solution_dict, current_value = self._get_basic_solution(maximize)
-                # impresión clara en consola (modo debug human-friendly)
-                print("\n--- Iteración", iteration, "---")
-                print("Solución básica actual (post-pivoteo):")
-                for var, val in solution_dict.items():
-                    print(f"  {var} = {val:.4f}")
-                print(f"Valor actual de la función objetivo: {current_value:.4f}\n")
-            except Exception as e:
-                logger.debug(f"No se pudo imprimir solución intermedia: {e}")
+            # Log intermediate solution if verbose_level > 1
+            if self.verbose_level > 1:
+                try:
+                    solution_dict, current_value = self._get_basic_solution(maximize)
+                    solution_str = ", ".join(
+                        [f"{var}={val:.4f}" for var, val in solution_dict.items()]
+                    )
+                    logger.info(
+                        f"Iteration {iteration} - Basic solution: {solution_str}, Current value: {current_value:.4f}"
+                    )
+                except Exception as e:
+                    logger.debug(f"Could not log intermediate solution: {e}")
 
             if iteration > 50:  # Prevent infinite loops
                 logger.warning(f"Too many iterations ({iteration}), stopping")
@@ -158,7 +167,13 @@ class SimplexSolver:
         }
 
     def solve(
-        self, c: list, A: list, b: list, constraint_types: list, maximize: bool = True
+        self,
+        c: list,
+        A: list,
+        b: list,
+        constraint_types: list,
+        maximize: bool = True,
+        verbose_level: int = 0,
     ) -> Dict[str, Any]:
         """
         Solve a linear programming problem using the simplex method.
@@ -169,10 +184,13 @@ class SimplexSolver:
             b: Right-hand side vector
             constraint_types: Constraint types ('<=', '>=', '=')
             maximize: True to maximize, False to minimize
+            verbose_level: Verbosity level (0=silent, 1=basic info, 2=detailed iterations)
 
         Returns:
             Dictionary with solution, optimal value, status, and iterations
         """
+        self.verbose_level = verbose_level
+
         logger.info(
             f"Starting solver - Variables: {len(c)}, Constraints: {len(A)}, "
             f"Type: {'MAX' if maximize else 'MIN'}"
@@ -188,9 +206,15 @@ class SimplexSolver:
 
         # Phase 1: If there are artificial variables
         if self.tableau.artificial_vars:
-            logger.info(
-                f"Starting Phase 1 - Artificial variables: {len(self.tableau.artificial_vars)}"
-            )
+            if self.verbose_level > 0:
+                logger.info(
+                    f"Starting Phase 1 - Artificial variables: {len(self.tableau.artificial_vars)}"
+                )
+            else:
+                logger.debug(
+                    f"Starting Phase 1 - Artificial variables: {len(self.tableau.artificial_vars)}"
+                )
+
             phase1_result = self._solve_phase(maximize)
             phase1_iterations = phase1_result["iterations"]
             total_iterations += phase1_iterations
@@ -211,15 +235,25 @@ class SimplexSolver:
                     "iterations": total_iterations,
                 }
 
-            logger.info(f"Phase 1 completed successfully in {phase1_iterations} iterations")
+            if self.verbose_level > 0:
+                logger.info(f"Phase 1 completed successfully in {phase1_iterations} iterations")
+            else:
+                logger.debug(f"Phase 1 completed successfully in {phase1_iterations} iterations")
 
             # Prepare Phase 2
-            logger.info("Starting Phase 2")
+            if self.verbose_level > 0:
+                logger.info("Starting Phase 2")
+            else:
+                logger.debug("Starting Phase 2")
+
             self.tableau.setup_phase2(np.array(c), maximize)
 
         # Phase 2 (or single phase)
         if not self.tableau.artificial_vars:
-            logger.info("Solving in single phase (no artificial variables)")
+            if self.verbose_level > 0:
+                logger.info("Solving in single phase (no artificial variables)")
+            else:
+                logger.debug("Solving in single phase (no artificial variables)")
 
         phase2_result = self._solve_phase(maximize)
         total_iterations += phase2_result["iterations"]

@@ -82,13 +82,9 @@ Documentation = "https://github.com/username/simplex-project/blob/main/GUIA_USUA
 Repository = "https://github.com/username/simplex-project"
 Issues = "https://github.com/username/simplex-project/issues"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-
 [tool.setuptools.packages.find]
-where = ["src"]
 include = ["simplex_solver*"]
-exclude = ["tests*", "tools*"]
+exclude = ["tests*", "tools*", "build*", "dist*"]
 
 [tool.black]
 line-length = 100
@@ -135,11 +131,13 @@ exclude = [
 ]
 
 [tool.coverage.run]
-source = ["src"]
+source = ["simplex_solver"]
 omit = [
     "*/tests/*",
     "*/__pycache__/*",
     "*/site-packages/*",
+    "build/*",
+    "dist/*",
 ]
 
 [tool.coverage.report]

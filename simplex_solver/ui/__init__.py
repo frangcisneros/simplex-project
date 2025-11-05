@@ -1,5 +1,8 @@
-"""User interface components for console interaction."""
+"""
+User interface package.
 
-from simplex_solver.ui.console import ConsoleUI
+This package is reserved for future UI components.
+Currently, user interface is handled by simplex_solver.user_interface module.
+"""
 
-__all__ = ["ConsoleUI"]
+__all__ = []
