@@ -5,26 +5,22 @@ Sistema de optimización lineal que combina el algoritmo Simplex con modelos de 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
-
 ## Características
 
 - **IA Integrada**: Usa modelos de lenguaje (Llama 3.1, Mistral) para entender problemas en español
 - **Lenguaje Natural**: Describe problemas con texto normal, sin necesidad de fórmulas matemáticas
 - **Procesamiento Local**: Funciona completamente en tu computadora usando Ollama
 - **Múltiples Tipos de Problemas**: Producción, transporte, dieta, mezclas, asignación de recursos
-- **🆕 Menú Contextual de Windows**: Resuelve problemas con clic derecho en archivos .txt
-
----
+- **Menú Contextual de Windows**: Resuelve problemas con clic derecho en archivos .txt
 
 ## Instalación
 
-### 🚀 Instalación Rápida (Recomendado)
+### Instalación Rápida (Recomendado)
 
 **Con el Instalador Interactivo** (Windows):
 
 1. Descarga el paquete de distribución
-2. Ejecuta `SimplexInstaller.exe` **como administrador**
+2. Ejecuta `SimplexInstaller.exe` como administrador
    - El instalador solicita permisos de administrador automáticamente
    - Necesarios para instalar el menú contextual de Windows
 3. El instalador:
@@ -33,9 +29,9 @@ Sistema de optimización lineal que combina el algoritmo Simplex con modelos de 
    - Te guía en la instalación de todos los componentes
    - Configura el menú contextual de Windows (opcional)
 
-Ver [Guía del Instalador](docs/INSTALLER_README.md) para más detalles.
+Para más información, consulte GUIA_USUARIO.md.
 
-### 📦 Instalación Manual
+### Instalación Manual
 
 #### 1. Clonar el repositorio
 
@@ -61,8 +57,6 @@ ollama pull llama3.1:8b
 cd tests
 python test_nlp_system.py
 ```
-
----
 
 ## Ejemplo de Uso
 
@@ -93,8 +87,6 @@ Variables:
   mesas = 50.00
   sillas = 0.00
 ```
-
----
 
 ## Estructura del Proyecto
 
@@ -141,49 +133,33 @@ simplex-project/
 │   ├── test_maximizacion.py
 │   └── test_minimizacion.py
 │
-├── tools/                           # 🔧 Herramientas de desarrollo
-│   ├── build.py                     # Sistema unificado de build (NUEVO)
-│   ├── logs.py                      # Gestión unificada de logs (NUEVO)
-│   ├── history.py                   # Gestión de historial (NUEVO)
+├── tools/                           # Herramientas de desarrollo
+│   ├── build.py                     # Sistema unificado de build
+│   ├── logs.py                      # Gestión unificada de logs
+│   ├── history.py                   # Gestión de historial
 │   ├── test_installer.py            # Tests del instalador
 │   └── README.md                    # Guía de herramientas
 │
-└── docs/                            # 📚 Documentación
-    ├── GUIA_IA.md                   # Guía de IA y modelos
-    ├── CONTEXT_MENU_GUIDE.md        # Guía del menú contextual
-    ├── INSTALLER_README.md          # Guía del instalador
-    ├── BUILD_INSTRUCTIONS.md        # Instrucciones de compilación
-    ├── CONSOLIDATION_SUMMARY.md     # Resumen de consolidación (NUEVO)
-    ├── HISTORY_SYSTEM.md            # Sistema de historial
-    └── LOGGING_SYSTEM.md            # Sistema de logs
+└── logs/                           # Base de datos de logging
 ```
-
----
 
 ## Documentación
 
-### 📚 Guías de Usuario
+Consulte las siguientes guías para información completa:
 
-- **[GUIA_IA.md](docs/GUIA_IA.md)**: Guía completa de instalación y uso con IA
-- **[CONTEXT_MENU_GUIDE.md](docs/CONTEXT_MENU_GUIDE.md)**: Guía del menú contextual de Windows
-- **[INSTALLER_README.md](docs/INSTALLER_README.md)**: Documentación del instalador interactivo
+**Guías Principales:**
 
-### 🔧 Guías de Desarrollo
+- **GUIA_USUARIO.md**: Guía completa de instalación y uso para usuarios finales
+- **GUIA_DESARROLLADOR.md**: Documentación técnica para desarrolladores
 
-- **[BUILD_INSTRUCTIONS.md](docs/BUILD_INSTRUCTIONS.md)**: Instrucciones para compilar el proyecto
-- **[CONSOLIDATION_SUMMARY.md](docs/CONSOLIDATION_SUMMARY.md)**: Resumen de mejoras y consolidación
-- **[tools/README.md](tools/README.md)**: Guía de herramientas de desarrollo
+**Documentación Adicional:**
 
-### 📊 Sistemas
-
-- **[HISTORY_SYSTEM.md](docs/HISTORY_SYSTEM.md)**: Sistema de historial de problemas
-- **[LOGGING_SYSTEM.md](docs/LOGGING_SYSTEM.md)**: Sistema de logging
-
----
+- **tools/README.md**: Guía de herramientas de desarrollo
+- **ejemplos/README.md**: Información sobre archivos de ejemplo
 
 ## Uso
 
-### 🖱️ Menú Contextual de Windows (¡NUEVO!)
+### Menú Contextual de Windows
 
 **Resuelve problemas de Simplex con solo un clic derecho:**
 
@@ -197,10 +173,10 @@ simplex-project/
    - Crea un archivo `.txt` con tu problema de Simplex (ver ejemplos en `ejemplos/`)
    - Haz clic derecho en el archivo
    - Selecciona "Resolver con Simplex Solver"
-   - ¡Listo! Se abrirá una ventana con la solución
+   - Se abrirá una ventana con la solución
 
-📖 **Guía completa**: [docs/CONTEXT_MENU_GUIDE.md](docs/CONTEXT_MENU_GUIDE.md)  
-📁 **Ejemplos**: [ejemplos/](ejemplos/)
+**Guía completa**: Consulte GUIA_USUARIO.md  
+**Ejemplos**: Vea la carpeta `ejemplos/`
 
 ### Desde Python
 
@@ -234,8 +210,6 @@ cd tests
 python test_nlp_system.py
 ```
 
----
-
 ## Modelos Soportados
 
 | Modelo      | Tamaño | Precisión | Recomendado Para                  |
@@ -251,8 +225,6 @@ python test_nlp_system.py
 ollama pull llama3.1:8b    # Modelo por defecto
 ```
 
----
-
 ## Tipos de Problemas Soportados
 
 - **Producción**: Maximizar ganancias con recursos limitados
@@ -261,9 +233,7 @@ ollama pull llama3.1:8b    # Modelo por defecto
 - **Mezclas**: Combinar materias primas óptimamente
 - **Asignación**: Distribuir recursos eficientemente
 
-Ver ejemplos de archivos .txt en carpeta [`ejemplos/`](ejemplos/)
-
----
+Ver ejemplos de archivos .txt en carpeta `ejemplos/`
 
 ## Configuración
 
@@ -285,8 +255,6 @@ ModelConfig.DEFAULT_CONFIGS[NLPModelType.LLAMA3_1_8B] = {
     "top_p": 0.9
 }
 ```
-
----
 
 ## Solución de Problemas
 
@@ -314,11 +282,9 @@ ollama pull llama3.2:3b
 pip install -r requirements.txt
 ```
 
-Ver GUIA_IA.md para más ayuda.
+Ver GUIA_USUARIO.md para más ayuda.
 
----
-
-## 🔨 Compilar Ejecutables
+## Compilar Ejecutables
 
 Para generar los ejecutables, usa el **sistema unificado de build** (NUEVO):
 
@@ -341,12 +307,10 @@ Los ejecutables se generarán en `dist/`:
 - `dist/SimplexInstaller.exe` - Instalador interactivo
 - `dist/SimplexSolver.exe` - Solver standalone
 
-📖 **Guía completa**: [docs/BUILD_INSTRUCTIONS.md](docs/BUILD_INSTRUCTIONS.md)  
-🔧 **Herramientas**: [tools/README.md](tools/README.md)
+**Guía completa**: Consulte GUIA_DESARROLLADOR.md  
+**Herramientas**: Consulte tools/README.md
 
----
-
-## 🛠️ Herramientas de Desarrollo
+## Herramientas de Desarrollo
 
 El proyecto incluye herramientas consolidadas siguiendo principios SOLID:
 
@@ -373,9 +337,7 @@ python tools/history.py --test  # Test del sistema
 python tools/history.py --stats # Estadísticas
 ```
 
-📖 **Documentación completa**: [tools/README.md](tools/README.md)
-
----
+**Documentación completa**: Consulte tools/README.md
 
 ## Testing
 
@@ -392,8 +354,6 @@ Los tests incluyen:
 - Tests de extremo a extremo con problemas reales
 - Validación de modelos y estructuras
 
----
-
 ## Autor
 
 - Francisco - [@frangcisneros](https://github.com/frangcisneros)
@@ -402,22 +362,19 @@ Los tests incluyen:
 - Guillermo
 - Lucia
 
----
-
 ## Soporte
 
-- **Documentación completa**: Ver carpeta [`docs/`](docs/)
-- **Guía de IA**: [docs/GUIA_IA.md](docs/GUIA_IA.md)
+- **Documentación completa**: Ver GUIA_USUARIO.md y GUIA_DESARROLLADOR.md
 - **Issues**: [GitHub Issues](https://github.com/frangcisneros/simplex-project/issues)
 
----
+## Versión
 
-_Versión 3.1 - Noviembre 2025_
+Versión 3.1 - Noviembre 2025
 
 **Novedades v3.1:**
 
-- ✨ Sistema de build unificado siguiendo principios SOLID
-- 🔧 Herramientas consolidadas para desarrollo
-- 📚 Documentación mejorada y reorganizada
-- 🗑️ Eliminación de código duplicado (-50% de scripts)
-- Ver [CONSOLIDATION_SUMMARY.md](docs/CONSOLIDATION_SUMMARY.md) para detalles
+- Sistema de build unificado siguiendo principios SOLID
+- Herramientas consolidadas para desarrollo
+- Documentación mejorada y reorganizada
+- Eliminación de código duplicado (-50% de scripts)
+- Guías consolidadas para usuarios y desarrolladores

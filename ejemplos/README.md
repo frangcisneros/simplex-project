@@ -2,21 +2,21 @@
 
 Esta carpeta contiene archivos de ejemplo con problemas de programación lineal en formato de texto.
 
-## 📝 Archivos de Ejemplo
+## Archivos de Ejemplo
 
-### 1. **ejemplo_maximizacion.txt**
+### 1. ejemplo_maximizacion.txt
 
 Problema básico de maximización con restricciones de tipo `<=`.
 
 **Descripción**: Maximizar una función objetivo sujeta a restricciones de recursos limitados.
 
-### 2. **ejemplo_minimizacion.txt**
+### 2. ejemplo_minimizacion.txt
 
 Problema de minimización con restricciones de tipo `>=`.
 
 **Descripción**: Minimizar costos cumpliendo con requisitos mínimos.
 
-### 3. **ejemplo_carpinteria.txt**
+### 3. ejemplo_carpinteria.txt
 
 Problema realista de una carpintería que fabrica mesas y sillas.
 
@@ -30,7 +30,7 @@ Problema realista de una carpintería que fabrica mesas y sillas.
 - Máximo 60 unidades en total
 - **Objetivo**: Maximizar la ganancia
 
-## 🎯 Cómo Usar los Ejemplos
+## Cómo Usar los Ejemplos
 
 ### Opción 1: Menú Contextual (Windows)
 
@@ -56,7 +56,7 @@ python simplex.py ejemplos/ejemplo_carpinteria.txt --pdf resultado.pdf
 python simplex.py --interactive
 ```
 
-## 📐 Formato de Archivos
+## Formato de Archivos
 
 Todos los archivos siguen esta estructura:
 
@@ -87,14 +87,14 @@ Esto representa:
 - **Restricción 2**: 2x₁ + 3x₂ ≤ 42
 - **Restricción 3**: 3x₁ + x₂ ≤ 24
 
-## ✍️ Crear tus Propios Problemas
+## Crear tus Propios Problemas
 
 1. Crea un nuevo archivo `.txt`
 2. Sigue el formato especificado arriba
 3. Guárdalo en esta carpeta (opcional)
 4. Resuélvelo usando cualquiera de los métodos anteriores
 
-## 🔍 Validación
+## Validación
 
 El programa validará automáticamente:
 
