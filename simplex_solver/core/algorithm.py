@@ -22,6 +22,28 @@ class SimplexSolver:
         self.tableau = Tableau()
         self.max_iterations = 100
         self.steps = []  # History of steps for PDF generation
+    
+    def _get_basic_solution(self, maximize: bool) -> tuple:
+        """
+        Devuelve (solution_dict, optimal_value_float).
+        Usa la API de Tableau existente: .get_solution(maximize)
+        En caso de error devuelve ({x_i: 0.0...}, 0.0)
+        """
+        try:
+            sol, val = self.tableau.get_solution(maximize)
+            # asegurar orden consistente (x1, x2, ...)
+            ordered = {k: sol.get(k, 0.0) for k in sorted(sol.keys(), key=lambda s: int(s[1:]))}
+            return ordered, float(val)
+        except Exception as e:
+            # No interrumpir ejecución por un fallo al obtener solución
+            logger.debug(f"_get_basic_solution: fallo al extraer solución: {e}")
+            # construir fallback con num_vars
+            try:
+                n = self.tableau.num_vars
+                fallback = {f"x{i+1}": 0.0 for i in range(n)}
+                return fallback, 0.0
+            except Exception:
+                return {}, 0.0
 
     def _solve_phase(self, maximize: bool) -> Dict[str, Any]:
         """
@@ -45,6 +67,21 @@ class SimplexSolver:
 
             if is_optimal:
                 logger.info(f"Optimal solution found at iteration {iteration}")
+
+            # Mensaje explicativo en consola
+            print("\nCondición de optimalidad alcanzada:")
+            print("No existen coeficientes en la fila objetivo que mejoren la función (criterio del tableau).")
+
+            # Intentar mostrar solución final de la fase
+            try:
+                final_solution, final_value = self._get_basic_solution(maximize)
+                print("\nSolución final de la fase:")
+                for var, val in final_solution.items():
+                    print(f"  {var} = {val:.4f}")
+                print(f"Valor óptimo (estimado): {final_value:.4f}\n")
+            except Exception as e:
+                logger.debug(f"No se pudo imprimir solución final: {e}")
+
                 return {"status": "optimal", "iterations": iteration}
 
             # Find entering variable
@@ -96,6 +133,18 @@ class SimplexSolver:
             # Perform pivoting
             self.tableau.pivot(entering_col, leaving_row)
             logger.debug(f"Pivot completed: [{leaving_row}, {entering_col}]")
+
+            # DEBUG: Mostrar la nueva solución básica después del pivoteo
+            try:
+                solution_dict, current_value = self._get_basic_solution(maximize)
+                # impresión clara en consola (modo debug human-friendly)
+                print("\n--- Iteración", iteration, "---")
+                print("Solución básica actual (post-pivoteo):")
+                for var, val in solution_dict.items():
+                    print(f"  {var} = {val:.4f}")
+                print(f"Valor actual de la función objetivo: {current_value:.4f}\n")
+            except Exception as e:
+                logger.debug(f"No se pudo imprimir solución intermedia: {e}")
 
             if iteration > 50:  # Prevent infinite loops
                 logger.warning(f"Too many iterations ({iteration}), stopping")
