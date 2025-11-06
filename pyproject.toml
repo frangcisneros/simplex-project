@@ -31,6 +31,7 @@ dependencies = [
     "psutil>=5.9.0",
     "tabulate>=0.9.0",
     "requests>=2.31.0",
+    "reportlab>=4.0.0",
 ]
 
 [project.optional-dependencies]
@@ -77,10 +78,10 @@ all = [
 simplex-solver = "simplex_solver.main:main"
 
 [project.urls]
-Homepage = "https://github.com/username/simplex-project"
-Documentation = "https://github.com/username/simplex-project/blob/main/GUIA_USUARIO.md"
-Repository = "https://github.com/username/simplex-project"
-Issues = "https://github.com/username/simplex-project/issues"
+Homepage = "https://github.com/frangcisneros/simplex-project"
+Documentation = "https://github.com/frangcisneros/simplex-project/blob/main/GUIA_USUARIO.md"
+Repository = "https://github.com/frangcisneros/simplex-project"
+Issues = "https://github.com/frangcisneros/simplex-project/issues"
 
 [tool.setuptools.packages.find]
 include = ["simplex_solver*"]

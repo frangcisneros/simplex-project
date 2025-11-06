@@ -51,15 +51,15 @@ class BuildCleaner:
         for artifact in artifacts:
             path = Path(artifact)
             if path.exists():
-                print(f"🗑️  Removing {path}")
+                print(f"Removing {path}")
                 shutil.rmtree(path, ignore_errors=True)
 
         # Remove .spec files
         for spec_file in Path(".").glob("*.spec"):
-            print(f"🗑️  Removing {spec_file}")
+            print(f"Removing {spec_file}")
             spec_file.unlink(missing_ok=True)
 
-        print("✓ Cleanup completed")
+        print("[OK] Cleanup completed")
 
 
 class PyInstallerManager:
@@ -71,10 +71,10 @@ class PyInstallerManager:
         try:
             import PyInstaller  # type: ignore
 
-            print("✓ PyInstaller detected")
+            print("[OK] PyInstaller detected")
             return True
         except ImportError:
-            print("⚠️  PyInstaller not found. Installing...")
+            print("[WARNING] PyInstaller not found. Installing...")
             return PyInstallerManager._install()
 
     @staticmethod
@@ -93,10 +93,10 @@ class PyInstallerManager:
                     [sys.executable, "-m", "pip", "install", "pyinstaller"],
                     stdout=subprocess.DEVNULL,
                 )
-            print("✓ PyInstaller installed successfully")
+            print("[OK] PyInstaller installed successfully")
             return True
         except subprocess.CalledProcessError as e:
-            print(f"✗ Failed to install PyInstaller: {e}")
+            print(f"[ERROR] Failed to install PyInstaller: {e}")
             return False
 
 
@@ -178,7 +178,7 @@ exe = EXE(
         spec_content += "\n)\n"
 
         spec_path.write_text(spec_content, encoding="utf-8")
-        print(f"✓ Generated {spec_path}")
+        print(f"[OK] Generated {spec_path}")
 
         return spec_path
 
@@ -189,18 +189,18 @@ class ExecutableBuilder:
     @staticmethod
     def build(spec_file: Path, name: str) -> bool:
         """Build an executable from a spec file."""
-        print(f"\n🔨 Building {name}...")
+        print(f"\n[BUILD] Building {name}...")
 
         try:
             cmd = [sys.executable, "-m", "PyInstaller", str(spec_file), "--clean"]
 
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-            print(f"✓ {name} built successfully")
+            print(f"[OK] {name} built successfully")
             return True
 
         except subprocess.CalledProcessError as e:
-            print(f"✗ Build failed for {name}")
+            print(f"[ERROR] Build failed for {name}")
             print(e.stderr)
             return False
 
@@ -209,10 +209,10 @@ class ExecutableBuilder:
         """Verify that an executable was created successfully."""
         if exe_path.exists():
             size_mb = exe_path.stat().st_size / (1024 * 1024)
-            print(f"✓ {name}: {exe_path} ({size_mb:.1f} MB)")
+            print(f"[OK] {name}: {exe_path} ({size_mb:.1f} MB)")
             return True
         else:
-            print(f"✗ {name} not found at {exe_path}")
+            print(f"[ERROR] {name} not found at {exe_path}")
             return False
 
 
@@ -295,7 +295,7 @@ class BuildOrchestrator:
     def build(self, target: str) -> bool:
         """Build a specific target."""
         if target not in self.CONFIGS:
-            print(f"✗ Unknown target: {target}")
+            print(f"[ERROR] Unknown target: {target}")
             print(f"Available targets: {', '.join(self.CONFIGS.keys())}")
             return False
 
@@ -322,7 +322,7 @@ class BuildOrchestrator:
 
     def build_all(self) -> bool:
         """Build all targets."""
-        print("\n🏗️  Building all targets...\n")
+        print("\n[BUILD] Building all targets...\n")
 
         success = True
         for target in self.CONFIGS.keys():
@@ -333,7 +333,7 @@ class BuildOrchestrator:
 
     def clean(self) -> None:
         """Clean all build artifacts."""
-        print("\n🧹 Cleaning build artifacts...\n")
+        print("\n[CLEAN] Cleaning build artifacts...\n")
         self.cleaner.clean_all()
 
 
@@ -341,7 +341,7 @@ def main() -> int:
     """Main entry point."""
     # Verify we're in the project root
     if not Path("pyproject.toml").exists() and not Path("README.md").exists():
-        print("✗ Error: Run this script from the project root directory")
+        print("[ERROR] Run this script from the project root directory")
         return 1
 
     # Parse arguments
@@ -391,9 +391,9 @@ Examples:
     # Summary
     print("\n" + "=" * 70)
     if success:
-        print("✓ BUILD COMPLETED SUCCESSFULLY")
+        print("[SUCCESS] BUILD COMPLETED SUCCESSFULLY")
     else:
-        print("✗ BUILD FAILED")
+        print("[FAILED] BUILD FAILED")
     print("=" * 70)
 
     return 0 if success else 1

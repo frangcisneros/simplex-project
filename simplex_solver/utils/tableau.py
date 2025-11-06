@@ -5,6 +5,7 @@ Contiene la lógica de construcción y manipulación del tableau.
 
 import numpy as np
 from typing import List, Tuple, Optional, Dict
+from simplex_solver.config import AlgorithmConfig
 
 
 class Tableau:
@@ -19,11 +20,16 @@ class Tableau:
         self.constraint_types: List[str] = []  # '<=', '>=', '='
         self.phase: int = 1  # 1 para fase 1, 2 para fase 2
         self.original_c: Optional[np.ndarray] = None  # almacenar c original
-        self.tol: float = 1e-10
+        self.tol: float = AlgorithmConfig.NUMERICAL_TOLERANCE
 
-    def build_initial_tableau(self, c: List[float], A: List[List[float]],
-                              b: List[float], constraint_types: List[str],
-                              maximize: bool = True) -> None:
+    def build_initial_tableau(
+        self,
+        c: List[float],
+        A: List[List[float]],
+        b: List[float],
+        constraint_types: List[str],
+        maximize: bool = True,
+    ) -> None:
         """
         Construye el tableau inicial para el problema simplex.
         Normaliza constraint_types, transforma filas con b<0 y construye
@@ -48,16 +54,16 @@ class Tableau:
                 A_arr[i, :] *= -1
                 b_arr[i] *= -1
                 # invertir el tipo de restricción cuando sea <= o >=
-                if constraint_types[i] == '<=':
-                    constraint_types[i] = '>='
-                elif constraint_types[i] == '>=':
-                    constraint_types[i] = '<='
+                if constraint_types[i] == "<=":
+                    constraint_types[i] = ">="
+                elif constraint_types[i] == ">=":
+                    constraint_types[i] = "<="
                 # '=' queda igual
 
         # Recontar variables necesarias (usar los tipos ya normalizados)
-        num_slack = constraint_types.count('<=')
-        num_surplus = constraint_types.count('>=')
-        num_artificial = constraint_types.count('>=') + constraint_types.count('=')
+        num_slack = constraint_types.count("<=")
+        num_surplus = constraint_types.count(">=")
+        num_artificial = constraint_types.count(">=") + constraint_types.count("=")
 
         total_vars = n + num_slack + num_surplus + num_artificial
 
@@ -74,13 +80,13 @@ class Tableau:
 
         # Insertar columnas en orden: [originals | slack(s) for <= | surplus(s) for >= | artificial]
         for i, const_type in enumerate(constraint_types):
-            if const_type == '<=':
+            if const_type == "<=":
                 # Variable de holgura +1
                 self.tableau[i, slack_idx] = 1.0
                 self.basic_vars.append(slack_idx)
                 slack_idx += 1
 
-            elif const_type == '>=':
+            elif const_type == ">=":
                 # Variable de exceso (-1) y artificial (+1)
                 # surplus column
                 self.tableau[i, slack_idx] = -1.0
@@ -91,7 +97,7 @@ class Tableau:
                 slack_idx += 1
                 artificial_idx += 1
 
-            elif const_type == '=':
+            elif const_type == "=":
                 # Variable artificial
                 self.tableau[i, artificial_idx] = 1.0
                 self.basic_vars.append(artificial_idx)
@@ -176,7 +182,9 @@ class Tableau:
                 # buscar columna j con tableau[i,j] == 1 y columna j tiene ceros en otras filas
                 found = False
                 for j in range(self.tableau.shape[1] - 1):
-                    if abs(self.tableau[i, j] - 1.0) < self.tol and np.all(np.abs(self.tableau[:, j] - np.eye(self.tableau.shape[0])[:, j]) < 1e-6):
+                    if abs(self.tableau[i, j] - 1.0) < self.tol and np.all(
+                        np.abs(self.tableau[:, j] - np.eye(self.tableau.shape[0])[:, j]) < 1e-6
+                    ):
                         self.basic_vars[i] = j
                         found = True
                         break
@@ -188,7 +196,7 @@ class Tableau:
         # Reconstruir la fila objetivo r_j = c_j - z_j utilizando original_c
         new_obj_row = np.zeros(total_vars + 1)
         # colocar c_j en posiciones originales
-        new_obj_row[:len(original_c)] = original_c
+        new_obj_row[: len(original_c)] = original_c
         self.tableau[-1, :] = new_obj_row
 
         # Hacer cero los coeficientes de las variables básicas (restar fila básica * coef)
@@ -235,7 +243,11 @@ class Tableau:
         last_row = self.tableau[-1, :-1]
 
         if self.phase == 1:
-            candidates = [(i, val) for i, val in enumerate(last_row) if val < -self.tol and i not in self.artificial_vars]
+            candidates = [
+                (i, val)
+                for i, val in enumerate(last_row)
+                if val < -self.tol and i not in self.artificial_vars
+            ]
             if not candidates:
                 return -1
             # elegir el más negativo
@@ -268,7 +280,7 @@ class Tableau:
 
         Devuelve (fila, pivot_val) o (-1, 0) si no hay fila candidata.
         """
-        ratios = [float('inf')] * self.num_constraints
+        ratios = [float("inf")] * self.num_constraints
         for i in range(self.num_constraints):
             a_ij = self.tableau[i, entering_col]
             if a_ij > self.tol:
@@ -276,7 +288,7 @@ class Tableau:
                 if ratio >= -self.tol:
                     ratios[i] = ratio
 
-        if all(r == float('inf') for r in ratios):
+        if all(r == float("inf") for r in ratios):
             return -1, 0.0
 
         # elegir la fila con ratio mínimo (si empates, regla de Bland: menor índice)
@@ -287,8 +299,11 @@ class Tableau:
     def pivot(self, entering_col: int, leaving_row: int) -> None:
         """Realiza la operación de pivoteo."""
         pivot = self.tableau[leaving_row, entering_col]
-        if abs(pivot) < self.tol:
-            raise ZeroDivisionError("Pivote casi nulo durante pivot()")
+        if abs(pivot) < AlgorithmConfig.PIVOT_TOLERANCE:
+            raise ZeroDivisionError(
+                f"Pivote casi nulo ({pivot:.2e}) detectado durante pivoteo. "
+                "Esto indica un problema mal condicionado en la formulación."
+            )
 
         # Actualizar variables básicas
         self.basic_vars[leaving_row] = entering_col

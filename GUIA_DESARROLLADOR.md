@@ -28,7 +28,7 @@ simplex-project/
 │   ├── problem_history.py           # Historial de problemas
 │   ├── log_viewer.py                # Visor de logs
 │   ├── debug.py                     # Utilidades de depuración
-│   ├── system_analyzer.py           # Análisis de capacidades del sistema
+│   ├── config.py                    # Configuración centralizada
 │   │
 │   ├── core/                        # Algoritmo Simplex
 │   │   ├── __init__.py
@@ -62,6 +62,13 @@ simplex-project/
 ├── ejemplos/                        # Archivos de ejemplo
 ├── tests/                           # Suite de tests
 ├── tools/                           # Herramientas de desarrollo
+│   ├── build.py                     # Sistema unificado de build
+│   ├── logs.py                      # Gestión unificada de logs
+│   ├── history.py                   # Gestión de historial
+│   ├── test_installer.py            # Tests del instalador
+│   ├── system_analyzer.py           # Análisis de capacidades del sistema
+│   └── README.md                    # Guía de herramientas
+│
 └── logs/                           # Base de datos de logging
 ```
 
@@ -105,6 +112,82 @@ Sistema de historial de problemas resueltos:
 - Búsqueda y consulta
 - Re-resolución desde historial
 - Estadísticas
+
+#### config.py - Sistema de Configuración Centralizado
+
+Módulo de configuración que centraliza todas las constantes y configuraciones de la aplicación, siguiendo el principio Single Source of Truth (SSOT). Contiene 9 clases de configuración:
+
+**AlgorithmConfig** - Parámetros del algoritmo Simplex:
+
+- `MAX_ITERATIONS = 100` - Iteraciones máximas permitidas
+- `SAFETY_ITERATION_LIMIT = 50` - Límite de seguridad antes de advertencia
+- `NUMERICAL_TOLERANCE = 1e-10` - Tolerancia para comparaciones numéricas
+- `PIVOT_TOLERANCE = 1e-10` - Tolerancia para detectar pivotes casi nulos
+
+**ValidationConfig** - Límites de validación:
+
+- `MIN_VARIABLES / MAX_VARIABLES = 1 / 1000` - Rango de variables
+- `MIN_CONSTRAINTS / MAX_CONSTRAINTS = 1 / 1000` - Rango de restricciones
+- `FEASIBILITY_TOLERANCE = 1e-6` - Tolerancia de factibilidad
+
+**FileConfig** - Configuración de archivos:
+
+- `DEFAULT_ENCODING = "utf-8"` - Codificación por defecto
+- `MAXIMIZE_KEYWORDS / MINIMIZE_KEYWORDS` - Palabras clave reconocidas
+- `SUBJECT_TO_KEYWORD` - Delimitador de restricciones
+- `VALID_CONSTRAINT_TYPES` - Tipos de restricción aceptados
+
+**LoggingConfig** - Parámetros de logging:
+
+- `RETENTION_DAYS = 180` - Retención de logs (6 meses)
+- `LOG_DATABASE_NAME` - Nombre de la base de datos
+- `VerbosityLevel` - Niveles de verbosidad (SILENT, BASIC, DETAILED)
+
+**ReportConfig** - Configuración de reportes PDF:
+
+- `DEFAULT_REPORTS_DIR` - Directorio de salida
+- `PAGE_SIZE = "letter"` - Tamaño de página
+- `MAX_ITERATIONS_IN_REPORT = 50` - Límite de iteraciones en reportes
+
+**HistoryConfig** - Parámetros del historial:
+
+- `DEFAULT_DISPLAY_LIMIT = 50` - Problemas a mostrar por defecto
+- `TEMP_FILE_PREFIX` - Prefijo para archivos temporales
+
+**Messages** - Mensajes estándar al usuario:
+
+- Todos los strings mostrados al usuario (títulos, validación, errores, etc.)
+- Centraliza textos para facilitar internacionalización futura
+
+**PathConfig** - Rutas de la aplicación:
+
+- `LOGS_DIR = "logs"` - Directorio de logs
+- `APP_DATA_DIR = "SimplexSolver"` - Directorio en AppData (Windows)
+
+**Defaults** - Valores por defecto:
+
+- `INTERACTIVE_FILENAME` - Nombre para modo interactivo
+- `DEFAULT_MAXIMIZE = True` - Tipo de problema por defecto
+
+**Uso del sistema de configuración:**
+
+```python
+from simplex_solver.config import AlgorithmConfig, Messages, FileConfig
+
+# Usar constantes del algoritmo
+max_iter = AlgorithmConfig.MAX_ITERATIONS
+tolerance = AlgorithmConfig.NUMERICAL_TOLERANCE
+
+# Usar mensajes estandarizados
+print(Messages.VALIDATING)
+print(Messages.VALIDATION_SUCCESS)
+
+# Usar configuración de archivos
+with open(filename, encoding=FileConfig.DEFAULT_ENCODING) as f:
+    content = f.read()
+```
+
+Este sistema reemplaza magic numbers y strings hardcodeados, facilitando el mantenimiento y modificación de parámetros desde un único punto.
 
 ## Sistema de Inteligencia Artificial
 
@@ -781,6 +864,226 @@ Gestión del historial de problemas con interfaz interactiva.
 
 Para más información, consulte `tools/README.md`.
 
+## Configuración del Entorno de Desarrollo
+
+Esta sección guía a nuevos desarrolladores en la configuración del entorno de desarrollo desde cero.
+
+### Requisitos Previos
+
+- **Python:** 3.9 o superior
+- **Git:** Para control de versiones
+- **Editor/IDE recomendado:**
+  - Visual Studio Code (con extensiones Python, Pylance)
+  - PyCharm Community/Professional
+  - Cualquier editor con soporte para Python
+
+### Configuración Paso a Paso
+
+#### 1. Clonar el Repositorio
+
+```bash
+git clone https://github.com/frangcisneros/simplex-project.git
+cd simplex-project
+```
+
+#### 2. Crear Entorno Virtual
+
+Se recomienda fuertemente usar un entorno virtual para aislar las dependencias:
+
+**Windows:**
+
+```powershell
+# Crear entorno virtual
+python -m venv venv
+
+# Activar entorno virtual
+.\venv\Scripts\activate
+```
+
+**Linux/Mac:**
+
+```bash
+# Crear entorno virtual
+python3 -m venv venv
+
+# Activar entorno virtual
+source venv/bin/activate
+```
+
+#### 3. Instalar Dependencias de Desarrollo
+
+```bash
+# Instalar dependencias runtime
+pip install -r requirements.txt
+
+# Instalar dependencias de desarrollo (testing, linting)
+pip install -r requirements-dev.txt
+
+# Instalar dependencias de build (opcional, solo si vas a compilar)
+pip install -r requirements-build.txt
+```
+
+#### 4. Verificar la Instalación
+
+```bash
+# Ejecutar tests para verificar que todo funciona
+python -m pytest tests/ -v
+
+# Ejecutar el solver en modo interactivo
+python simplex.py --interactive
+```
+
+#### 5. Configurar IDE (Visual Studio Code)
+
+Si usas VS Code, crea un archivo `.vscode/settings.json`:
+
+```json
+{
+	"python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
+	"python.testing.pytestEnabled": true,
+	"python.testing.pytestArgs": ["tests"],
+	"python.linting.enabled": true,
+	"python.linting.flake8Enabled": true,
+	"python.formatting.provider": "black",
+	"editor.formatOnSave": true
+}
+```
+
+### Estructura del Proyecto para Desarrollo
+
+```
+simplex-project/
+├── venv/                   # Entorno virtual (no versionado)
+├── simplex_solver/         # Código fuente principal
+├── tests/                  # Suite de tests
+├── tools/                  # Scripts de desarrollo
+├── ejemplos/               # Archivos de ejemplo
+├── logs/                   # Logs locales (no versionados)
+├── htmlcov/                # Reportes de cobertura (no versionados)
+└── dist/                   # Ejecutables compilados (no versionados)
+```
+
+## Workflow de Desarrollo con Git
+
+### Branches Recomendados
+
+El proyecto utiliza un modelo de branches basado en Git Flow simplificado:
+
+- **main** - Código estable y listo para producción
+- **develop** - Rama de desarrollo principal
+- **feature/\*** - Ramas para nuevas funcionalidades
+- **bugfix/\*** - Ramas para corrección de bugs
+- **hotfix/\*** - Ramas para correcciones urgentes en producción
+- **quality/\*** - Ramas para mejoras de calidad (refactoring, tests)
+
+### Flujo de Trabajo Típico
+
+#### Crear una Nueva Funcionalidad
+
+```bash
+# 1. Actualizar tu repositorio local
+git checkout develop
+git pull origin develop
+
+# 2. Crear rama de feature
+git checkout -b feature/nombre-descriptivo
+
+# 3. Implementar la funcionalidad
+# ... editar archivos ...
+
+# 4. Agregar tests
+# ... crear/modificar archivos en tests/ ...
+
+# 5. Ejecutar tests localmente
+python -m pytest tests/ -v
+
+# 6. Verificar cobertura
+python -m pytest tests/ --cov=simplex_solver
+
+# 7. Formatear código
+black simplex_solver/
+isort simplex_solver/
+
+# 8. Verificar linting
+flake8 simplex_solver/
+
+# 9. Commit de cambios
+git add .
+git commit -m "feat: descripción breve de la funcionalidad"
+
+# 10. Push a tu fork
+git push origin feature/nombre-descriptivo
+
+# 11. Crear Pull Request en GitHub
+```
+
+#### Corregir un Bug
+
+```bash
+# 1. Crear rama de bugfix
+git checkout develop
+git checkout -b bugfix/descripcion-del-bug
+
+# 2. Implementar la corrección
+# ... editar archivos ...
+
+# 3. Agregar test que reproduzca el bug
+# ... crear test en tests/ ...
+
+# 4. Verificar que el test pasa
+python -m pytest tests/test_nombre.py -v
+
+# 5. Commit
+git commit -m "fix: descripción de la corrección"
+
+# 6. Push y PR
+git push origin bugfix/descripcion-del-bug
+```
+
+### Convenciones de Commits
+
+Seguimos **Conventional Commits** para mensajes de commit claros y estructurados:
+
+```
+<tipo>(<scope>): <descripción breve>
+
+<descripción detallada opcional>
+
+<referencias opcionales: closes #123>
+```
+
+**Tipos de commit:**
+
+- `feat:` - Nueva funcionalidad
+- `fix:` - Corrección de bug
+- `docs:` - Cambios en documentación
+- `style:` - Cambios de formato (no afectan funcionalidad)
+- `refactor:` - Refactorización de código
+- `test:` - Agregar o modificar tests
+- `chore:` - Cambios en build, herramientas, etc.
+- `perf:` - Mejoras de rendimiento
+
+**Ejemplos:**
+
+```bash
+git commit -m "feat(nlp): agregar soporte para modelo Gemma2"
+git commit -m "fix(solver): corregir detección de pivotes nulos"
+git commit -m "docs(readme): actualizar sección de instalación"
+git commit -m "test(algorithm): agregar tests para problemas no acotados"
+git commit -m "refactor(main): extraer clase ApplicationOrchestrator"
+```
+
+### Code Review
+
+Antes de crear un Pull Request, asegúrate de:
+
+1. **Todos los tests pasan:** `python -m pytest tests/ -v`
+2. **Cobertura adecuada:** Al menos 80% en código nuevo
+3. **Linting sin errores:** `flake8 simplex_solver/`
+4. **Código formateado:** `black simplex_solver/` e `isort simplex_solver/`
+5. **Documentación actualizada:** Actualizar docstrings y archivos .md si aplica
+6. **Changelog actualizado:** Agregar entrada describiendo los cambios
+
 ## Contribución al Proyecto
 
 ### Flujo de Trabajo Recomendado
@@ -802,14 +1105,182 @@ Para más información, consulte `tools/README.md`.
 - Agregar type hints cuando sea posible
 - Escribir tests para nueva funcionalidad
 
-### Documentación
+- Agregar ejemplos de uso
+- Documentar cambios en el formato de datos
+
+## Versionado Semántico
+
+El proyecto sigue **Semantic Versioning (SemVer)** para numeración de versiones: `MAJOR.MINOR.PATCH`
+
+### Cuándo Incrementar Cada Número
+
+**MAJOR (X.0.0)** - Cambios incompatibles con versiones anteriores:
+
+- Cambios en la API pública que rompen compatibilidad
+- Eliminación de funcionalidades
+- Cambios en el formato de archivos de entrada
+- Reestructuración completa del proyecto
+
+**MINOR (x.X.0)** - Nueva funcionalidad compatible con versiones anteriores:
+
+- Agregar nuevos modelos de IA soportados
+- Nuevas opciones de línea de comandos
+- Nuevos tipos de restricciones soportados
+- Mejoras significativas en el algoritmo
+
+**PATCH (x.x.X)** - Correcciones de bugs y mejoras menores:
+
+- Corrección de bugs
+- Mejoras de rendimiento
+- Actualizaciones de dependencias
+- Correcciones en documentación
+
+**Ejemplos:**
+
+- `1.0.0` → Primera versión estable
+- `1.1.0` → Agregar soporte para modelo Gemma2 (nueva funcionalidad)
+- `1.1.1` → Corregir bug en detección de pivotes nulos (bugfix)
+- `2.0.0` → Cambiar formato de archivos de entrada (breaking change)
+
+### Crear una Nueva Release
+
+```bash
+# 1. Actualizar versión en pyproject.toml
+# [project]
+# version = "1.2.0"
+
+# 2. Actualizar CHANGELOG.md
+# ## [1.2.0] - 2025-11-05
+# ### Added
+# - Nueva funcionalidad X
+
+# 3. Commit de versión
+git add pyproject.toml CHANGELOG.md
+git commit -m "chore: release v1.2.0"
+
+# 4. Crear tag
+git tag -a v1.2.0 -m "Release v1.2.0"
+
+# 5. Push con tags
+git push origin develop
+git push origin v1.2.0
+
+# 6. Merge a main y crear release en GitHub
+```
+
+## Ejecutar Tests Específicos
+
+### Ejecutar un Solo Test
+
+```bash
+# Ejecutar una clase de test específica
+python -m pytest tests/test_unit_solver_core.py::TestSimplexSolver -v
+
+# Ejecutar un test específico
+python -m pytest tests/test_unit_solver_core.py::TestSimplexSolver::test_simple_maximization -v
+```
+
+### Ejecutar Tests por Categoría
+
+```bash
+# Solo tests unitarios
+python -m pytest tests/test_unit_*.py -v
+
+# Solo tests end-to-end
+python -m pytest tests/test_e2e_*.py -v
+
+# Tests que contienen "nlp" en el nombre
+python -m pytest tests/ -k "nlp" -v
+
+# Tests que NO contienen "stress"
+python -m pytest tests/ -k "not stress" -v
+```
+
+### Tests con Opciones Avanzadas
+
+```bash
+# Modo verbose con output de print()
+python -m pytest tests/ -v -s
+
+# Detener en el primer fallo
+python -m pytest tests/ -x
+
+# Ejecutar últimos tests fallidos
+python -m pytest tests/ --lf
+
+# Ejecutar tests en paralelo (requiere pytest-xdist)
+python -m pytest tests/ -n auto
+
+# Generar reporte HTML de cobertura
+python -m pytest tests/ --cov=simplex_solver --cov-report=html
+# Ver reporte en: htmlcov/index.html
+```
+
+## Integración Continua (CI/CD)
+
+### GitHub Actions
+
+El proyecto utiliza GitHub Actions para automatizar testing y deployment. Los workflows se encuentran en `.github/workflows/`.
+
+**Workflow de CI** (`ci.yml`):
+
+- Se ejecuta en cada push y pull request a `main` y `develop`
+- Configura Python 3.10
+- Instala dependencias
+- Ejecuta linting (flake8)
+- Ejecuta tests con pytest
+- Genera reporte de cobertura
+- Sube cobertura a Codecov (opcional)
+
+**Workflow de Release** (`release.yml`):
+
+- Se activa al crear tags con patrón `v*.*.*`
+- Compila ejecutables con PyInstaller
+- Crea Release en GitHub
+- Adjunta ejecutables y documentación
+
+### Configuración Local de Pre-commit Hooks
+
+Para ejecutar validaciones antes de cada commit:
+
+```bash
+# Instalar pre-commit
+pip install pre-commit
+
+# Configurar hooks
+pre-commit install
+
+# Ejecutar manualmente
+pre-commit run --all-files
+```
+
+Crea `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/psf/black
+    rev: 23.7.0
+    hooks:
+      - id: black
+        language_version: python3.10
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+```
+
+## Documentación
 
 Al agregar funcionalidad nueva:
 
 1. Actualizar docstrings en el código
 2. Actualizar esta guía si es necesario
-3. Agregar ejemplos de uso
-4. Documentar cambios en el formato de datos
 
 ## Integración Continua
 
@@ -838,10 +1309,10 @@ git push origin v1.0.0
 
 ## Análisis del Sistema
 
-El módulo `system_analyzer.py` proporciona información sobre las capacidades del sistema:
+El módulo `system_analyzer.py` (ubicado en `tools/`) proporciona información sobre las capacidades del sistema:
 
 ```python
-from simplex_solver.system_analyzer import SystemAnalyzer
+from tools.system_analyzer import SystemAnalyzer
 
 analyzer = SystemAnalyzer()
 capabilities = analyzer.analyze_system()

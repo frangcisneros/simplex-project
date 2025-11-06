@@ -11,8 +11,9 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
-# Importar el analizador de sistema
-from simplex_solver.system_analyzer import SystemAnalyzer
+# Importar el analizador de sistema desde tools
+sys.path.insert(0, str(Path(__file__).parent / "tools"))
+from system_analyzer import SystemAnalyzer
 
 
 class Color:

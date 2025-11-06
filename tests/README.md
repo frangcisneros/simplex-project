@@ -2,16 +2,16 @@
 
 Esta carpeta contiene la suite de pruebas completa para el proyecto Simplex Solver. Las pruebas están organizadas usando **pytest** como framework principal.
 
-## 📋 Tabla de Contenidos
+## Tabla de Contenidos
 
 - [Estructura de Tests](#estructura-de-tests)
-- [Cómo Ejecutar las Pruebas](#cómo-ejecutar-las-pruebas)
-- [Tests de Estrés](#tests-de-estrés)
+- [Cómo Ejecutar las Pruebas](#c%C3%B3mo-ejecutar-las-pruebas)
+- [Tests de Estrés](#tests-de-estr%C3%A9s)
 - [Fixtures Compartidos](#fixtures-compartidos)
-- [Cobertura de Código](#cobertura-de-código)
+- [Cobertura de Código](#cobertura-de-c%C3%B3digo)
 - [Tests Existentes](#tests-existentes)
 
-## 🗂️ Estructura de Tests
+## Estructura de Tests
 
 ```
 tests/
@@ -25,20 +25,18 @@ tests/
 ├── test_stress_solver.py            # Tests de estrés y rendimiento
 ├── test_debug_mode.py               # Tests del modo verbose (niveles 0, 1, 2)
 ├── test_verbose_mode.py             # Tests adicionales del modo verbose
-├── test_nlp_system_pytest.py        # Tests completos del sistema NLP (pytest)
-├── test_maximizacion_pytest.py      # Tests de problemas de maximización (pytest)
-├── test_minimizacion_pytest.py      # Tests de problemas de minimización (pytest)
-├── test_validation_pytest.py        # Tests de validación de entrada (pytest)
+├── test_nlp_system_pytest.py        # Tests completos del sistema NLP
+├── test_maximizacion_pytest.py      # Tests de problemas de maximización
+├── test_minimizacion_pytest.py      # Tests de problemas de minimización
+├── test_validation_pytest.py        # Tests de validación de entrada
 ├── test_context_menu.py             # Tests del menú contextual
 ├── test_export_pdf.py               # Tests de exportación PDF
-├── test_logging_system.py           # Tests del sistema de logging
-├── test_nlp_system.py               # Tests NLP originales (unittest)
-├── test_maximizacion.py             # Tests maximización originales (unittest)
-├── test_minimizacion.py             # Tests minimización originales (unittest)
-└── test_validation.py               # Tests validación originales (unittest)
+└── test_logging_system.py           # Tests del sistema de logging
 ```
 
-## 🚀 Cómo Ejecutar las Pruebas
+**Nota**: Los archivos `test_*_pytest.py` son las versiones oficiales que usan pytest y fixtures. Las versiones antiguas en formato unittest han sido eliminadas.
+
+## Cómo Ejecutar las Pruebas
 
 ### Ejecutar Todos los Tests
 
@@ -90,7 +88,7 @@ python -m pytest tests/ -q
 python -m pytest tests/ -v --tb=short
 ```
 
-## ⚡ Tests de Estrés
+## Tests de Estrés
 
 Los tests de estrés (`test_stress_solver.py`) evalúan el rendimiento del sistema con problemas grandes. Por defecto, ejecutan versiones reducidas para no alargar demasiado las pruebas.
 
@@ -158,7 +156,7 @@ python -m pytest tests/test_stress_solver.py -v
 python -m pytest tests/test_stress_solver.py::test_stress_large_solver -v
 ```
 
-## 🔧 Fixtures Compartidos
+## Fixtures Compartidos
 
 El archivo `conftest.py` contiene fixtures reutilizables para todos los tests:
 
@@ -200,7 +198,7 @@ def test_my_maximization(solver, simple_max_problem, assert_optimal_solution):
     assert_optimal_solution(result, 54.0)  # Verifica valor óptimo esperado
 ```
 
-## 📊 Cobertura de Código
+## Cobertura de Código
 
 La suite de pruebas actual proporciona:
 
@@ -221,7 +219,7 @@ python -m pytest tests/ --cov=simplex_solver --cov-report=html
 start htmlcov/index.html
 ```
 
-## 📝 Tests Existentes
+## Tests Existentes
 
 ### Tests Unitarios (Unit Tests)
 
@@ -298,22 +296,15 @@ start htmlcov/index.html
 - Casos edge (NaN, infinito, contradicciones)
 - Tests parametrizados extensivos
 
-### Tests Originales (unittest)
-
-Los tests originales en formato unittest aún están disponibles:
-
-- `test_nlp_system.py`
-- `test_maximizacion.py`
-- `test_minimizacion.py`
-- `test_validation.py`
-
-También disponibles:
+### Tests Adicionales
 
 - `test_context_menu.py` - Tests del menú contextual (19 tests)
 - `test_export_pdf.py` - Tests de exportación PDF
 - `test_logging_system.py` - Tests del sistema de logging
+- `test_debug_mode.py` - Tests del modo verbose
+- `test_verbose_mode.py` - Tests adicionales de verbosidad
 
-## 🔍 Estrategias de Testing
+## Estrategias de Testing
 
 ### Isolation con Monkeypatch
 
@@ -359,7 +350,7 @@ def test_multiple_cases(c, A, b, constraint_types, description):
     pass
 ```
 
-## 🎯 Mejores Prácticas
+## Mejores Prácticas
 
 1. **Ejecutar tests antes de commit**:
 
@@ -379,7 +370,7 @@ def test_multiple_cases(c, A, b, constraint_types, description):
    - `test_<what>_<scenario>_<expected>`
    - Ejemplo: `test_solver_unbounded_detects_correctly`
 
-## 📚 Recursos Adicionales
+## Recursos Adicionales
 
 - [Documentación de pytest](https://docs.pytest.org/)
 - [pytest-cov Documentation](https://pytest-cov.readthedocs.io/)
@@ -387,6 +378,8 @@ def test_multiple_cases(c, A, b, constraint_types, description):
 
 ---
 
-**Total de Tests**: 164 tests (163 passed, 1 skipped)  
+**Total de Tests**: ~160 tests  
 **Cobertura**: ~53% del código  
-**Tiempo de Ejecución**: ~18 segundos (todos los tests)
+**Tiempo de Ejecución**: ~15-20 segundos (todos los tests)
+
+**Nota sobre migración**: Este proyecto ha migrado completamente de unittest a pytest. Todos los tests ahora usan fixtures y parametrización de pytest para mejor mantenibilidad y menos duplicación de código.

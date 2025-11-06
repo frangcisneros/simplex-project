@@ -7,6 +7,7 @@ from typing import Dict, Any, List
 import numpy as np
 from simplex_solver.utils.tableau import Tableau
 from simplex_solver.logging_system import logger
+from simplex_solver.config import AlgorithmConfig
 
 
 class SimplexSolver:
@@ -20,7 +21,7 @@ class SimplexSolver:
     def __init__(self):
         """Initialize the SimplexSolver with default settings."""
         self.tableau = Tableau()
-        self.max_iterations = 100
+        self.max_iterations = AlgorithmConfig.MAX_ITERATIONS
         self.steps = []  # History of steps for PDF generation
         self.verbose_level = 0  # Verbosity level for logging iterations
 
@@ -155,8 +156,8 @@ class SimplexSolver:
                 except Exception as e:
                     logger.debug(f"Could not log intermediate solution: {e}")
 
-            if iteration > 50:  # Prevent infinite loops
-                logger.warning(f"Too many iterations ({iteration}), stopping")
+            if iteration > AlgorithmConfig.SAFETY_ITERATION_LIMIT:
+                logger.warning(f"Too many iterations ({iteration}), stopping at safety limit")
                 return {"status": "error", "message": "Too many iterations"}
 
         logger.error(f"Maximum iterations reached: {self.max_iterations}")

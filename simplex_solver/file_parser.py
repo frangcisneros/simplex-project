@@ -10,6 +10,7 @@ from typing import List, Tuple, Optional
 # Agregar import del validador
 from simplex_solver.input_validator import InputValidator
 from simplex_solver.logging_system import logger
+from simplex_solver.config import FileConfig
 
 
 class FileParser:
@@ -31,7 +32,7 @@ class FileParser:
             file_size = os.path.getsize(filename)
             logger.debug(f"Tamaño del archivo: {file_size} bytes")
 
-            with open(filename, "r", encoding="utf-8") as f:
+            with open(filename, "r", encoding=FileConfig.DEFAULT_ENCODING) as f:
                 lines = [line.strip() for line in f.readlines() if line.strip()]
 
             logger.log_file_operation("read", filename, True)
@@ -69,69 +70,20 @@ class FileParser:
             logger.log_file_operation("read", filename, False, str(e))
             raise ValueError(f"Error al leer el archivo: {e}")
 
-
-"""
-Módulo para procesamiento de archivos de entrada.
-Lee y parsea archivos con problemas de programación lineal.
-"""
-
-import sys
-from typing import List, Tuple, Optional
-
-
-class FileParser:
-    """Parser para archivos de problemas de programación lineal."""
-
-    @staticmethod
-    def parse_file(
-        filename: str,
-    ) -> Tuple[List[float], List[List[float]], List[float], List[str], bool]:
-        """
-        Lee y parsea un archivo con el problema de programación lineal.
-
-        Formato esperado:
-        MAXIMIZE (o MINIMIZE)
-        c1 c2 c3 ... (coeficientes de la función objetivo)
-        SUBJECT TO
-        a11 a12 a13 ... <= b1
-        a21 a22 a23 ... >= b2
-        a31 a32 a33 ... = b3
-        ...
-
-        Args:
-            filename: Ruta del archivo a parsear
-
-        Returns:
-            Tupla con (c, A, b, constraint_types, maximize)
-        """
-        try:
-            with open(filename, "r", encoding="utf-8") as f:
-                lines = [line.strip() for line in f.readlines() if line.strip()]
-
-            if not lines:
-                raise ValueError("Archivo vacío")
-
-            maximize = FileParser._parse_optimization_type(lines[0])
-            c = FileParser._parse_objective_function(lines[1])
-            A, b, constraint_types = FileParser._parse_constraints(lines, len(c))
-
-            return c, A, b, constraint_types, maximize
-
-        except FileNotFoundError:
-            raise FileNotFoundError(f"No se pudo encontrar el archivo {filename}")
-        except Exception as e:
-            raise ValueError(f"Error al leer el archivo: {e}")
-
     @staticmethod
     def _parse_optimization_type(line: str) -> bool:
         """Parsea el tipo de optimización (MAXIMIZE/MINIMIZE)."""
         line_upper = line.upper()
-        if line_upper == "MAXIMIZE":
+
+        if line_upper in FileConfig.MAXIMIZE_KEYWORDS:
             return True
-        elif line_upper == "MINIMIZE":
+        elif line_upper in FileConfig.MINIMIZE_KEYWORDS:
             return False
         else:
-            raise ValueError("Primera línea debe ser MAXIMIZE o MINIMIZE")
+            raise ValueError(
+                f"Primera línea debe ser una palabra clave de optimización válida: "
+                f"{FileConfig.MAXIMIZE_KEYWORDS} o {FileConfig.MINIMIZE_KEYWORDS}"
+            )
 
     @staticmethod
     def _parse_objective_function(line: str) -> List[float]:
@@ -149,12 +101,12 @@ class FileParser:
         # Buscar "SUBJECT TO"
         subject_to_idx = -1
         for i, line in enumerate(lines):
-            if "SUBJECT TO" in line.upper():
+            if FileConfig.SUBJECT_TO_KEYWORD in line.upper():
                 subject_to_idx = i
                 break
 
         if subject_to_idx == -1:
-            raise ValueError("No se encontró 'SUBJECT TO'")
+            raise ValueError(f"No se encontró '{FileConfig.SUBJECT_TO_KEYWORD}'")
 
         A = []
         b = []

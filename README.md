@@ -5,6 +5,45 @@ Sistema de optimización lineal que combina el algoritmo Simplex con modelos de 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Quick Start
+
+¿Quieres resolver un problema de optimización ahora mismo? Aquí un ejemplo rápido:
+
+**Problema:** Una carpintería fabrica mesas y sillas. Cada mesa da $80 de ganancia y requiere 4 horas. Cada silla da $50 de ganancia y requiere 2 horas. Hay 200 horas disponibles. ¿Cuántas unidades fabricar para maximizar la ganancia?
+
+**Solución en 3 pasos:**
+
+```bash
+# 1. Instalar dependencias
+pip install numpy psutil tabulate requests reportlab
+
+# 2. Crear archivo con el problema (ejemplo_rapido.txt)
+echo MAXIMIZE > ejemplo_rapido.txt
+echo 80 50 >> ejemplo_rapido.txt
+echo SUBJECT TO >> ejemplo_rapido.txt
+echo 4 2 ^<= 200 >> ejemplo_rapido.txt
+
+# 3. Resolver
+python simplex.py ejemplo_rapido.txt
+```
+
+**Resultado:**
+
+```
+Solución óptima encontrada
+Valor óptimo: $4,000.00
+
+Variables:
+  x1 = 50.00  (mesas)
+  x2 = 0.00   (sillas)
+```
+
+**¿Prefieres describir el problema en español?** Instala Ollama y usa la opción `--nlp`:
+
+```bash
+python simplex.py --nlp "Una carpintería fabrica mesas y sillas. Cada mesa da $80 de ganancia..."
+```
+
 ## Características
 
 - **IA Integrada**: Usa modelos de lenguaje (Llama 3.1, Mistral) para entender problemas en español

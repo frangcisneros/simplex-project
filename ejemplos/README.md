@@ -10,11 +10,15 @@ Problema básico de maximización con restricciones de tipo `<=`.
 
 **Descripción**: Maximizar una función objetivo sujeta a restricciones de recursos limitados.
 
+**Estado esperado**: Solución óptima
+
 ### 2. ejemplo_minimizacion.txt
 
 Problema de minimización con restricciones de tipo `>=`.
 
 **Descripción**: Minimizar costos cumpliendo con requisitos mínimos.
+
+**Estado esperado**: Solución óptima
 
 ### 3. ejemplo_carpinteria.txt
 
@@ -29,6 +33,42 @@ Problema realista de una carpintería que fabrica mesas y sillas.
 - Cada mesa requiere 4 horas, cada silla 2 horas
 - Máximo 60 unidades en total
 - **Objetivo**: Maximizar la ganancia
+
+**Estado esperado**: Solución óptima
+
+### 4. max_4tablas.txt
+
+Problema complejo con múltiples restricciones.
+
+**Estado esperado**: Solución óptima
+
+### 5. ejemplo_infactible.txt
+
+Problema sin solución factible (restricciones contradictorias).
+
+**Descripción**: Las restricciones se contradicen entre sí, haciendo imposible encontrar una solución que las satisfaga todas.
+
+**Estado esperado**: Infactible (no existe solución)
+
+**Ejemplo de output:**
+
+```
+El problema es infactible (no existe solución que satisfaga todas las restricciones)
+```
+
+### 6. ejemplo_no_acotado.txt
+
+Problema no acotado (la función objetivo puede crecer infinitamente).
+
+**Descripción**: No hay restricciones suficientes que limiten el crecimiento de la función objetivo.
+
+**Estado esperado**: No acotado (unbounded)
+
+**Ejemplo de output:**
+
+```
+El problema es no acotado (la solución puede crecer infinitamente)
+```
 
 ## Cómo Usar los Ejemplos
 
@@ -98,19 +138,19 @@ Esto representa:
 
 El programa validará automáticamente:
 
-- ✅ Formato correcto del archivo
-- ✅ Consistencia en el número de variables
-- ✅ Tipos de restricciones válidos
-- ✅ Valores numéricos correctos
-- ✅ Factibilidad de la solución
+- Formato correcto del archivo
+- Consistencia en el número de variables
+- Tipos de restricciones válidos
+- Valores numéricos correctos
+- Factibilidad de la solución
 
-## 📚 Más Información
+## Más Información
 
 - [Documentación Principal](../README.md)
-- [Guía del Menú Contextual](../docs/CONTEXT_MENU_GUIDE.md)
-- [Arquitectura del Sistema](../ARQUITECTURA.md)
+- [Guía del Usuario](../GUIA_USUARIO.md)
+- [Guía del Desarrollador](../GUIA_DESARROLLADOR.md)
 
-## 🆘 Errores Comunes
+## Errores Comunes
 
 ### "Error en el formato del archivo"
 

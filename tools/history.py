@@ -37,10 +37,10 @@ def test_history() -> int:
         # Test 1: Get all problems
         print("\n1. Retrieving all problems...")
         problems = history.get_all_problems()
-        print(f"   ✓ Found: {len(problems)} problem(s)")
+        print(f"   [OK] Found: {len(problems)} problem(s)")
 
         if not problems:
-            print("\n⚠️  No problems in history yet.")
+            print("\n[WARNING] No problems in history yet.")
             print("   Solve a problem first to populate the history.")
             return 0
 
@@ -53,27 +53,27 @@ def test_history() -> int:
         first_id = problems[0]["id"]
         problem = history.get_problem_by_id(first_id)
         if problem:
-            print(f"   ✓ Problem #{first_id} found")
+            print(f"   [OK] Problem #{first_id} found")
             history.display_problem_detail(problem)
         else:
-            print(f"   ✗ Problem #{first_id} not found")
+            print(f"   [ERROR] Problem #{first_id} not found")
             return 1
 
         # Test 4: Create temporary file
         print("\n4. Creating temporary file from problem...")
         temp_file = history.create_temp_file_from_history(first_id)
         if temp_file:
-            print(f"   ✓ Temporary file created: {temp_file}")
-            print(f"   ✓ Exists: {os.path.exists(temp_file)}")
+            print(f"   [OK] Temporary file created: {temp_file}")
+            print(f"   [OK] Exists: {os.path.exists(temp_file)}")
 
             # Clean up
             try:
                 os.remove(temp_file)
-                print(f"   ✓ Temporary file cleaned up")
+                print(f"   [OK] Temporary file cleaned up")
             except Exception as e:
-                print(f"   ⚠️  Could not remove temp file: {e}")
+                print(f"   [WARNING] Could not remove temp file: {e}")
         else:
-            print(f"   ✗ Failed to create temporary file")
+            print(f"   [ERROR] Failed to create temporary file")
             return 1
 
         # Test 5: Statistics
@@ -89,13 +89,13 @@ def test_history() -> int:
         print(f"   Unbounded: {unbounded}")
 
         print("\n" + "=" * 80)
-        print("✓ ALL TESTS PASSED")
+        print("[OK] ALL TESTS PASSED")
         print("=" * 80)
 
         return 0
 
     except Exception as e:
-        print(f"\n✗ Test failed: {e}")
+        print(f"\n[ERROR] Test failed: {e}")
         import traceback
 
         traceback.print_exc()
@@ -109,7 +109,7 @@ def show_stats() -> int:
         problems = history.get_all_problems()
 
         if not problems:
-            print("⚠️  No problems in history yet.")
+            print("[WARNING] No problems in history yet.")
             return 0
 
         # Calculate stats
@@ -121,14 +121,14 @@ def show_stats() -> int:
         # Recent problems
         recent = problems[:5]  # First 5 (assuming they're ordered by date DESC)
 
-        print("\n📊 History Statistics:")
+        print("\n[STATS] History Statistics:")
         print(f"   Total problems: {total}")
         print(f"   Optimal solutions: {optimal} ({optimal/total*100:.1f}%)")
         print(f"   Max variables: {max_vars}")
         print(f"   Max constraints: {max_constraints}")
 
         if recent:
-            print("\n📝 Recent problems:")
+            print("\n[INFO] Recent problems:")
             for p in recent:
                 date = p.get("solved_at", "Unknown")[:10]  # Just the date
                 status = p.get("status", "Unknown")
@@ -138,7 +138,7 @@ def show_stats() -> int:
         return 0
 
     except Exception as e:
-        print(f"✗ Error: {e}")
+        print(f"[ERROR] {e}")
         return 1
 
 
@@ -162,7 +162,7 @@ def launch_interactive_menu() -> int:
         return 0
 
     except Exception as e:
-        print(f"✗ Error: {e}")
+        print(f"[ERROR] {e}")
         import traceback
 
         traceback.print_exc()

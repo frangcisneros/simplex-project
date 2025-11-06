@@ -418,6 +418,153 @@ cd tests
 python test_nlp_system.py
 ```
 
+## Desinstalación
+
+Esta sección describe cómo desinstalar completamente Simplex Solver y todos sus componentes opcionales.
+
+### Desinstalar el Menú Contextual de Windows
+
+Si instaló el menú contextual:
+
+1. Navegue a la carpeta `context_menu/`
+2. Localice el archivo `uninstall.bat`
+3. Haga clic derecho y seleccione "Ejecutar como administrador"
+4. Confirme la desinstalación cuando se le solicite
+
+El script eliminará la entrada del registro de Windows automáticamente.
+
+### Desinstalar Ollama (Opcional)
+
+Si instaló Ollama y desea eliminarlo:
+
+**Windows:**
+
+1. Abra "Configuración" → "Aplicaciones" → "Aplicaciones y características"
+2. Busque "Ollama"
+3. Seleccione "Desinstalar"
+4. Siga el asistente de desinstalación
+
+**Eliminar modelos descargados:**
+
+Los modelos de Ollama ocupan espacio considerable. Para eliminarlos:
+
+```bash
+# Ver modelos instalados
+ollama list
+
+# Eliminar un modelo específico
+ollama rm llama3.1:8b
+ollama rm mistral:7b
+
+# O eliminar todos los modelos manualmente
+# Ubicación de modelos en Windows:
+# C:\Users\<Usuario>\.ollama\models
+```
+
+### Desinstalar Dependencias de Python
+
+Si instaló las dependencias en un entorno global:
+
+```bash
+# Desinstalar paquetes principales
+pip uninstall numpy psutil tabulate requests reportlab
+
+# Desinstalar dependencias de IA (si las instaló)
+pip uninstall torch transformers accelerate bitsandbytes sentencepiece
+
+# Desinstalar herramientas de desarrollo (si las instaló)
+pip uninstall pytest pytest-cov black isort flake8 mypy
+
+# Desinstalar herramientas de build (si las instaló)
+pip uninstall pyinstaller
+```
+
+**Recomendación:** Si instaló Simplex Solver en un entorno virtual, simplemente elimine la carpeta del entorno virtual.
+
+### Eliminar Archivos del Proyecto
+
+Si clonó el repositorio desde GitHub:
+
+```bash
+# Navegar al directorio padre
+cd ..
+
+# Eliminar la carpeta completa del proyecto
+Remove-Item -Recurse -Force simplex-project
+```
+
+Si descargó un ejecutable standalone (`SimplexSolver.exe`), simplemente elimine el archivo.
+
+### Eliminar Datos de la Aplicación (Windows)
+
+Simplex Solver almacena logs y historial en el directorio de datos de la aplicación:
+
+**Ubicación:**
+
+```
+C:\Users\<Usuario>\AppData\Roaming\SimplexSolver\
+```
+
+Para eliminar completamente estos datos:
+
+```powershell
+# Eliminar directorio de datos de la aplicación
+Remove-Item -Recurse -Force "$env:APPDATA\SimplexSolver"
+```
+
+Esta carpeta contiene:
+
+- Base de datos de logs (`simplex_logs.db`)
+- Historial de problemas resueltos
+- Archivos temporales
+
+### Eliminar Reportes Generados
+
+Si generó reportes PDF, estos se guardan en:
+
+- Carpeta `reports/` del proyecto (si usó instalación manual)
+- Ubicación especificada con el flag `--pdf` (si usó el ejecutable)
+
+Elimine manualmente los archivos PDF que desee remover.
+
+### Verificación de Desinstalación Completa
+
+Para verificar que se eliminaron todos los componentes:
+
+**1. Verificar menú contextual:**
+
+- Haga clic derecho en un archivo `.txt`
+- Verifique que no aparezca "Resolver con Simplex Solver"
+
+**2. Verificar Ollama:**
+
+```bash
+ollama list
+# Debe mostrar error o lista vacía si eliminó los modelos
+```
+
+**3. Verificar paquetes Python:**
+
+```bash
+pip list | findstr "numpy tabulate psutil reportlab"
+# No debe mostrar resultados
+```
+
+**4. Verificar datos de la aplicación:**
+
+```powershell
+Test-Path "$env:APPDATA\SimplexSolver"
+# Debe retornar "False"
+```
+
+### Reinstalación
+
+Si desea reinstalar Simplex Solver en el futuro:
+
+- Siga las instrucciones de instalación desde el principio
+- El instalador interactivo detectará automáticamente componentes existentes (si los hay)
+- Puede optar por una instalación limpia o actualizar componentes específicos
+
 ## Soporte y Documentación Adicional
 
 Para más información técnica, consulte GUIA_DESARROLLADOR.md en la raíz del proyecto.

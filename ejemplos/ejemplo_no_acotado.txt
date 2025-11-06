@@ -1,0 +1,4 @@
+MAXIMIZE
+3 4
+SUBJECT TO
+-1 -1 <= -2

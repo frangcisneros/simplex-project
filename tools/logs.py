@@ -40,10 +40,10 @@ def verify_logs() -> int:
     print("LOG SYSTEM VERIFICATION")
     print("=" * 70)
     print(f"\nDatabase path: {db_path}")
-    print(f"Exists: {'✓ YES' if db_path.exists() else '✗ NO'}")
+    print(f"Exists: {'[YES]' if db_path.exists() else '[NO]'}")
 
     if not db_path.exists():
-        print("\n⚠️  Database doesn't exist yet.")
+        print("\n[WARNING] Database doesn't exist yet.")
         print("Run the program at least once to create logs.")
         return 1
 
@@ -63,7 +63,7 @@ def verify_logs() -> int:
         # Total logs
         cursor.execute("SELECT COUNT(*) FROM logs")
         total_logs = cursor.fetchone()[0]
-        print(f"\n📊 Total logs: {total_logs}")
+        print(f"\n[STATS] Total logs: {total_logs}")
 
         # Logs by level
         cursor.execute(
@@ -74,19 +74,19 @@ def verify_logs() -> int:
             ORDER BY count DESC
         """
         )
-        print("\n📈 Logs by level:")
+        print("\n[STATS] Logs by level:")
         for level, count in cursor.fetchall():
             print(f"   {level:10} : {count:4} logs")
 
         # Sessions
         cursor.execute("SELECT COUNT(*) FROM sessions")
         total_sessions = cursor.fetchone()[0]
-        print(f"\n🔄 Total sessions: {total_sessions}")
+        print(f"\n[STATS] Total sessions: {total_sessions}")
 
         # Solver events
         cursor.execute('SELECT COUNT(*) FROM solver_events WHERE event_type="solve_complete"')
         problems_solved = cursor.fetchone()[0]
-        print(f"🎯 Problems solved: {problems_solved}")
+        print(f"[STATS] Problems solved: {problems_solved}")
 
         # Last session
         cursor.execute(
@@ -99,7 +99,7 @@ def verify_logs() -> int:
         )
         last_session = cursor.fetchone()
         if last_session:
-            print(f"\n⏱️  Last session:")
+            print(f"\n[INFO] Last session:")
             print(f"   ID: {last_session[0]}")
             print(f"   Start: {last_session[1][:19]}")
             print(f"   End: {last_session[2][:19] if last_session[2] else 'In progress'}")
@@ -175,7 +175,7 @@ def show_stats() -> int:
     db_path = get_db_path()
 
     if not db_path.exists():
-        print("⚠️  No log database found. Run the solver first.")
+        print("[WARNING] No log database found. Run the solver first.")
         return 1
 
     try:
@@ -192,7 +192,7 @@ def show_stats() -> int:
         cursor.execute('SELECT COUNT(*) FROM solver_events WHERE event_type="solve_complete"')
         problems_solved = cursor.fetchone()[0]
 
-        print("\n📊 Quick Stats:")
+        print("\n[STATS] Quick Stats:")
         print(f"   Logs: {total_logs}")
         print(f"   Sessions: {total_sessions}")
         print(f"   Problems solved: {problems_solved}")
@@ -209,7 +209,7 @@ def show_stats() -> int:
         recent = cursor.fetchall()
 
         if recent:
-            print("\n📈 Last 24 hours:")
+            print("\n[STATS] Last 24 hours:")
             for level, count in recent:
                 print(f"   {level}: {count}")
 
@@ -217,18 +217,23 @@ def show_stats() -> int:
         return 0
 
     except Exception as e:
-        print(f"✗ Error: {e}")
+        print(f"[ERROR] {e}")
         return 1
 
 
 def launch_viewer() -> int:
     """Launch the interactive log viewer."""
     try:
-        viewer = LogViewer()
-        viewer.run()
+        db_path = get_db_path()
+        if not db_path.exists():
+            print("[WARNING] No log database found. Run the solver first.")
+            return 1
+
+        viewer = LogViewer(str(db_path))
+        viewer.show_menu()
         return 0
     except Exception as e:
-        print(f"✗ Error launching viewer: {e}")
+        print(f"[ERROR] Error launching viewer: {e}")
         import traceback
 
         traceback.print_exc()
