@@ -381,6 +381,13 @@ def main():
     logger.info("=== Iniciando Simplex Solver ===")
     logger.debug(f"Argumentos de línea de comandos: {' '.join(sys.argv)}")
 
+    # Si no hay argumentos, mostrar menú interactivo
+    if len(sys.argv) == 1:
+        from simplex_solver.menu import show_menu
+
+        show_menu()
+        return
+
     parser = create_parser()
     args = parser.parse_args()
 
