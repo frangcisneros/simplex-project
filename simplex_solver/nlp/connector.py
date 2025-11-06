@@ -27,7 +27,9 @@ from .config import NLPModelType, DefaultSettings, ErrorMessages
 
 
 class SolverType(Enum):
-    """Tipos de solver soportados."""
+    """
+    Enumeración de los tipos de solvers soportados.
+    """
 
     SIMPLEX = "simplex"
     PULP = "pulp"
@@ -36,12 +38,11 @@ class SolverType(Enum):
 
 class SimplexSolverAdapter(IOptimizationSolver):
     """
-    Permite usar el SimplexSolver original con el nuevo sistema NLP.
+    Adaptador para integrar el SimplexSolver con el sistema NLP.
 
-    El SimplexSolver ya existía antes del sistema NLP y tiene su propia interfaz.
-    Este adaptador traduce entre lo que espera SimplexSolver (c, A, b) y lo que
-    devuelve el modelo generator. También enriquece los resultados con nombres
-    de variables personalizados.
+    Este adaptador traduce el formato del modelo generado por el sistema NLP
+    al formato esperado por el SimplexSolver, y enriquece los resultados con
+    nombres personalizados de variables si están disponibles.
     """
 
     def __init__(self):
@@ -50,25 +51,22 @@ class SimplexSolverAdapter(IOptimizationSolver):
 
     def solve(self, model: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Ejecuta el algoritmo Simplex y devuelve la solución.
-
-        Valida que el modelo tenga las claves necesarias (c, A, b, maximize),
-        llama al SimplexSolver, y si hay variable_names personalizado,
-        mapea la solución de x1, x2, x3... a los nombres reales.
+        Resuelve un modelo de optimización utilizando el SimplexSolver.
 
         Args:
-            model: Modelo con claves 'c', 'A', 'b', 'maximize' y opcionalmente 'variable_names'
+            model: Diccionario que contiene las claves 'c', 'A', 'b', 'maximize',
+                   y opcionalmente 'variable_names'.
 
         Returns:
-            Diccionario con 'status', 'solution', 'objective_value', etc.
+            Diccionario con el estado de la solución, valores óptimos y otros detalles.
         """
         try:
             required_keys = ["c", "A", "b", "maximize"]
             missing_keys = [k for k in required_keys if k not in model]
             if missing_keys:
-                raise ValueError(f"Missing required keys in model: {missing_keys}")
+                raise ValueError(f"Faltan claves requeridas en el modelo: {missing_keys}")
 
-            # DEBUG: Print model and constraint_types
+            # DEBUG: Imprimir detalles del modelo generado
             print("=== DEBUG: Modelo generado para Simplex ===")
             for k, v in model.items():
                 if k != "A":
@@ -86,11 +84,10 @@ class SimplexSolverAdapter(IOptimizationSolver):
                 maximize=model["maximize"],
             )
 
-            # Enriquecer resultado con información adicional
+            # Enriquecer resultado con nombres personalizados de variables
             if "variable_names" in model and result.get("status") == "optimal":
                 var_names = model["variable_names"]
                 if var_names and len(var_names) == len(model["c"]):
-                    # Mapear variables con nombres personalizados
                     named_solution = {}
                     for i, name in enumerate(var_names):
                         old_key = f"x{i+1}"
@@ -101,17 +98,16 @@ class SimplexSolverAdapter(IOptimizationSolver):
             return result
 
         except Exception as e:
-            self.logger.error(f"Error solving with SimplexSolver: {e}")
+            self.logger.error(f"Error al resolver con SimplexSolver: {e}")
             return {"status": "error", "message": str(e)}
 
 
 class NLPConnectorFactory:
     """
-    Crea conectores NLP configurados y listos para usar.
+    Factory para crear conectores NLP completamente configurados.
 
-    En vez de instanciar manualmente cada componente (procesador, generador, solver, validador),
-    esta factory lo hace automáticamente con la configuración adecuada. Simplifica
-    la creación del sistema completo.
+    Simplifica la creación de un sistema completo al instanciar automáticamente
+    todos los componentes necesarios (procesador NLP, generador de modelos, solver y validador).
     """
 
     @staticmethod
@@ -124,38 +120,32 @@ class NLPConnectorFactory:
         """
         Construye un conector NLP completo con todos sus componentes.
 
-        Instancia el procesador NLP (real o mock), el generador de modelos
-        para el solver elegido, el solver mismo, y el validador. Devuelve
-        todo conectado y listo para procesar problemas.
-
         Args:
-            nlp_model_type: Modelo de lenguaje a usar (FLAN-T5, Mistral, etc.)
-            solver_type: Qué solver usar (por ahora solo SIMPLEX está implementado)
-            use_mock_nlp: Si True, usa un procesador simple para testing
-            custom_config: Parámetros personalizados para el modelo NLP
+            nlp_model_type: Modelo de lenguaje a usar (por ejemplo, Mistral, Llama).
+            solver_type: Tipo de solver a utilizar (actualmente solo SIMPLEX).
+            use_mock_nlp: Si es True, utiliza un procesador NLP simulado para pruebas.
+            custom_config: Configuración personalizada para el modelo NLP.
 
         Returns:
-            NLPOptimizationConnector configurado y listo para usar
+            NLPOptimizationConnector configurado y listo para usar.
         """
         # Crear procesador NLP
         if use_mock_nlp:
             nlp_processor = MockNLPProcessor()
         else:
-            # Usar Ollama por defecto (más simple y confiable)
             nlp_processor = OllamaNLPProcessor(nlp_model_type, custom_config=custom_config)
 
         # Crear generador de modelo
         if solver_type == SolverType.SIMPLEX:
             model_generator = SimplexModelGenerator()
         else:
-            # Aquí se pueden agregar otros generadores
-            raise NotImplementedError(f"Solver type {solver_type} not implemented yet")
+            raise NotImplementedError(f"Solver type {solver_type} no implementado aún")
 
         # Crear solver
         if solver_type == SolverType.SIMPLEX:
             solver = SimplexSolverAdapter()
         else:
-            raise NotImplementedError(f"Solver type {solver_type} not implemented yet")
+            raise NotImplementedError(f"Solver type {solver_type} no implementado aún")
 
         # Crear validador
         validator = ModelValidator()
@@ -170,18 +160,10 @@ class NLPConnectorFactory:
 
 class NLPOptimizationConnector(INLPConnector):
     """
-    Orquesta el pipeline completo: texto -> NLP -> modelo -> solución.
+    Conector principal que orquesta el pipeline completo de optimización NLP.
 
-    Este es el componente principal del sistema. Recibe texto en lenguaje natural
-    y coordina todos los pasos:
-    1. Procesar el texto con NLP para extraer el problema
-    2. Validar que el problema esté bien formado
-    3. Generar el modelo matemático
-    4. Resolver con el solver
-    5. Devolver resultados completos
-
-    Maneja errores en cada paso y proporciona información detallada sobre
-    qué salió mal si algo falla.
+    Coordina los pasos desde el procesamiento del texto en lenguaje natural
+    hasta la obtención de la solución óptima del problema de optimización.
     """
 
     def __init__(
@@ -192,16 +174,13 @@ class NLPOptimizationConnector(INLPConnector):
         validator: IModelValidator,
     ):
         """
-        Conecta todos los componentes del sistema.
-
-        Recibe las instancias de cada componente ya configuradas. Esto permite
-        flexibilidad: podemos usar cualquier implementación que cumpla las interfaces.
+        Inicializa el conector con los componentes necesarios.
 
         Args:
-            nlp_processor: Procesador para extraer problemas del texto
-            model_generator: Generador para convertir a formato del solver
-            solver: Algoritmo que resuelve el problema de optimización
-            validator: Validador para chequear que el problema esté bien formado
+            nlp_processor: Procesador NLP para extraer problemas del texto.
+            model_generator: Generador de modelos matemáticos para el solver.
+            solver: Solver para resolver el problema de optimización.
+            validator: Validador para verificar la validez del problema extraído.
         """
         self.nlp_processor = nlp_processor
         self.model_generator = model_generator
@@ -212,29 +191,19 @@ class NLPOptimizationConnector(INLPConnector):
 
     def process_and_solve(self, natural_language_text: str) -> Dict[str, Any]:
         """
-        Ejecuta el proceso completo desde texto hasta la solución óptima.
-
-        Pasos:
-        1. Verifica que el procesador NLP esté disponible
-        2. Procesa el texto para extraer el problema
-        3. Valida que el problema sea matemáticamente correcto
-        4. Genera el modelo en el formato del solver
-        5. Resuelve el problema de optimización
-        6. Devuelve solución con metadata (tiempo, confianza, problema extraído)
-
-        Si algo falla en cualquier paso, devuelve un dict con success=False
-        y detalles del error.
+        Ejecuta el pipeline completo desde texto hasta solución óptima.
 
         Args:
-            natural_language_text: Descripción del problema en español
+            natural_language_text: Descripción del problema en lenguaje natural.
 
         Returns:
-            Dict con 'success', 'solution', 'extracted_problem', 'processing_time', etc.
+            Diccionario con los resultados del proceso, incluyendo solución,
+            problema extraído, tiempo de procesamiento y análisis de estructura.
         """
         start_time = time.time()
 
         try:
-            self.logger.info("Starting NLP optimization pipeline")
+            self.logger.info("Iniciando pipeline de optimización NLP")
 
             # Paso 1: Verificar disponibilidad del procesador NLP
             if not self.nlp_processor.is_available():
@@ -245,7 +214,7 @@ class NLPOptimizationConnector(INLPConnector):
                 }
 
             # Paso 2: Procesar texto con NLP
-            self.logger.info("Step 1: Processing text with NLP")
+            self.logger.info("Paso 1: Procesando texto con NLP")
             nlp_result = self.nlp_processor.process_text(natural_language_text)
 
             if not nlp_result.success:
@@ -258,37 +227,37 @@ class NLPOptimizationConnector(INLPConnector):
             if nlp_result.problem is None:
                 return {
                     "success": False,
-                    "error": "No problem extracted from NLP result",
+                    "error": "No se extrajo ningún problema del resultado NLP",
                     "step_failed": "problem_extraction",
                 }
 
             # Paso 3: Validar el problema extraído
-            self.logger.info("Step 2: Validating extracted problem")
+            self.logger.info("Paso 2: Validando el problema extraído")
             if not self.validator.validate(nlp_result.problem):
                 validation_errors = self.validator.get_validation_errors(nlp_result.problem)
                 return {
                     "success": False,
-                    "error": f"Validation failed: {', '.join(validation_errors)}",
+                    "error": f"Validación fallida: {', '.join(validation_errors)}",
                     "step_failed": "validation",
                     "validation_errors": validation_errors,
                 }
 
             # Paso 4: Generar modelo
-            self.logger.info("Step 3: Generating optimization model")
+            self.logger.info("Paso 3: Generando modelo de optimización")
             model = self.model_generator.generate_model(nlp_result.problem)
 
             # Guardar si era un problema de minimización (para ajustar resultado)
             was_minimization = model.get("is_minimization", False)
 
             # Paso 5: Resolver modelo
-            self.logger.info("Step 4: Solving optimization model")
+            self.logger.info("Paso 4: Resolviendo modelo de optimización")
             solution = self.solver.solve(model)
 
             # Si el problema original era de minimización, ajustar el valor óptimo
             if was_minimization and solution.get("status") == "optimal":
                 if "optimal_value" in solution:
                     solution["optimal_value"] = -solution["optimal_value"]
-                    self.logger.info(f"Adjusted optimal value for minimization problem")
+                    self.logger.info("Valor óptimo ajustado para problema de minimización")
 
             processing_time = time.time() - start_time
 
@@ -302,7 +271,7 @@ class NLPOptimizationConnector(INLPConnector):
                 problem_dict, expected_structure
             )
             if not is_valid:
-                self.logger.warning(f"Structure mismatch detected: {warnings}")
+                self.logger.warning(f"Desajuste de estructura detectado: {warnings}")
 
             # Construir resultado completo
             result = {
@@ -324,16 +293,16 @@ class NLPOptimizationConnector(INLPConnector):
                 },
             }
 
-            self.logger.info(f"Pipeline completed successfully in {processing_time:.2f}s")
+            self.logger.info(f"Pipeline completado exitosamente en {processing_time:.2f}s")
             return result
 
         except Exception as e:
             processing_time = time.time() - start_time
-            self.logger.error(f"Pipeline failed: {e}", exc_info=True)
+            self.logger.error(f"Pipeline fallido: {e}", exc_info=True)
 
             return {
                 "success": False,
-                "error": f"Pipeline error: {str(e)}",
+                "error": f"Error en el pipeline: {str(e)}",
                 "step_failed": "unknown",
                 "processing_time": processing_time,
             }

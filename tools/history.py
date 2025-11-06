@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Unified History Management Tool for Simplex Solver
-===================================================
+Herramienta Unificada de Gestión de Historial para el Solver Simplex
+===================================================================
 
-This tool consolidates history viewing and testing functionality.
-Provides both interactive menu and diagnostic capabilities.
+Esta herramienta consolida la visualización y prueba del historial.
+Proporciona tanto un menú interactivo como capacidades de diagnóstico.
 
-Usage:
-    python tools/history.py             # Launch interactive menu (default)
-    python tools/history.py --test      # Test history system
-    python tools/history.py --stats     # Show quick statistics
+Uso:
+    python tools/history.py             # Lanzar menú interactivo (por defecto)
+    python tools/history.py --test      # Probar el sistema de historial
+    python tools/history.py --stats     # Mostrar estadísticas rápidas
 
-Author: Francisco Cisneros
+Autor: Francisco Cisneros
 """
 
 import sys
@@ -19,83 +19,83 @@ import os
 import argparse
 from pathlib import Path
 
-# Add parent directory to path for imports
+# Agregar el directorio padre al path para las importaciones
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from simplex_solver.problem_history import ProblemHistory, show_history_menu
 
 
 def test_history() -> int:
-    """Test the history system functionality."""
+    """Probar la funcionalidad del sistema de historial."""
     print("=" * 80)
-    print("HISTORY SYSTEM TEST")
+    print("PRUEBA DEL SISTEMA DE HISTORIAL")
     print("=" * 80)
 
     try:
         history = ProblemHistory()
 
-        # Test 1: Get all problems
-        print("\n1. Retrieving all problems...")
+        # Prueba 1: Obtener todos los problemas
+        print("\n1. Recuperando todos los problemas...")
         problems = history.get_all_problems()
-        print(f"   [OK] Found: {len(problems)} problem(s)")
+        print(f"   [OK] Encontrados: {len(problems)} problema(s)")
 
         if not problems:
-            print("\n[WARNING] No problems in history yet.")
-            print("   Solve a problem first to populate the history.")
+            print("\n[ADVERTENCIA] No hay problemas en el historial aún.")
+            print("   Resuelve un problema primero para llenar el historial.")
             return 0
 
-        # Test 2: Display problems table
-        print("\n2. Displaying problems table...")
+        # Prueba 2: Mostrar tabla de problemas
+        print("\n2. Mostrando tabla de problemas...")
         history.display_problems_table(problems)
 
-        # Test 3: Get details of first problem
-        print("\n3. Retrieving details of first problem...")
+        # Prueba 3: Obtener detalles del primer problema
+        print("\n3. Recuperando detalles del primer problema...")
         first_id = problems[0]["id"]
         problem = history.get_problem_by_id(first_id)
         if problem:
-            print(f"   [OK] Problem #{first_id} found")
+            print(f"   [OK] Problema #{first_id} encontrado")
             history.display_problem_detail(problem)
         else:
-            print(f"   [ERROR] Problem #{first_id} not found")
+            print(f"   [ERROR] Problema #{first_id} no encontrado")
             return 1
 
-        # Test 4: Create temporary file
-        print("\n4. Creating temporary file from problem...")
+        # Prueba 4: Crear archivo temporal
+        print("\n4. Creando archivo temporal desde el problema...")
         temp_file = history.create_temp_file_from_history(first_id)
         if temp_file:
-            print(f"   [OK] Temporary file created: {temp_file}")
-            print(f"   [OK] Exists: {os.path.exists(temp_file)}")
+            print(f"   [OK] Archivo temporal creado: {temp_file}")
+            print(f"   [OK] Existe: {os.path.exists(temp_file)}")
 
-            # Clean up
+            # Limpiar
             try:
                 os.remove(temp_file)
-                print(f"   [OK] Temporary file cleaned up")
+                print(f"   [OK] Archivo temporal eliminado")
             except Exception as e:
-                print(f"   [WARNING] Could not remove temp file: {e}")
+                print(f"   [ADVERTENCIA] No se pudo eliminar el archivo temporal: {e}")
         else:
-            print(f"   [ERROR] Failed to create temporary file")
+            print(f"   [ERROR] Falló la creación del archivo temporal")
             return 1
 
-        # Test 5: Statistics
-        print("\n5. Calculating statistics...")
+        # Prueba 5: Estadísticas
+        print("\n5. Calculando estadísticas...")
         total = len(problems)
         optimal = sum(1 for p in problems if p.get("status") == "optimal")
         infeasible = sum(1 for p in problems if p.get("status") == "infeasible")
         unbounded = sum(1 for p in problems if p.get("status") == "unbounded")
 
-        print(f"   Total problems: {total}")
-        print(f"   Optimal: {optimal}")
-        print(f"   Infeasible: {infeasible}")
-        print(f"   Unbounded: {unbounded}")
+        print(f"   Problemas totales: {total}")
+        print(f"   Óptimos: {optimal}")
+        print(f"   Infactibles: {infeasible}")
+        print(f"   No acotados: {unbounded}")
 
         print("\n" + "=" * 80)
-        print("[OK] ALL TESTS PASSED")
+        print("[OK] TODAS LAS PRUEBAS PASARON")
         print("=" * 80)
 
         return 0
 
     except Exception as e:
-        print(f"\n[ERROR] Test failed: {e}")
+        print(f"\n[ERROR] Prueba fallida: {e}")
         import traceback
 
         traceback.print_exc()
@@ -103,35 +103,35 @@ def test_history() -> int:
 
 
 def show_stats() -> int:
-    """Show quick statistics about problem history."""
+    """Mostrar estadísticas rápidas sobre el historial de problemas."""
     try:
         history = ProblemHistory()
         problems = history.get_all_problems()
 
         if not problems:
-            print("[WARNING] No problems in history yet.")
+            print("[ADVERTENCIA] No hay problemas en el historial aún.")
             return 0
 
-        # Calculate stats
+        # Calcular estadísticas
         total = len(problems)
         optimal = sum(1 for p in problems if p.get("status") == "optimal")
         max_vars = max((p.get("num_variables", 0) for p in problems), default=0)
         max_constraints = max((p.get("num_constraints", 0) for p in problems), default=0)
 
-        # Recent problems
-        recent = problems[:5]  # First 5 (assuming they're ordered by date DESC)
+        # Problemas recientes
+        recent = problems[:5]  # Primeros 5 (asumiendo que están ordenados por fecha DESC)
 
-        print("\n[STATS] History Statistics:")
-        print(f"   Total problems: {total}")
-        print(f"   Optimal solutions: {optimal} ({optimal/total*100:.1f}%)")
-        print(f"   Max variables: {max_vars}")
-        print(f"   Max constraints: {max_constraints}")
+        print("\n[ESTADÍSTICAS] Estadísticas del Historial:")
+        print(f"   Problemas totales: {total}")
+        print(f"   Soluciones óptimas: {optimal} ({optimal/total*100:.1f}%)")
+        print(f"   Máx. variables: {max_vars}")
+        print(f"   Máx. restricciones: {max_constraints}")
 
         if recent:
-            print("\n[INFO] Recent problems:")
+            print("\n[INFO] Problemas recientes:")
             for p in recent:
-                date = p.get("solved_at", "Unknown")[:10]  # Just the date
-                status = p.get("status", "Unknown")
+                date = p.get("solved_at", "Desconocido")[:10]  # Solo la fecha
+                status = p.get("status", "Desconocido")
                 vars_count = p.get("num_variables", 0)
                 print(f"   [{date}] {status} - {vars_count} variables")
 
@@ -143,12 +143,12 @@ def show_stats() -> int:
 
 
 def launch_interactive_menu() -> int:
-    """Launch the interactive history menu."""
+    """Lanzar el menú interactivo del historial."""
     try:
         temp_file = show_history_menu()
 
         if temp_file:
-            # User wants to re-solve a problem
+            # El usuario desea resolver nuevamente un problema
             print("\n¿Deseas ejecutar el Simplex Solver con este problema? (s/n)")
             choice = input().strip().lower()
 
@@ -170,20 +170,22 @@ def launch_interactive_menu() -> int:
 
 
 def main() -> int:
-    """Main entry point."""
+    """Punto de entrada principal."""
     parser = argparse.ArgumentParser(
-        description="Unified history management tool for Simplex Solver",
+        description="Herramienta unificada de gestión de historial para el Solver Simplex",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  python tools/history.py           # Launch interactive menu
-  python tools/history.py --test    # Test history system
-  python tools/history.py --stats   # Show quick statistics
+Ejemplos:
+  python tools/history.py           # Lanzar menú interactivo
+  python tools/history.py --test    # Probar el sistema de historial
+  python tools/history.py --stats   # Mostrar estadísticas rápidas
         """,
     )
 
-    parser.add_argument("--test", action="store_true", help="Test history system functionality")
-    parser.add_argument("--stats", action="store_true", help="Show quick statistics")
+    parser.add_argument(
+        "--test", action="store_true", help="Probar la funcionalidad del sistema de historial"
+    )
+    parser.add_argument("--stats", action="store_true", help="Mostrar estadísticas rápidas")
 
     args = parser.parse_args()
 
@@ -192,7 +194,7 @@ Examples:
     elif args.stats:
         return show_stats()
     else:
-        # Default: launch interactive menu
+        # Por defecto: lanzar menú interactivo
         return launch_interactive_menu()
 
 

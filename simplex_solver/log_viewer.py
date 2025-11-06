@@ -1,6 +1,6 @@
 """
 Visor de Logs para Simplex Solver.
-Interfaz en consola para visualizar y analizar logs.
+Interfaz en consola para visualizar y analizar logs almacenados en una base de datos SQLite.
 """
 
 import sqlite3
@@ -11,21 +11,26 @@ from tabulate import tabulate
 
 
 class LogViewer:
-    """Visor de logs con interfaz de consola."""
+    """
+    Clase para gestionar y visualizar logs generados por el sistema.
+    Proporciona una interfaz de consola para realizar consultas y análisis.
+    """
 
     def __init__(self, db_path: str):
         """
-        Inicializa el visor de logs.
+        Inicializa el visor de logs y verifica la existencia de la base de datos.
 
         Args:
-            db_path: Ruta a la base de datos de logs
+            db_path: Ruta al archivo de la base de datos de logs.
         """
         self.db_path = db_path
         if not os.path.exists(db_path):
             raise FileNotFoundError(f"Base de datos no encontrada: {db_path}")
 
     def show_menu(self):
-        """Muestra el menú principal del visor de logs."""
+        """
+        Muestra el menú principal del visor de logs y gestiona la interacción con el usuario.
+        """
         while True:
             print("\n" + "=" * 60)
             print("SIMPLEX SOLVER - VISOR DE LOGS")
@@ -79,7 +84,10 @@ class LogViewer:
                 input("Presione Enter para continuar...")
 
     def view_recent_logs(self):
-        """Muestra los logs más recientes."""
+        """
+        Muestra los logs más recientes almacenados en la base de datos.
+        Permite al usuario especificar la cantidad de registros a visualizar.
+        """
         limit = int(input("Cantidad de logs a mostrar (default: 50): ") or "50")
 
         conn = sqlite3.connect(self.db_path)
@@ -102,7 +110,7 @@ class LogViewer:
             print(f"\n📋 Últimos {len(logs)} logs:")
             print("-" * 120)
             headers = ["Timestamp", "Nivel", "Módulo", "Función", "Mensaje"]
-            # Truncar mensajes largos
+            # Truncar mensajes largos para mejorar la legibilidad
             formatted_logs = [
                 (
                     log[0][:19],
@@ -120,7 +128,9 @@ class LogViewer:
         input("\nPresione Enter para continuar...")
 
     def view_logs_by_level(self):
-        """Muestra logs filtrados por nivel."""
+        """
+        Filtra y muestra los logs según el nivel de severidad especificado por el usuario.
+        """
         print("\nNiveles disponibles:")
         print("1. DEBUG")
         print("2. INFO")
@@ -171,11 +181,7 @@ class LogViewer:
                     log[1][:20],
                     log[2][:20] if log[2] else "",
                     (log[3][:50] + "...") if len(log[3]) > 50 else log[3],
-                    (
-                        (log[4][:30] + "...")
-                        if log[4] and len(log[4]) > 30
-                        else (log[4] or "")
-                    ),
+                    ((log[4][:30] + "...") if log[4] and len(log[4]) > 30 else (log[4] or "")),
                 )
                 for log in logs
             ]
@@ -186,7 +192,9 @@ class LogViewer:
         input("\nPresione Enter para continuar...")
 
     def view_logs_by_session(self):
-        """Muestra logs de una sesión específica."""
+        """
+        Permite al usuario seleccionar una sesión específica y muestra los logs asociados a ella.
+        """
         # Primero mostrar sesiones disponibles
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -331,12 +339,8 @@ class LogViewer:
         if solver_stats and solver_stats[0] > 0:
             print("\n📊 Estadísticas del Solver:")
             print(f"  Problemas resueltos: {solver_stats[0]}")
-            print(
-                f"  Iteraciones promedio: {solver_stats[1]:.2f if solver_stats[1] else 0}"
-            )
-            print(
-                f"  Tiempo promedio: {solver_stats[2]:.2f if solver_stats[2] else 0} ms"
-            )
+            print(f"  Iteraciones promedio: {solver_stats[1]:.2f if solver_stats[1] else 0}")
+            print(f"  Tiempo promedio: {solver_stats[2]:.2f if solver_stats[2] else 0} ms")
             print(f"  Soluciones óptimas: {solver_stats[3]}")
 
         # Tamaño de la BD
@@ -430,11 +434,7 @@ class LogViewer:
                     os.path.basename(op[2])[:30],
                     f"{op[3]} bytes" if op[3] else "",
                     "✓" if op[4] else "✗",
-                    (
-                        (op[5][:30] + "...")
-                        if op[5] and len(op[5]) > 30
-                        else (op[5] or "")
-                    ),
+                    ((op[5][:30] + "...") if op[5] and len(op[5]) > 30 else (op[5] or "")),
                 )
                 for op in operations
             ]
@@ -590,9 +590,7 @@ class LogViewer:
 
     def cleanup_old_logs(self):
         """Limpia logs antiguos manualmente."""
-        days = int(
-            input("Eliminar logs más antiguos que (días, default: 180): ") or "180"
-        )
+        days = int(input("Eliminar logs más antiguos que (días, default: 180): ") or "180")
 
         confirm = input(
             f"¿Está seguro de eliminar logs más antiguos que {days} días? (s/n): "
@@ -610,14 +608,10 @@ class LogViewer:
             cursor.execute("DELETE FROM logs WHERE timestamp < ?", (cutoff_date,))
             logs_deleted = cursor.rowcount
 
-            cursor.execute(
-                "DELETE FROM solver_events WHERE timestamp < ?", (cutoff_date,)
-            )
+            cursor.execute("DELETE FROM solver_events WHERE timestamp < ?", (cutoff_date,))
             events_deleted = cursor.rowcount
 
-            cursor.execute(
-                "DELETE FROM file_operations WHERE timestamp < ?", (cutoff_date,)
-            )
+            cursor.execute("DELETE FROM file_operations WHERE timestamp < ?", (cutoff_date,))
             files_deleted = cursor.rowcount
 
             cursor.execute("DELETE FROM sessions WHERE start_time < ?", (cutoff_date,))
@@ -644,7 +638,10 @@ class LogViewer:
 
 
 def main():
-    """Función principal del visor de logs."""
+    """
+    Punto de entrada principal para iniciar el visor de logs.
+    Verifica la existencia de la base de datos y lanza el menú principal.
+    """
     # Intentar obtener la ruta de la BD
     import sys
     from pathlib import Path

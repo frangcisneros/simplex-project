@@ -1,5 +1,5 @@
 """
-Pytest configuration and shared fixtures for Simplex Solver tests.
+Configuración de Pytest y fixtures compartidos para las pruebas del Simplex Solver.
 """
 
 import pytest
@@ -7,27 +7,42 @@ from simplex_solver.solver import SimplexSolver
 from simplex_solver.user_interface import UserInterface
 
 
-# ==================== Solver Fixtures ====================
+# ==================== Fixtures para el Solver ====================
 
 
 @pytest.fixture
 def solver():
-    """Create a fresh SimplexSolver instance."""
+    """
+    Crea una nueva instancia de SimplexSolver.
+
+    Retorna:
+        Una instancia de SimplexSolver.
+    """
     return SimplexSolver()
 
 
 @pytest.fixture
 def ui():
-    """Create a UserInterface instance."""
+    """
+    Crea una nueva instancia de UserInterface.
+
+    Retorna:
+        Una instancia de UserInterface.
+    """
     return UserInterface()
 
 
-# ==================== Test Data Fixtures ====================
+# ==================== Fixtures para Datos de Prueba ====================
 
 
 @pytest.fixture
 def simple_max_problem():
-    """Simple 2-variable maximization problem with only <= constraints."""
+    """
+    Problema simple de maximización con 2 variables y solo restricciones <=.
+
+    Retorna:
+        Un diccionario con los datos del problema.
+    """
     return {
         "c": [3, 2],
         "A": [[2, 1], [1, 1], [1, 0]],
@@ -39,7 +54,12 @@ def simple_max_problem():
 
 @pytest.fixture
 def simple_min_problem():
-    """Simple 2-variable minimization problem with >= constraints."""
+    """
+    Problema simple de minimización con 2 variables y restricciones >=.
+
+    Retorna:
+        Un diccionario con los datos del problema.
+    """
     return {
         "c": [3, 2],
         "A": [[2, 1], [1, 1]],
@@ -51,7 +71,12 @@ def simple_min_problem():
 
 @pytest.fixture
 def max_problem_with_ge():
-    """Maximization with >= and <= constraints."""
+    """
+    Problema de maximización con restricciones >= y <=.
+
+    Retorna:
+        Un diccionario con los datos del problema.
+    """
     return {
         "c": [4, 3],
         "A": [[2, 1], [1, 2], [1, 0], [0, 1]],
@@ -63,7 +88,12 @@ def max_problem_with_ge():
 
 @pytest.fixture
 def max_problem_with_equality():
-    """Maximization with equality constraint."""
+    """
+    Problema de maximización con una restricción de igualdad.
+
+    Retorna:
+        Un diccionario con los datos del problema.
+    """
     return {
         "c": [2, 5],
         "A": [[1, 1], [2, 1], [1, 0]],
@@ -75,7 +105,12 @@ def max_problem_with_equality():
 
 @pytest.fixture
 def max_3vars_mixed():
-    """3-variable maximization with mixed constraint types."""
+    """
+    Problema de maximización con 3 variables y tipos de restricciones mixtos.
+
+    Retorna:
+        Un diccionario con los datos del problema.
+    """
     return {
         "c": [3, 2, 4],
         "A": [[1, 1, 1], [2, 1, 3], [1, 2, 1]],
@@ -87,7 +122,12 @@ def max_3vars_mixed():
 
 @pytest.fixture
 def min_3vars_only_ge():
-    """3-variable minimization with only >= constraints."""
+    """
+    Problema de minimización con 3 variables y solo restricciones >=.
+
+    Retorna:
+        Un diccionario con los datos del problema.
+    """
     return {
         "c": [2, 1, 3],
         "A": [[1, 1, 1], [2, 1, 1], [1, 2, 1]],
@@ -99,7 +139,12 @@ def min_3vars_only_ge():
 
 @pytest.fixture
 def diet_problem():
-    """Classic diet minimization problem."""
+    """
+    Problema clásico de minimización de dieta.
+
+    Retorna:
+        Un diccionario con los datos del problema.
+    """
     return {
         "c": [2, 3],
         "A": [[2, 1], [1, 2], [1, 1]],
@@ -109,16 +154,16 @@ def diet_problem():
     }
 
 
-# ==================== Helper Functions ====================
+# ==================== Funciones Auxiliares ====================
 
 
 def assert_optimal_solution(result, expected_vars=None):
     """
-    Helper to assert a result has optimal status and valid solution.
+    Verifica que un resultado tenga estado óptimo y una solución válida.
 
     Args:
-        result: Solver result dict
-        expected_vars: Optional list of expected variable names
+        result: Diccionario con el resultado del solver.
+        expected_vars: Lista opcional de nombres de variables esperadas.
     """
     assert result["status"] == "optimal"
     assert "optimal_value" in result
@@ -132,14 +177,14 @@ def assert_optimal_solution(result, expected_vars=None):
 
 def assert_solution_feasible(result, A, b, constraint_types, tol=1e-6):
     """
-    Verify that a solution satisfies all constraints.
+    Verifica que una solución satisface todas las restricciones.
 
     Args:
-        result: Solver result dict
-        A: Constraint matrix
-        b: RHS vector
-        constraint_types: List of constraint types
-        tol: Tolerance for floating point comparison
+        result: Diccionario con el resultado del solver.
+        A: Matriz de coeficientes de las restricciones.
+        b: Vector del lado derecho.
+        constraint_types: Lista de tipos de restricciones.
+        tol: Tolerancia para comparación de punto flotante.
     """
     if result["status"] != "optimal":
         return
@@ -147,32 +192,42 @@ def assert_solution_feasible(result, A, b, constraint_types, tol=1e-6):
     solution = result["solution"]
     n_vars = len(A[0]) if A else 0
 
-    # Extract values in order
+    # Extraer valores en orden
     x = []
     for i in range(1, n_vars + 1):
         var_name = f"x{i}"
         x.append(solution.get(var_name, 0.0))
 
-    # Check each constraint
+    # Verificar cada restricción
     for i, (row, rhs, ctype) in enumerate(zip(A, b, constraint_types)):
         lhs = sum(coeff * val for coeff, val in zip(row, x))
 
         if ctype == "<=":
-            assert lhs <= rhs + tol, f"Constraint {i}: {lhs} > {rhs}"
+            assert lhs <= rhs + tol, f"Restricción {i}: {lhs} > {rhs}"
         elif ctype == ">=":
-            assert lhs >= rhs - tol, f"Constraint {i}: {lhs} < {rhs}"
+            assert lhs >= rhs - tol, f"Restricción {i}: {lhs} < {rhs}"
         elif ctype == "=":
-            assert abs(lhs - rhs) <= tol, f"Constraint {i}: {lhs} != {rhs}"
+            assert abs(lhs - rhs) <= tol, f"Restricción {i}: {lhs} != {rhs}"
 
 
-# Make helpers available as fixtures too
+# Hacer disponibles las funciones auxiliares como fixtures también
 @pytest.fixture
 def check_optimal():
-    """Fixture that returns the assert_optimal_solution function."""
+    """
+    Fixture que retorna la función assert_optimal_solution.
+
+    Retorna:
+        La función assert_optimal_solution.
+    """
     return assert_optimal_solution
 
 
 @pytest.fixture
 def check_feasible():
-    """Fixture that returns the assert_solution_feasible function."""
+    """
+    Fixture que retorna la función assert_solution_feasible.
+
+    Retorna:
+        La función assert_solution_feasible.
+    """
     return assert_solution_feasible

@@ -7,14 +7,14 @@ import sys
 import os
 from typing import List, Tuple, Optional
 
-# Agregar import del validador
+# Importar el validador de problemas de programación lineal
 from simplex_solver.input_validator import InputValidator
 from simplex_solver.logging_system import logger
 from simplex_solver.config import FileConfig
 
 
 class FileParser:
-    """Parser para archivos de problemas de programación lineal."""
+    """Clase para parsear archivos de problemas de programación lineal."""
 
     @staticmethod
     def parse_file(
@@ -22,6 +22,13 @@ class FileParser:
     ) -> Tuple[List[float], List[List[float]], List[float], List[str], bool]:
         """
         Lee y parsea un archivo con el problema de programación lineal.
+
+        Parámetros:
+            filename (str): Ruta del archivo a procesar.
+
+        Retorna:
+            Tuple: Coeficientes de la función objetivo, matriz de restricciones,
+            términos independientes, tipos de restricciones y tipo de optimización.
         """
         logger.info(f"Iniciando parseo de archivo: {filename}")
         try:
@@ -72,7 +79,15 @@ class FileParser:
 
     @staticmethod
     def _parse_optimization_type(line: str) -> bool:
-        """Parsea el tipo de optimización (MAXIMIZE/MINIMIZE)."""
+        """
+        Determina el tipo de optimización (MAXIMIZAR o MINIMIZAR).
+
+        Parámetros:
+            line (str): Línea que contiene la palabra clave de optimización.
+
+        Retorna:
+            bool: True si es maximización, False si es minimización.
+        """
         line_upper = line.upper()
 
         if line_upper in FileConfig.MAXIMIZE_KEYWORDS:
@@ -87,7 +102,15 @@ class FileParser:
 
     @staticmethod
     def _parse_objective_function(line: str) -> List[float]:
-        """Parsea los coeficientes de la función objetivo."""
+        """
+        Extrae los coeficientes de la función objetivo desde una línea.
+
+        Parámetros:
+            line (str): Línea que contiene los coeficientes de la función objetivo.
+
+        Retorna:
+            List[float]: Lista de coeficientes de la función objetivo.
+        """
         try:
             return list(map(float, line.split()))
         except ValueError:
@@ -97,8 +120,17 @@ class FileParser:
     def _parse_constraints(
         lines: List[str], num_vars: int
     ) -> Tuple[List[List[float]], List[float], List[str]]:
-        """Parsea las restricciones del problema."""
-        # Buscar "SUBJECT TO"
+        """
+        Procesa las restricciones del problema desde las líneas del archivo.
+
+        Parámetros:
+            lines (List[str]): Líneas del archivo que contienen las restricciones.
+            num_vars (int): Número de variables en la función objetivo.
+
+        Retorna:
+            Tuple: Matriz de coeficientes, términos independientes y tipos de restricciones.
+        """
+        # Buscar la palabra clave "SUBJECT TO"
         subject_to_idx = -1
         for i, line in enumerate(lines):
             if FileConfig.SUBJECT_TO_KEYWORD in line.upper():
@@ -117,7 +149,7 @@ class FileParser:
             if not line:
                 continue
 
-            # Detectar tipo de restricción
+            # Detectar el tipo de restricción
             if "<=" in line:
                 parts = line.split("<=")
                 const_type = "<="

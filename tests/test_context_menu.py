@@ -1,6 +1,6 @@
 """
 Tests para el sistema de menú contextual de Windows.
-Verifica que los scripts del context menu funcionen correctamente.
+Verifica que los scripts del menú contextual funcionen correctamente.
 """
 
 import unittest
@@ -10,35 +10,53 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 import tempfile
 
-# Agregar el directorio raíz al path
+# Agregar el directorio raíz al path para permitir importaciones
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "context_menu"))
 
 
 class TestContextMenuIntegration(unittest.TestCase):
-    """Tests de integración para el menú contextual."""
+    """
+    Tests de integración para verificar el funcionamiento del menú contextual.
+    """
 
     def setUp(self):
-        """Configuración antes de cada test."""
+        """
+        Configuración inicial antes de cada test.
+        Crea un directorio temporal para los archivos de prueba.
+        """
         self.test_dir = tempfile.mkdtemp()
         self.test_file = Path(self.test_dir) / "test_problem.txt"
 
     def tearDown(self):
-        """Limpieza después de cada test."""
+        """
+        Limpieza después de cada test.
+        Elimina el directorio temporal creado.
+        """
         import shutil
 
         if os.path.exists(self.test_dir):
             shutil.rmtree(self.test_dir)
 
     def create_test_file(self, content):
-        """Crea un archivo de prueba con el contenido especificado."""
+        """
+        Crea un archivo de prueba con el contenido especificado.
+
+        Parámetros:
+            content: Contenido a escribir en el archivo.
+
+        Retorna:
+            La ruta del archivo creado.
+        """
         with open(self.test_file, "w", encoding="utf-8") as f:
             f.write(content)
         return str(self.test_file)
 
     def test_solve_from_context_maximization(self):
-        """Test resolver problema de maximización desde context menu."""
+        """
+        Verifica que se pueda resolver un problema de maximización desde el menú contextual.
+        """
         # Crear archivo de prueba
         content = """MAXIMIZE
 3 2
@@ -70,7 +88,9 @@ SUBJECT TO
                 self.assertIn("RESULTADOS", printed_text)
 
     def test_solve_from_context_minimization(self):
-        """Test resolver problema de minimización desde context menu."""
+        """
+        Verifica que se pueda resolver un problema de minimización desde el menú contextual.
+        """
         content = """MINIMIZE
 4 3
 SUBJECT TO
@@ -95,7 +115,9 @@ SUBJECT TO
                 self.assertIn("Proceso completado", printed_text)
 
     def test_solve_from_context_invalid_file(self):
-        """Test manejo de archivo inválido."""
+        """
+        Verifica el manejo de un archivo inexistente.
+        """
         import solve_from_context
 
         # Mock de input para evitar que se detenga esperando entrada del usuario
@@ -109,7 +131,9 @@ SUBJECT TO
                 self.assertEqual(cm.exception.code, 1)
 
     def test_solve_from_context_invalid_format(self):
-        """Test manejo de formato inválido."""
+        """
+        Verifica el manejo de un archivo con formato inválido.
+        """
         content = """ESTO NO ES VALIDO
 1 2 3
 """
@@ -129,44 +153,63 @@ SUBJECT TO
 
 
 class TestContextMenuScripts(unittest.TestCase):
-    """Tests para verificar la existencia y estructura de los scripts."""
+    """
+    Tests para verificar la existencia y estructura de los scripts del menú contextual.
+    """
 
     def setUp(self):
-        """Configuración antes de cada test."""
+        """
+        Configuración inicial antes de cada test.
+        Define la ruta del directorio de scripts del menú contextual.
+        """
         self.context_menu_dir = PROJECT_ROOT / "context_menu"
 
     def test_solve_from_context_exists(self):
-        """Verifica que el script solve_from_context.py existe."""
+        """
+        Verifica que el script solve_from_context.py existe.
+        """
         script_path = self.context_menu_dir / "solve_from_context.py"
         self.assertTrue(script_path.exists(), "solve_from_context.py debe existir")
 
     def test_solve_from_context_ai_exists(self):
-        """Verifica que el script solve_from_context_ai.py existe."""
+        """
+        Verifica que el script solve_from_context_ai.py existe.
+        """
         script_path = self.context_menu_dir / "solve_from_context_ai.py"
         self.assertTrue(script_path.exists(), "solve_from_context_ai.py debe existir")
 
     def test_run_solver_bat_exists(self):
-        """Verifica que el wrapper run_solver.bat existe."""
+        """
+        Verifica que el wrapper run_solver.bat existe.
+        """
         bat_path = self.context_menu_dir / "run_solver.bat"
         self.assertTrue(bat_path.exists(), "run_solver.bat debe existir")
 
     def test_run_solver_ai_bat_exists(self):
-        """Verifica que el wrapper run_solver_ai.bat existe."""
+        """
+        Verifica que el wrapper run_solver_ai.bat existe.
+        """
         bat_path = self.context_menu_dir / "run_solver_ai.bat"
         self.assertTrue(bat_path.exists(), "run_solver_ai.bat debe existir")
 
     def test_install_bat_exists(self):
-        """Verifica que el instalador install.bat existe."""
+        """
+        Verifica que el instalador install.bat existe.
+        """
         bat_path = self.context_menu_dir / "install.bat"
         self.assertTrue(bat_path.exists(), "install.bat debe existir")
 
     def test_uninstall_bat_exists(self):
-        """Verifica que el desinstalador uninstall.bat existe."""
+        """
+        Verifica que el desinstalador uninstall.bat existe.
+        """
         bat_path = self.context_menu_dir / "uninstall.bat"
         self.assertTrue(bat_path.exists(), "uninstall.bat debe existir")
 
     def test_run_solver_bat_content(self):
-        """Verifica que run_solver.bat contiene los comandos correctos."""
+        """
+        Verifica que run_solver.bat contiene los comandos correctos.
+        """
         bat_path = self.context_menu_dir / "run_solver.bat"
         with open(bat_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -176,7 +219,9 @@ class TestContextMenuScripts(unittest.TestCase):
         self.assertIn("pause", content.lower(), "Debe tener pause al final")
 
     def test_install_bat_content(self):
-        """Verifica que install.bat contiene las configuraciones del registro."""
+        """
+        Verifica que install.bat contiene las configuraciones del registro.
+        """
         bat_path = self.context_menu_dir / "install.bat"
         with open(bat_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -187,33 +232,48 @@ class TestContextMenuScripts(unittest.TestCase):
 
 
 class TestContextMenuExamples(unittest.TestCase):
-    """Tests para verificar los archivos de ejemplo."""
+    """
+    Tests para verificar la existencia y el formato de los archivos de ejemplo.
+    """
 
     def setUp(self):
-        """Configuración antes de cada test."""
+        """
+        Configuración inicial antes de cada test.
+        Define la ruta del directorio de ejemplos.
+        """
         self.ejemplos_dir = PROJECT_ROOT / "ejemplos"
 
     def test_ejemplos_directory_exists(self):
-        """Verifica que la carpeta ejemplos existe."""
+        """
+        Verifica que la carpeta ejemplos existe.
+        """
         self.assertTrue(self.ejemplos_dir.exists(), "Carpeta ejemplos debe existir")
 
     def test_ejemplo_maximizacion_exists(self):
-        """Verifica que ejemplo_maximizacion.txt existe."""
+        """
+        Verifica que ejemplo_maximizacion.txt existe.
+        """
         ejemplo_path = self.ejemplos_dir / "ejemplo_maximizacion.txt"
         self.assertTrue(ejemplo_path.exists(), "ejemplo_maximizacion.txt debe existir")
 
     def test_ejemplo_minimizacion_exists(self):
-        """Verifica que ejemplo_minimizacion.txt existe."""
+        """
+        Verifica que ejemplo_minimizacion.txt existe.
+        """
         ejemplo_path = self.ejemplos_dir / "ejemplo_minimizacion.txt"
         self.assertTrue(ejemplo_path.exists(), "ejemplo_minimizacion.txt debe existir")
 
     def test_ejemplo_carpinteria_exists(self):
-        """Verifica que ejemplo_carpinteria.txt existe."""
+        """
+        Verifica que ejemplo_carpinteria.txt existe.
+        """
         ejemplo_path = self.ejemplos_dir / "ejemplo_carpinteria.txt"
         self.assertTrue(ejemplo_path.exists(), "ejemplo_carpinteria.txt debe existir")
 
     def test_ejemplo_maximizacion_format(self):
-        """Verifica que ejemplo_maximizacion.txt tiene el formato correcto."""
+        """
+        Verifica que ejemplo_maximizacion.txt tiene el formato correcto.
+        """
         ejemplo_path = self.ejemplos_dir / "ejemplo_maximizacion.txt"
         with open(ejemplo_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -222,7 +282,9 @@ class TestContextMenuExamples(unittest.TestCase):
         self.assertIn("SUBJECT TO", content, "Debe tener SUBJECT TO")
 
     def test_ejemplo_minimizacion_format(self):
-        """Verifica que ejemplo_minimizacion.txt tiene el formato correcto."""
+        """
+        Verifica que ejemplo_minimizacion.txt tiene el formato correcto.
+        """
         ejemplo_path = self.ejemplos_dir / "ejemplo_minimizacion.txt"
         with open(ejemplo_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -231,7 +293,9 @@ class TestContextMenuExamples(unittest.TestCase):
         self.assertIn("SUBJECT TO", content, "Debe tener SUBJECT TO")
 
     def test_ejemplos_are_parseable(self):
-        """Verifica que los ejemplos se pueden parsear correctamente."""
+        """
+        Verifica que los ejemplos se pueden parsear correctamente.
+        """
         from simplex_solver.file_parser import FileParser
 
         ejemplos = [

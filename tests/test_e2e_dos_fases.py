@@ -9,11 +9,13 @@ from simplex_solver.core.algorithm import SimplexSolver
 
 
 class TestDosFasesE2E:
-    """Tests de integración para el Método de Dos Fases."""
+    """
+    Tests de integración para el Método de Dos Fases.
+    """
 
     def test_dos_fases_basic_feasible(self):
         """
-        Test básico del Método de Dos Fases con problema factible.
+        Verifica que el Método de Dos Fases resuelve correctamente un problema factible.
 
         Problema:
         MIN 3x1 + 2x2 + x3
@@ -59,7 +61,9 @@ class TestDosFasesE2E:
             assert val >= -1e-6, f"Variable {var} debe ser no negativa, valor: {val}"
 
     def test_dos_fases_verify_constraints_satisfied(self):
-        """Verifica que la solución del Método de Dos Fases satisface las restricciones."""
+        """
+        Verifica que la solución del Método de Dos Fases satisface todas las restricciones.
+        """
         c, A, b, constraint_types, maximize = FileParser.parse_file(
             "ejemplos/ejemplo_dos_fases.txt"
         )
@@ -91,7 +95,9 @@ class TestDosFasesE2E:
                 ), f"Restricción {i+1} ({const_type}): {lhs:.4f} no satisface <= {rhs}"
 
     def test_dos_fases_with_minimization_problem(self):
-        """Verifica que el Método de Dos Fases funciona con problemas de minimización."""
+        """
+        Verifica que el Método de Dos Fases funciona correctamente con problemas de minimización.
+        """
         c, A, b, constraint_types, maximize = FileParser.parse_file(
             "ejemplos/ejemplo_minimizacion.txt"
         )
@@ -104,7 +110,9 @@ class TestDosFasesE2E:
         assert result["optimal_value"] >= 0, "Valor óptimo debe ser no negativo"
 
     def test_dos_fases_iteration_count(self):
-        """Verifica que el contador de iteraciones funciona correctamente en Dos Fases."""
+        """
+        Verifica que el contador de iteraciones funciona correctamente en el Método de Dos Fases.
+        """
         c, A, b, constraint_types, maximize = FileParser.parse_file(
             "ejemplos/ejemplo_dos_fases.txt"
         )
@@ -127,7 +135,9 @@ class TestDosFasesE2E:
             ), "Iteraciones de Fase 1 no pueden exceder total"
 
     def test_dos_fases_with_verbose_output(self):
-        """Verifica que el solver funciona con diferentes niveles de verbosidad."""
+        """
+        Verifica que el solver funciona correctamente con diferentes niveles de verbosidad.
+        """
         c, A, b, constraint_types, maximize = FileParser.parse_file(
             "ejemplos/ejemplo_dos_fases.txt"
         )
@@ -142,7 +152,9 @@ class TestDosFasesE2E:
             assert result["optimal_value"] is not None, "Debe tener valor óptimo"
 
     def test_dos_fases_solution_format(self):
-        """Verifica que el formato de la solución sea correcto."""
+        """
+        Verifica que el formato de la solución generada sea correcto.
+        """
         c, A, b, constraint_types, maximize = FileParser.parse_file(
             "ejemplos/ejemplo_dos_fases.txt"
         )
@@ -168,7 +180,9 @@ class TestDosFasesE2E:
             assert var_name.startswith("x"), f"Variable {var_name} tiene formato inválido"
 
     def test_dos_fases_steps_recorded(self):
-        """Verifica que se registran los pasos para la generación de reportes."""
+        """
+        Verifica que se registran los pasos necesarios para la generación de reportes.
+        """
         c, A, b, constraint_types, maximize = FileParser.parse_file(
             "ejemplos/ejemplo_dos_fases.txt"
         )
@@ -190,14 +204,16 @@ class TestDosFasesE2E:
 
 
 class TestDosFasesInfeasible:
-    """Tests para problemas infactibles con Dos Fases."""
+    """
+    Tests para problemas infactibles utilizando el Método de Dos Fases.
+    """
 
     def test_detects_infeasible_problem(self):
         """
-        Verifica que el Método de Dos Fases detecte problemas infactibles.
+        Verifica que el Método de Dos Fases detecte correctamente problemas infactibles.
 
-        Este test usa el ejemplo de problema infactible que debe detectar
-        que no hay solución factible en la Fase 1.
+        Este test utiliza un ejemplo de problema infactible y verifica que el solver
+        detecte que no hay solución factible en la Fase 1.
         """
         c, A, b, constraint_types, maximize = FileParser.parse_file(
             "ejemplos/ejemplo_infactible.txt"
@@ -213,7 +229,9 @@ class TestDosFasesInfeasible:
         assert "message" in result, "Debe incluir mensaje de error"
 
     def test_infeasible_no_solution_in_result(self):
-        """Verifica que un problema infactible no devuelva solución."""
+        """
+        Verifica que un problema infactible no devuelva solución ni valor óptimo.
+        """
         c, A, b, constraint_types, maximize = FileParser.parse_file(
             "ejemplos/ejemplo_infactible.txt"
         )

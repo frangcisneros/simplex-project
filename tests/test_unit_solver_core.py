@@ -6,7 +6,7 @@ from simplex_solver.utils.tableau import Tableau
 
 
 def test_simple_optimal_solution():
-    """Small maximization problem should return optimal status."""
+    """Prueba un problema pequeño de maximización que debería devolver un estado óptimo."""
     solver = SimplexSolver()
 
     c = [3, 2]
@@ -16,46 +16,49 @@ def test_simple_optimal_solution():
 
     result = solver.solve(c, A, b, constraint_types, maximize=True)
 
+    # Verificar que el resultado es óptimo
     assert result["status"] == "optimal"
     assert "optimal_value" in result
     assert result["optimal_value"] >= 0
 
 
 def test_unbounded_detected_via_mock(monkeypatch):
-    """Force an unbounded detection by patching tableau methods."""
+    """Fuerza la detección de un problema no acotado mediante el parcheo de métodos de Tableau."""
     solver = SimplexSolver()
 
-    # simple feasible-looking problem
+    # Problema simple que parece factible
     c = [1, 1]
     A = [[1, 0]]
     b = [1]
     constraint_types = ["<="]
 
-    # Patch Tableau methods used by _solve_phase to force an unbounded result
+    # Parchear métodos de Tableau utilizados por _solve_phase para forzar un resultado no acotado
     monkeypatch.setattr(Tableau, "is_optimal", lambda self, maximize: False)
     monkeypatch.setattr(Tableau, "get_entering_variable", lambda self, maximize: 0)
     monkeypatch.setattr(Tableau, "is_unbounded", lambda self, col: True)
 
     result = solver.solve(c, A, b, constraint_types, maximize=True)
 
+    # Verificar que el estado detectado es "unbounded"
     assert result["status"] == "unbounded"
 
 
 def test_infeasible_detected_via_mock(monkeypatch):
-    """Force infeasible detection by simulating artificial vars left in basis."""
+    """Fuerza la detección de un problema infactible simulando variables artificiales en la base."""
     solver = SimplexSolver()
 
-    # Use a constraint type that creates artificial variables
+    # Usar un tipo de restricción que crea variables artificiales
     c = [1, 1]
     A = [[1, 1]]
     b = [10]
-    constraint_types = ["="]  # equality causes artificial var
+    constraint_types = ["="]  # La igualdad causa variables artificiales
 
-    # Ensure phase1 runs: is_optimal False for phase1 and phase2
+    # Asegurar que phase1 se ejecute: is_optimal False para phase1 y phase2
     monkeypatch.setattr(Tableau, "is_optimal", lambda self, maximize: False)
-    # Simulate phase1 finishes but artificial vars remain
+    # Simular que phase1 termina pero las variables artificiales permanecen
     monkeypatch.setattr(Tableau, "has_artificial_vars_in_basis", lambda self: True)
 
     result = solver.solve(c, A, b, constraint_types, maximize=True)
 
+    # Verificar que el estado detectado es "infeasible"
     assert result["status"] == "infeasible"

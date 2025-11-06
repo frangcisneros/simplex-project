@@ -13,37 +13,42 @@ from simplex_solver.core.sensitivity import SensitivityAnalyzer
 
 class SimplexSolver:
     """
-    Implements the Simplex method for solving linear programming problems.
+    Implementa el método Simplex para resolver problemas de programación lineal.
 
-    This class focuses solely on the algorithm logic, delegating
-    I/O operations and UI concerns to other modules.
+    Esta clase se centra únicamente en la lógica del algoritmo, delegando
+    las operaciones de entrada/salida y las preocupaciones de la interfaz de usuario a otros módulos.
     """
 
     def __init__(self):
-        """Initialize the SimplexSolver with default settings."""
+        """
+        Inicializa el solver Simplex con configuraciones predeterminadas.
+        """
         self.tableau = Tableau()
         self.max_iterations = AlgorithmConfig.MAX_ITERATIONS
-        self.steps = []  # History of steps for PDF generation
-        self.verbose_level = 0  # Verbosity level for logging iterations
-        self._last_result = None  # Store last solve result for sensitivity analysis
-        self._original_c = None
-        self._original_b = None
+        self.steps = []  # Historial de pasos para la generación de reportes en PDF
+        self.verbose_level = 0  # Nivel de verbosidad para registrar iteraciones
+        self._last_result = None  # Almacena el último resultado para análisis de sensibilidad
+        self._original_c = None  # Coeficientes originales de la función objetivo
+        self._original_b = None  # Valores originales del lado derecho de las restricciones
 
     def _get_basic_solution(self, maximize: bool) -> tuple:
         """
-        Devuelve (solution_dict, optimal_value_float).
-        Usa la API de Tableau existente: .get_solution(maximize)
-        En caso de error devuelve ({x_i: 0.0...}, 0.0)
+        Obtiene la solución básica del problema actual en el tableau.
+
+        Args:
+            maximize: Indica si el problema es de maximización (True) o minimización (False).
+
+        Returns:
+            tuple: Un diccionario con las variables básicas y su valor, y el valor óptimo.
         """
         try:
             sol, val = self.tableau.get_solution(maximize)
-            # asegurar orden consistente (x1, x2, ...)
+            # Asegura un orden consistente de las variables (x1, x2, ...)
             ordered = {k: sol.get(k, 0.0) for k in sorted(sol.keys(), key=lambda s: int(s[1:]))}
             return ordered, float(val)
         except Exception as e:
-            # No interrumpir ejecución por un fallo al obtener solución
+            # Manejo de errores para evitar interrupciones en la ejecución
             logger.debug(f"_get_basic_solution: fallo al extraer solución: {e}")
-            # construir fallback con num_vars
             try:
                 n = self.tableau.num_vars
                 fallback = {f"x{i+1}": 0.0 for i in range(n)}
@@ -53,30 +58,30 @@ class SimplexSolver:
 
     def _solve_phase(self, maximize: bool) -> Dict[str, Any]:
         """
-        Solve one phase of the simplex method.
+        Resuelve una fase del método Simplex.
 
         Args:
-            maximize: True for maximization, False for minimization
+            maximize: True para maximización, False para minimización.
 
         Returns:
-            Dictionary with status, iterations, and optional message
+            dict: Un diccionario con el estado, número de iteraciones y mensajes opcionales.
         """
         iteration = 0
-        logger.debug(f"Starting simplex phase (maximize={maximize})")
+        logger.debug(f"Iniciando fase del método Simplex (maximize={maximize})")
 
         while iteration < self.max_iterations - 1:
             iteration += 1
-            logger.debug(f"Iteration {iteration}: Checking optimality")
+            logger.debug(f"Iteración {iteration}: Verificando optimalidad")
 
-            # Check optimality
+            # Verifica si la solución actual es óptima
             is_optimal = self.tableau.is_optimal(maximize)
 
             if is_optimal:
-                logger.info(f"Optimal solution found at iteration {iteration}")
+                logger.info(f"Solución óptima encontrada en la iteración {iteration}")
 
                 if self.verbose_level > 0:
                     logger.info(
-                        "Optimality condition reached: no coefficients in objective row improve the function"
+                        "Condición de optimalidad alcanzada: no hay coeficientes en la fila objetivo que mejoren la función"
                     )
 
                 if self.verbose_level > 1:
@@ -86,53 +91,55 @@ class SimplexSolver:
                             [f"{var}={val:.4f}" for var, val in final_solution.items()]
                         )
                         logger.info(
-                            f"Final solution of phase: {solution_str}, Optimal value: {final_value:.4f}"
+                            f"Solución final de la fase: {solution_str}, Valor óptimo: {final_value:.4f}"
                         )
                     except Exception as e:
-                        logger.debug(f"Could not log final solution: {e}")
+                        logger.debug(f"No se pudo registrar la solución final: {e}")
 
                 return {"status": "optimal", "iterations": iteration}
 
-            # Find entering variable
+            # Encuentra la variable entrante
             entering_col = self.tableau.get_entering_variable(maximize)
 
             if entering_col == -1:
-                logger.info("No entering variable found - optimal solution")
+                logger.info("No se encontró variable entrante - solución óptima")
                 return {"status": "optimal", "iterations": iteration}
 
-            logger.debug(f"Entering variable: column {entering_col + 1}")
+            logger.debug(f"Variable entrante: columna {entering_col + 1}")
             if self.verbose_level > 1:
-                logger.info(f"Entering variable: column {entering_col + 1}")
+                logger.info(f"Variable entrante: columna {entering_col + 1}")
 
-            # Check if problem is unbounded
+            # Verifica si el problema es no acotado
             if self.tableau.is_unbounded(entering_col):
-                logger.warning(f"Unbounded problem detected at iteration {iteration}")
+                logger.warning(f"Problema no acotado detectado en la iteración {iteration}")
                 return {
                     "status": "unbounded",
-                    "message": "The problem is unbounded",
+                    "message": "El problema es no acotado",
                     "iterations": iteration,
                 }
 
-            # Find leaving variable
+            # Encuentra la variable saliente
             leaving_row, pivot = self.tableau.get_leaving_variable(entering_col)
 
             if leaving_row == -1:
-                logger.error(f"Could not find leaving variable at iteration {iteration}")
+                logger.error(f"No se pudo encontrar variable saliente en la iteración {iteration}")
                 return {
                     "status": "error",
-                    "message": "Could not find leaving variable",
+                    "message": "No se pudo encontrar variable saliente",
                     "iterations": iteration,
                 }
 
-            logger.debug(f"Leaving variable: row {leaving_row + 1}, pivot: {pivot:.4f}")
+            logger.debug(f"Variable saliente: fila {leaving_row + 1}, pivote: {pivot:.4f}")
             if self.verbose_level > 1:
-                logger.info(f"Leaving variable: row {leaving_row + 1}, pivot: {pivot:.4f}")
+                logger.info(f"Variable saliente: fila {leaving_row + 1}, pivote: {pivot:.4f}")
 
-            # Store step for PDF report
+            # Almacena el paso para el reporte en PDF
             self.steps.append(
                 {
                     "iteration": iteration,
-                    "tableau": self.tableau.tableau.copy(),
+                    "tableau": (
+                        self.tableau.tableau.copy() if self.tableau.tableau is not None else None
+                    ),
                     "basic_vars": self.tableau.basic_vars.copy(),
                     "entering_var": entering_col,
                     "leaving_var": self.tableau.basic_vars[leaving_row],
@@ -143,11 +150,11 @@ class SimplexSolver:
                 }
             )
 
-            # Perform pivoting
+            # Realiza el pivoteo
             self.tableau.pivot(entering_col, leaving_row)
-            logger.debug(f"Pivot completed: [{leaving_row}, {entering_col}]")
+            logger.debug(f"Pivote completado: [{leaving_row}, {entering_col}]")
 
-            # Log intermediate solution if verbose_level > 1
+            # Registra solución intermedia si verbose_level > 1
             if self.verbose_level > 1:
                 try:
                     solution_dict, current_value = self._get_basic_solution(maximize)
@@ -155,19 +162,21 @@ class SimplexSolver:
                         [f"{var}={val:.4f}" for var, val in solution_dict.items()]
                     )
                     logger.info(
-                        f"Iteration {iteration} - Basic solution: {solution_str}, Current value: {current_value:.4f}"
+                        f"Iteración {iteration} - Solución básica: {solution_str}, Valor actual: {current_value:.4f}"
                     )
                 except Exception as e:
-                    logger.debug(f"Could not log intermediate solution: {e}")
+                    logger.debug(f"No se pudo registrar solución intermedia: {e}")
 
             if iteration > AlgorithmConfig.SAFETY_ITERATION_LIMIT:
-                logger.warning(f"Too many iterations ({iteration}), stopping at safety limit")
-                return {"status": "error", "message": "Too many iterations"}
+                logger.warning(
+                    f"Demasiadas iteraciones ({iteration}), deteniendo en el límite de seguridad"
+                )
+                return {"status": "error", "message": "Demasiadas iteraciones"}
 
-        logger.error(f"Maximum iterations reached: {self.max_iterations}")
+        logger.error(f"Se alcanzó el máximo de iteraciones: {self.max_iterations}")
         return {
             "status": "error",
-            "message": "Too many iterations",
+            "message": "Demasiadas iteraciones",
             "iterations": iteration,
         }
 
@@ -181,48 +190,48 @@ class SimplexSolver:
         verbose_level: int = 0,
     ) -> Dict[str, Any]:
         """
-        Solve a linear programming problem using the simplex method.
+        Resuelve un problema de programación lineal utilizando el método Simplex.
 
         Args:
-            c: Objective function coefficients
-            A: Constraint coefficient matrix
-            b: Right-hand side vector
-            constraint_types: Constraint types ('<=', '>=', '=')
-            maximize: True to maximize, False to minimize
-            verbose_level: Verbosity level (0=silent, 1=basic info, 2=detailed iterations)
+            c: Coeficientes de la función objetivo.
+            A: Matriz de coeficientes de las restricciones.
+            b: Vector del lado derecho de las restricciones.
+            constraint_types: Tipos de restricciones ('<=', '>=', '=').
+            maximize: True para maximizar, False para minimizar.
+            verbose_level: Nivel de verbosidad (0=silencioso, 1=información básica, 2=iteraciones detalladas).
 
         Returns:
-            Dictionary with solution, optimal value, status, and iterations
+            dict: Un diccionario con la solución, valor óptimo, estado y número de iteraciones.
         """
         self.verbose_level = verbose_level
 
         logger.info(
-            f"Starting solver - Variables: {len(c)}, Constraints: {len(A)}, "
-            f"Type: {'MAX' if maximize else 'MIN'}"
+            f"Iniciando solver - Variables: {len(c)}, Restricciones: {len(A)}, "
+            f"Tipo: {'MAX' if maximize else 'MIN'}"
         )
-        self.steps.clear()  # Clear step history
+        self.steps.clear()  # Limpia el historial de pasos
 
-        # Store original data for sensitivity analysis
+        # Almacena los datos originales para análisis de sensibilidad
         self._original_c = np.array(c)
         self._original_b = np.array(b)
         self._maximize = maximize
 
-        # Build initial tableau
+        # Construye el tableau inicial
         self.tableau.build_initial_tableau(c, A, b, constraint_types, maximize)
-        logger.debug("Initial tableau built")
+        logger.debug("Tableau inicial construido")
 
         total_iterations = 0
         phase1_iterations = 0
 
-        # Phase 1: If there are artificial variables
+        # Fase 1: Si hay variables artificiales
         if self.tableau.artificial_vars:
             if self.verbose_level > 0:
                 logger.info(
-                    f"Starting Phase 1 - Artificial variables: {len(self.tableau.artificial_vars)}"
+                    f"Iniciando Fase 1 - Variables artificiales: {len(self.tableau.artificial_vars)}"
                 )
             else:
                 logger.debug(
-                    f"Starting Phase 1 - Artificial variables: {len(self.tableau.artificial_vars)}"
+                    f"Iniciando Fase 1 - Variables artificiales: {len(self.tableau.artificial_vars)}"
                 )
 
             phase1_result = self._solve_phase(maximize)
@@ -230,40 +239,41 @@ class SimplexSolver:
             total_iterations += phase1_iterations
 
             if phase1_result["status"] != "optimal":
-                logger.warning(f"Phase 1 not optimal: {phase1_result['status']}")
+                logger.warning(f"Fase 1 no óptima: {phase1_result['status']}")
                 return {**phase1_result, "iterations": total_iterations}
 
-            # Check feasibility
+            # Verifica factibilidad
             if (
-                abs(self.tableau.tableau[-1, -1]) > 1e-10
+                self.tableau.tableau is not None
+                and abs(self.tableau.tableau[-1, -1]) > 1e-10
                 or self.tableau.has_artificial_vars_in_basis()
             ):
-                logger.warning("Infeasible problem detected in Phase 1")
+                logger.warning("Problema infactible detectado en la Fase 1")
                 return {
                     "status": "infeasible",
-                    "message": "The problem has no feasible solution",
+                    "message": "El problema no tiene solución factible",
                     "iterations": total_iterations,
                 }
 
             if self.verbose_level > 0:
-                logger.info(f"Phase 1 completed successfully in {phase1_iterations} iterations")
+                logger.info(f"Fase 1 completada exitosamente en {phase1_iterations} iteraciones")
             else:
-                logger.debug(f"Phase 1 completed successfully in {phase1_iterations} iterations")
+                logger.debug(f"Fase 1 completada exitosamente en {phase1_iterations} iteraciones")
 
-            # Prepare Phase 2
+            # Prepara la Fase 2
             if self.verbose_level > 0:
-                logger.info("Starting Phase 2")
+                logger.info("Iniciando Fase 2")
             else:
-                logger.debug("Starting Phase 2")
+                logger.debug("Iniciando Fase 2")
 
             self.tableau.setup_phase2(np.array(c), maximize)
 
-        # Phase 2 (or single phase)
+        # Fase 2 (o fase única)
         if not self.tableau.artificial_vars:
             if self.verbose_level > 0:
-                logger.info("Solving in single phase (no artificial variables)")
+                logger.info("Resolviendo en una sola fase (sin variables artificiales)")
             else:
-                logger.debug("Solving in single phase (no artificial variables)")
+                logger.debug("Resolviendo en una sola fase (sin variables artificiales)")
 
         phase2_result = self._solve_phase(maximize)
         total_iterations += phase2_result["iterations"]
@@ -271,15 +281,17 @@ class SimplexSolver:
         if phase2_result["status"] == "optimal":
             solution, optimal_value = self.tableau.get_solution(maximize)
             logger.info(
-                f"Optimal solution found - Value: {optimal_value:.6f}, "
-                f"Total iterations: {total_iterations}"
+                f"Solución óptima encontrada - Valor: {optimal_value:.6f}, "
+                f"Iteraciones totales: {total_iterations}"
             )
 
-            # Store final state for report
+            # Almacena el estado final para el reporte
             self.steps.append(
                 {
                     "iteration": total_iterations,
-                    "tableau": self.tableau.tableau.copy(),
+                    "tableau": (
+                        self.tableau.tableau.copy() if self.tableau.tableau is not None else None
+                    ),
                     "basic_vars": self.tableau.basic_vars.copy(),
                     "entering_var": None,
                     "leaving_var": None,
@@ -298,7 +310,7 @@ class SimplexSolver:
             if self.tableau.artificial_vars:
                 result["phase1_iterations"] = phase1_iterations
 
-            # Store result for sensitivity analysis
+            # Almacena el resultado para análisis de sensibilidad
             self._last_result = result
 
             return result
@@ -307,40 +319,40 @@ class SimplexSolver:
 
     def get_sensitivity_analysis(self) -> Dict[str, Any]:
         """
-        Perform sensitivity analysis on the optimal solution.
+        Realiza un análisis de sensibilidad sobre la solución óptima.
 
-        This method calculates:
-        - Shadow Prices: Marginal value of each constraint
-        - Optimality Ranges: Allowable ranges for objective coefficients
-        - Feasibility Ranges: Allowable ranges for RHS values
+        Este método calcula:
+        - Precios sombra: Valor marginal de cada restricción.
+        - Rangos de optimalidad: Rangos permitidos para los coeficientes de la función objetivo.
+        - Rangos de factibilidad: Rangos permitidos para los valores del lado derecho.
 
         Returns:
-            Dictionary containing shadow_prices, optimality_ranges, and feasibility_ranges
+            dict: Un diccionario que contiene precios sombra, rangos de optimalidad y rangos de factibilidad.
 
         Raises:
-            ValueError: If no optimal solution exists or solver hasn't been run
+            ValueError: Si no existe una solución óptima o el solver no ha sido ejecutado.
         """
-        # Validate that we have an optimal solution
+        # Valida que exista una solución óptima
         if self._last_result is None:
             raise ValueError(
-                "Sensitivity analysis is only available after solving a problem. "
-                "Please call solve() first."
+                "El análisis de sensibilidad solo está disponible después de resolver un problema. "
+                "Por favor, llame a solve() primero."
             )
 
         if self._last_result["status"] != "optimal":
             raise ValueError(
-                f"Sensitivity analysis is only available for optimal solutions. "
-                f"Current status: {self._last_result['status']}"
+                f"El análisis de sensibilidad solo está disponible para soluciones óptimas. "
+                f"Estado actual: {self._last_result['status']}"
             )
 
-        logger.info("Performing sensitivity analysis...")
+        logger.info("Realizando análisis de sensibilidad...")
 
-        # Validate internal state (should never fail if we passed the checks above)
-        assert self.tableau.tableau is not None, "Tableau is None"
-        assert self._original_c is not None, "Original c is None"
-        assert self._original_b is not None, "Original b is None"
+        # Valida el estado interno (no debería fallar si se pasaron las validaciones anteriores)
+        assert self.tableau.tableau is not None, "El tableau es None"
+        assert self._original_c is not None, "Los coeficientes originales son None"
+        assert self._original_b is not None, "Los valores originales son None"
 
-        # Create sensitivity analyzer
+        # Crea el analizador de sensibilidad
         analyzer = SensitivityAnalyzer(
             tableau=self.tableau.tableau,
             basic_vars=self.tableau.basic_vars,
@@ -348,8 +360,8 @@ class SimplexSolver:
             num_constraints=len(self._original_b),
         )
 
-        # Perform analysis
+        # Realiza el análisis
         analysis = analyzer.analyze(self._original_c, self._original_b)
 
-        logger.info("Sensitivity analysis completed")
+        logger.info("Análisis de sensibilidad completado")
         return analysis

@@ -1,15 +1,15 @@
-# Complete installation with AI/NLP and optimization capabilities
-# Install with: pip install -r requirements-full.txt
+# Instalación completa con capacidades de IA/NLP y optimización
+# Instalar con: pip install -r requirements-full.txt
 
-# Core dependencies
+# Dependencias principales
 -r requirements.txt
 
-# AI/NLP dependencies
-torch>=2.0.0
-transformers>=4.30.0
-accelerate>=0.20.0
-bitsandbytes>=0.41.0
-sentencepiece>=0.1.99
+# Dependencias para IA/NLP
+torch>=2.0.0  # Biblioteca para aprendizaje profundo
+transformers>=4.30.0  # Modelos de lenguaje preentrenados
+accelerate>=0.20.0  # Aceleración de entrenamiento de modelos
+bitsandbytes>=0.41.0  # Optimizaciones para modelos grandes
+sentencepiece>=0.1.99  # Tokenización de texto
 
-# Alternative optimization solvers
-PuLP>=2.7.0
+# Solvers alternativos para optimización
+PuLP>=2.7.0  # Solver para problemas de programación lineal

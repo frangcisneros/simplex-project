@@ -1,6 +1,6 @@
 """
 Sistema de Logging con SQLite para Simplex Solver.
-Proporciona logging completo con almacenamiento en base de datos.
+Proporciona un sistema centralizado para registrar eventos y datos relevantes del sistema.
 """
 
 import sqlite3
@@ -9,13 +9,15 @@ import sys
 import platform
 import traceback
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import threading
 
 
 class LogLevel:
-    """Niveles de log disponibles."""
+    """
+    Clase que define los niveles de severidad para los logs.
+    """
 
     DEBUG = "DEBUG"
     INFO = "INFO"
@@ -26,15 +28,17 @@ class LogLevel:
 
 class LoggingSystem:
     """
-    Sistema centralizado de logging con SQLite.
-    Captura eventos del sistema con información detallada.
+    Sistema centralizado de logging con almacenamiento en SQLite.
+    Permite registrar eventos del sistema, errores, y datos adicionales para análisis posterior.
     """
 
     _instance = None
     _lock = threading.Lock()
 
     def __new__(cls):
-        """Singleton pattern para asegurar una sola instancia."""
+        """
+        Implementación del patrón Singleton para garantizar una única instancia.
+        """
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -42,34 +46,43 @@ class LoggingSystem:
         return cls._instance
 
     def __init__(self):
-        """Inicializa el sistema de logging."""
+        """
+        Inicializa el sistema de logging, configurando la base de datos y registrando la sesión actual.
+        """
         if not hasattr(self, "initialized"):
             self.db_path = self._get_db_path()
-            self.retention_days = 180  # 6 meses
+            self.retention_days = 180  # Período de retención de logs en días
             self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
             self._init_database()
             self._log_system_info()
             self.initialized = True
 
     def _get_db_path(self) -> str:
-        """Obtiene la ruta de la base de datos."""
+        """
+        Determina la ruta donde se almacenará la base de datos de logs.
+
+        Returns:
+            str: Ruta completa al archivo de la base de datos.
+        """
         if getattr(sys, "frozen", False):
-            # Si es ejecutable, guardar en carpeta del usuario
+            # En modo ejecutable, guardar en la carpeta del usuario
             app_data = os.getenv("APPDATA") or os.path.expanduser("~")
             log_dir = os.path.join(app_data, "SimplexSolver", "logs")
         else:
-            # Si es desarrollo, guardar en carpeta del proyecto
+            # En modo desarrollo, guardar en la carpeta del proyecto
             log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
 
         os.makedirs(log_dir, exist_ok=True)
         return os.path.join(log_dir, "simplex_logs.db")
 
     def _init_database(self):
-        """Inicializa la base de datos y crea las tablas necesarias."""
+        """
+        Inicializa la base de datos SQLite y crea las tablas necesarias si no existen.
+        """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Tabla principal de logs
+        # Crear tabla principal de logs
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS logs (
@@ -91,7 +104,7 @@ class LoggingSystem:
         """
         )
 
-        # Tabla de sesiones
+        # Crear tabla de sesiones
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS sessions (
@@ -111,7 +124,7 @@ class LoggingSystem:
         """
         )
 
-        # Tabla de eventos específicos del solver
+        # Crear tabla de eventos del solver
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS solver_events (
@@ -131,7 +144,7 @@ class LoggingSystem:
         """
         )
 
-        # Tabla de archivos procesados
+        # Crear tabla de operaciones con archivos
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS file_operations (
@@ -147,7 +160,7 @@ class LoggingSystem:
         """
         )
 
-        # Tabla de historial de problemas resueltos
+        # Crear tabla de historial de problemas
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS problem_history (
@@ -170,7 +183,7 @@ class LoggingSystem:
         """
         )
 
-        # Índices para mejorar el rendimiento
+        # Crear índices para optimizar consultas
         cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_logs_timestamp 
@@ -199,11 +212,13 @@ class LoggingSystem:
         conn.commit()
         conn.close()
 
-        # Limpiar logs antiguos
+        # Realizar limpieza de logs antiguos
         self._cleanup_old_logs()
 
     def _log_system_info(self):
-        """Registra información del sistema al inicio de la sesión."""
+        """
+        Registra información del sistema al inicio de la sesión actual.
+        """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -230,7 +245,7 @@ class LoggingSystem:
             )
             conn.commit()
         except Exception as e:
-            print(f"Error logging system info: {e}")
+            print(f"Error registrando información del sistema: {e}")
         finally:
             conn.close()
 
@@ -238,10 +253,10 @@ class LoggingSystem:
         self,
         level: str,
         message: str,
-        module: str = None,
-        function: str = None,
-        exception: Exception = None,
-        user_data: Dict[str, Any] = None,
+        module: Optional[str] = None,
+        function: Optional[str] = None,
+        exception: Optional[Exception] = None,
+        user_data: Optional[Dict[str, Any]] = None,
     ):
         """
         Registra un evento en el sistema de logs.
@@ -275,9 +290,7 @@ class LoggingSystem:
                 exception_type = type(exception).__name__
                 exception_message = str(exception)
                 stack_trace = "".join(
-                    traceback.format_exception(
-                        type(exception), exception, exception.__traceback__
-                    )
+                    traceback.format_exception(type(exception), exception, exception.__traceback__)
                 )
 
             # Convertir user_data a string si existe
@@ -312,7 +325,7 @@ class LoggingSystem:
             self._print_log(level, message, module, function)
 
         except Exception as e:
-            print(f"Error in logging system: {e}")
+            print(f"Error en el sistema de logging: {e}")
         finally:
             conn.close()
 
@@ -336,16 +349,18 @@ class LoggingSystem:
     def log_solver_event(
         self,
         event_type: str,
-        problem_type: str = None,
-        num_variables: int = None,
-        num_constraints: int = None,
-        iterations: int = None,
-        execution_time_ms: float = None,
-        status: str = None,
-        optimal_value: float = None,
-        additional_data: Dict[str, Any] = None,
+        problem_type: Optional[str] = None,
+        num_variables: Optional[int] = None,
+        num_constraints: Optional[int] = None,
+        iterations: Optional[int] = None,
+        execution_time_ms: Optional[float] = None,
+        status: Optional[str] = None,
+        optimal_value: Optional[float] = None,
+        additional_data: Optional[Dict[str, Any]] = None,
     ):
-        """Registra eventos específicos del solver."""
+        """
+        Registra eventos específicos del solver.
+        """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -374,7 +389,7 @@ class LoggingSystem:
             )
             conn.commit()
         except Exception as e:
-            print(f"Error logging solver event: {e}")
+            print(f"Error registrando evento del solver: {e}")
         finally:
             conn.close()
 
@@ -383,9 +398,11 @@ class LoggingSystem:
         operation_type: str,
         file_path: str,
         success: bool,
-        error_message: str = None,
+        error_message: Optional[str] = None,
     ):
-        """Registra operaciones con archivos."""
+        """
+        Registra operaciones con archivos.
+        """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -413,7 +430,7 @@ class LoggingSystem:
             )
             conn.commit()
         except Exception as e:
-            print(f"Error logging file operation: {e}")
+            print(f"Error registrando operación con archivo: {e}")
         finally:
             conn.close()
 
@@ -421,14 +438,14 @@ class LoggingSystem:
         self,
         file_path: str,
         file_content: str,
-        problem_type: str = None,
-        num_variables: int = None,
-        num_constraints: int = None,
-        iterations: int = None,
-        execution_time_ms: float = None,
-        status: str = None,
-        optimal_value: float = None,
-        solution_variables: str = None,
+        problem_type: Optional[str] = None,
+        num_variables: Optional[int] = None,
+        num_constraints: Optional[int] = None,
+        iterations: Optional[int] = None,
+        execution_time_ms: Optional[float] = None,
+        status: Optional[str] = None,
+        optimal_value: Optional[float] = None,
+        solution_variables: Optional[str] = None,
     ):
         """
         Guarda un problema resuelto en el historial para poder re-resolverlo después.
@@ -509,26 +526,20 @@ class LoggingSystem:
             conn.close()
 
     def _cleanup_old_logs(self):
-        """Elimina logs más antiguos que el período de retención."""
+        """
+        Elimina registros antiguos de la base de datos que exceden el período de retención.
+        """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
         try:
-            cutoff_date = (
-                datetime.now() - timedelta(days=self.retention_days)
-            ).isoformat()
+            cutoff_date = (datetime.now() - timedelta(days=self.retention_days)).isoformat()
 
-            # Limpiar logs antiguos
+            # Eliminar registros antiguos
             cursor.execute("DELETE FROM logs WHERE timestamp < ?", (cutoff_date,))
-            cursor.execute(
-                "DELETE FROM solver_events WHERE timestamp < ?", (cutoff_date,)
-            )
-            cursor.execute(
-                "DELETE FROM file_operations WHERE timestamp < ?", (cutoff_date,)
-            )
-            cursor.execute(
-                "DELETE FROM problem_history WHERE timestamp < ?", (cutoff_date,)
-            )
+            cursor.execute("DELETE FROM solver_events WHERE timestamp < ?", (cutoff_date,))
+            cursor.execute("DELETE FROM file_operations WHERE timestamp < ?", (cutoff_date,))
+            cursor.execute("DELETE FROM problem_history WHERE timestamp < ?", (cutoff_date,))
             cursor.execute("DELETE FROM sessions WHERE start_time < ?", (cutoff_date,))
 
             deleted_count = cursor.rowcount
@@ -541,7 +552,7 @@ class LoggingSystem:
                 )
 
         except Exception as e:
-            print(f"Error during cleanup: {e}")
+            print(f"Error durante la limpieza: {e}")
         finally:
             conn.close()
 

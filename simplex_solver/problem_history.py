@@ -1,6 +1,6 @@
 """
 Gestor de Historial de Problemas Resueltos.
-Permite ver y re-resolver problemas anteriores.
+Permite visualizar y gestionar problemas resueltos previamente, así como re-resolverlos.
 """
 
 import sqlite3
@@ -14,8 +14,12 @@ from tabulate import tabulate
 from simplex_solver.logging_system import logger
 
 
-# Colores ANSI para terminal
 class Colors:
+    """
+    Clase para definir colores ANSI utilizados en la terminal.
+    Facilita la personalización de la salida en consola.
+    """
+
     CYAN = "\033[96m"
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
@@ -27,14 +31,24 @@ class Colors:
 
 
 class ProblemHistory:
-    """Gestor del historial de problemas resueltos."""
+    """
+    Clase para gestionar el historial de problemas resueltos.
+    Proporciona métodos para consultar, buscar y re-resolver problemas almacenados.
+    """
 
     def __init__(self):
-        """Inicializa el gestor de historial."""
+        """
+        Inicializa el gestor de historial y configura la ruta de la base de datos.
+        """
         self.db_path = self._get_db_path()
 
     def _get_db_path(self) -> str:
-        """Obtiene la ruta de la base de datos."""
+        """
+        Obtiene la ruta de la base de datos donde se almacena el historial.
+
+        Returns:
+            str: Ruta completa al archivo de la base de datos.
+        """
         if getattr(sys, "frozen", False):
             app_data = os.getenv("APPDATA") or os.path.expanduser("~")
             log_dir = os.path.join(app_data, "SimplexSolver", "logs")
@@ -45,13 +59,13 @@ class ProblemHistory:
 
     def get_all_problems(self, limit: int = 50) -> List[Dict[str, Any]]:
         """
-        Obtiene todos los problemas del historial.
+        Recupera todos los problemas almacenados en el historial.
 
         Args:
-            limit: Número máximo de problemas a retornar
+            limit: Número máximo de problemas a retornar.
 
         Returns:
-            Lista de diccionarios con información de cada problema
+            List[Dict[str, Any]]: Lista de problemas con sus detalles principales.
         """
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -95,13 +109,13 @@ class ProblemHistory:
 
     def get_problem_by_id(self, problem_id: int) -> Optional[Dict[str, Any]]:
         """
-        Obtiene un problema específico por su ID, incluyendo el contenido del archivo.
+        Recupera un problema específico del historial utilizando su ID.
 
         Args:
-            problem_id: ID del problema
+            problem_id: ID único del problema a recuperar.
 
         Returns:
-            Diccionario con toda la información del problema o None si no existe
+            Optional[Dict[str, Any]]: Diccionario con los detalles completos del problema o None si no existe.
         """
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -141,13 +155,13 @@ class ProblemHistory:
 
     def search_problems(self, keyword: str) -> List[Dict[str, Any]]:
         """
-        Busca problemas por nombre de archivo.
+        Busca problemas en el historial utilizando una palabra clave.
 
         Args:
-            keyword: Palabra clave para buscar
+            keyword: Palabra clave para buscar en el nombre o ruta del archivo.
 
         Returns:
-            Lista de problemas que coinciden
+            List[Dict[str, Any]]: Lista de problemas que coinciden con la búsqueda.
         """
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -191,7 +205,12 @@ class ProblemHistory:
             conn.close()
 
     def display_problems_table(self, problems: List[Dict[str, Any]]):
-        """Muestra una tabla formateada de problemas."""
+        """
+        Muestra una tabla con los problemas almacenados en el historial.
+
+        Args:
+            problems: Lista de problemas a mostrar.
+        """
         if not problems:
             print(f"\n{Colors.YELLOW}No se encontraron problemas en el historial.{Colors.RESET}\n")
             return

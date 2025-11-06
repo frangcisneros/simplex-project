@@ -11,40 +11,40 @@ from typing import Dict, Any
 
 class NLPModelType(Enum):
     """
-    Modelos disponibles para procesamiento de problemas de optimización.
+    Enumeración de los modelos disponibles para el procesamiento de problemas de optimización.
 
-    Diferentes modelos pueden tener distintas capacidades para analizar
-    problemas matemáticos complejos y generar estructuras JSON correctas.
+    Cada modelo tiene capacidades específicas para analizar problemas matemáticos
+    complejos y generar estructuras JSON correctas.
     """
 
-    MISTRAL_7B = "mistral:7b"  # Modelo predeterminado
-    LLAMA3_1_8B = "llama3.1:8b"  # Mejor razonamiento matemático
-    QWEN2_5_14B = "qwen2.5:14b"  # Especializado en matemáticas
-    LLAMA3_2_3B = "llama3.2:3b"  # Ligero pero capaz
+    MISTRAL_7B = "mistral:7b"  # Modelo predeterminado, balance entre eficiencia y precisión
+    LLAMA3_1_8B = "llama3.1:8b"  # Modelo avanzado para razonamiento matemático
+    QWEN2_5_14B = "qwen2.5:14b"  # Especializado en problemas matemáticos complejos
+    LLAMA3_2_3B = "llama3.2:3b"  # Modelo ligero para problemas simples
 
 
 class ModelConfig:
     """
-    Configuración optimizada para Mistral 7B.
+    Configuración optimizada para cada modelo de lenguaje.
 
-    Parámetros ajustados específicamente para generar JSON estructurado
-    de problemas de optimización lineal de forma determinística.
+    Define parámetros como temperatura, número máximo de tokens y top-p,
+    ajustados para generar JSON estructurado de manera eficiente y precisa.
     """
 
     DEFAULT_CONFIGS: Dict[NLPModelType, Dict[str, Any]] = {
         NLPModelType.MISTRAL_7B: {
-            "temperature": 0.0,  # Determinístico para JSON
+            "temperature": 0.0,  # Determinístico para generar JSON consistente
             "max_tokens": 1024,
             "top_p": 0.8,
         },
         NLPModelType.LLAMA3_1_8B: {
             "temperature": 0.1,  # Ligeramente creativo para problemas complejos
-            "max_tokens": 2048,  # Más espacio para análisis completo
+            "max_tokens": 2048,  # Más espacio para análisis detallado
             "top_p": 0.95,
         },
         NLPModelType.QWEN2_5_14B: {
             "temperature": 0.0,  # Determinístico para JSON
-            "max_tokens": 2048,  # Máximo espacio para análisis complejo
+            "max_tokens": 2048,  # Máximo espacio para problemas complejos
             "top_p": 0.9,
         },
         NLPModelType.LLAMA3_2_3B: {
@@ -57,14 +57,10 @@ class ModelConfig:
 
 class PromptTemplates:
     """
-    Prompts que le pedimos al modelo de lenguaje para extraer información.
+    Plantillas de prompts para interactuar con los modelos de lenguaje.
 
-    Estos prompts instruyen al modelo sobre cómo convertir el texto en español
-    a un JSON estructurado con el problema de optimización.
-
-    Utiliza técnica de few-shot learning con ejemplos concretos para mejorar
-    la capacidad del modelo de identificar variables y restricciones en
-    problemas complejos.
+    Estas plantillas instruyen al modelo sobre cómo convertir texto en español
+    a un JSON estructurado que represente un problema de optimización.
     """
 
     OPTIMIZATION_EXTRACTION_PROMPT = """Eres un analista experto en Programación Lineal. Tu tarea es leer un problema en español y convertirlo a un formato JSON estructurado.
@@ -144,9 +140,9 @@ Responde "VALID" si es válido o lista los errores encontrados.
 
 class ErrorMessages:
     """
-    Mensajes de error claros para cuando algo falla en el pipeline.
+    Mensajes de error estándar para identificar problemas en el pipeline.
 
-    Estos mensajes ayudan a identificar en qué parte del proceso ocurrió el problema.
+    Estos mensajes ayudan a depurar errores en diferentes etapas del proceso.
     """
 
     MODEL_NOT_AVAILABLE = "El modelo NLP no está disponible o no se pudo cargar"
@@ -163,13 +159,13 @@ class DefaultSettings:
     """
     Configuración por defecto del sistema NLP.
 
-    Permite probar diferentes modelos para encontrar el que mejor
-    analiza problemas de optimización complejos.
+    Define parámetros globales como el modelo predeterminado, tiempos máximos
+    de procesamiento y límites de variables y restricciones.
     """
 
-    DEFAULT_MODEL = NLPModelType.LLAMA3_1_8B  # Mejor modelo para problemas complejos
-    MAX_PROCESSING_TIME = 60.0  # Mayor tiempo para problemas complejos
-    MIN_CONFIDENCE_SCORE = 0.7  # Umbral de confianza estándar
-    MAX_VARIABLES = 50  # Soporte para problemas grandes
-    MAX_CONSTRAINTS = 100  # Más restricciones permitidas
-    CACHE_SIZE = 50  # Cache moderado
+    DEFAULT_MODEL = NLPModelType.LLAMA3_1_8B  # Modelo recomendado para problemas complejos
+    MAX_PROCESSING_TIME = 60.0  # Tiempo máximo permitido para procesar un problema
+    MIN_CONFIDENCE_SCORE = 0.7  # Umbral mínimo de confianza para aceptar resultados
+    MAX_VARIABLES = 50  # Límite de variables soportadas
+    MAX_CONSTRAINTS = 100  # Límite de restricciones soportadas
+    CACHE_SIZE = 50  # Tamaño máximo del caché

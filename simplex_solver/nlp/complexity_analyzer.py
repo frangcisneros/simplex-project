@@ -2,9 +2,9 @@
 Analizador de complejidad de problemas y capacidades del sistema.
 
 Detecta automáticamente:
-- Complejidad del problema (simple, medio, complejo)
-- Capacidades de hardware (RAM, GPU, CPU)
-- Modelo óptimo a usar
+- Complejidad del problema (simple, medio, complejo).
+- Capacidades de hardware (RAM, GPU, CPU).
+- Modelo óptimo a usar.
 """
 
 import re
@@ -24,7 +24,9 @@ from .config import NLPModelType, DefaultSettings
 
 
 class ProblemComplexity(Enum):
-    """Niveles de complejidad de un problema."""
+    """
+    Enumeración para los niveles de complejidad de un problema.
+    """
 
     SIMPLE = "simple"
     MEDIUM = "medium"
@@ -32,7 +34,9 @@ class ProblemComplexity(Enum):
 
 
 class SystemCapability(Enum):
-    """Capacidades del sistema."""
+    """
+    Enumeración para las capacidades del sistema.
+    """
 
     LOW = "low"  # < 4GB RAM, sin GPU
     MEDIUM = "medium"  # 4-8GB RAM, GPU opcional
@@ -41,12 +45,12 @@ class SystemCapability(Enum):
 
 class ComplexityAnalyzer:
     """
-    Analiza la complejidad de un problema de optimización.
+    Clase para analizar la complejidad de un problema de optimización.
 
-    Examina el texto para estimar:
-    - Número de variables
-    - Número de restricciones
-    - Longitud y complejidad del texto
+    Examina el texto del problema para estimar:
+    - Número de variables.
+    - Número de restricciones.
+    - Longitud y complejidad del texto.
     """
 
     def __init__(self):
@@ -57,10 +61,10 @@ class ComplexityAnalyzer:
         Determina la complejidad de un problema basándose en su descripción.
 
         Args:
-            text: Descripción del problema en lenguaje natural
+            text: Descripción del problema en lenguaje natural.
 
         Returns:
-            Nivel de complejidad (SIMPLE, MEDIUM, COMPLEX)
+            ProblemComplexity: Nivel de complejidad (SIMPLE, MEDIUM, COMPLEX).
         """
         # Calcular métricas del texto
         text_length = len(text)
@@ -77,8 +81,7 @@ class ComplexityAnalyzer:
             r"\bx\d+",
         ]
         estimated_vars = sum(
-            len(re.findall(pattern, text, re.IGNORECASE))
-            for pattern in variable_indicators
+            len(re.findall(pattern, text, re.IGNORECASE)) for pattern in variable_indicators
         )
 
         # Estimar número de restricciones
@@ -93,8 +96,7 @@ class ComplexityAnalyzer:
             r"\brecursos?\b",
         ]
         estimated_constraints = sum(
-            len(re.findall(pattern, text, re.IGNORECASE))
-            for pattern in constraint_indicators
+            len(re.findall(pattern, text, re.IGNORECASE)) for pattern in constraint_indicators
         )
 
         # Calcular score de complejidad
@@ -156,12 +158,12 @@ class ComplexityAnalyzer:
 
 class SystemAnalyzer:
     """
-    Analiza las capacidades del sistema actual.
+    Clase para analizar las capacidades del sistema actual.
 
     Detecta:
-    - Memoria RAM disponible
-    - Disponibilidad de GPU
-    - Velocidad del CPU
+    - Memoria RAM disponible.
+    - Disponibilidad de GPU.
+    - Velocidad del CPU.
     """
 
     def __init__(self):
@@ -172,7 +174,7 @@ class SystemAnalyzer:
         Determina la capacidad del sistema actual.
 
         Returns:
-            Nivel de capacidad (LOW, MEDIUM, HIGH)
+            SystemCapability: Nivel de capacidad (LOW, MEDIUM, HIGH).
         """
         # Obtener memoria RAM total en GB
         ram_gb = psutil.virtual_memory().total / (1024**3)
@@ -206,10 +208,10 @@ class SystemAnalyzer:
 
 class ModelSelector:
     """
-    Selector simplificado que siempre usa Mistral 7B como modelo predeterminado.
+    Clase para seleccionar el modelo NLP óptimo basado en la complejidad del problema
+    y las capacidades del sistema.
 
-    Mistral 7B es el modelo óptimo que funciona para todos los tipos de problemas
-    con un buen equilibrio entre capacidad y eficiencia.
+    Actualmente, utiliza un modelo predeterminado configurado en DefaultSettings.
     """
 
     def __init__(self):
@@ -225,10 +227,10 @@ class ModelSelector:
         Selecciona el modelo configurado por defecto para problemas de optimización.
 
         Args:
-            problem_text: Descripción del problema (se mantiene por compatibilidad)
+            problem_text: Descripción del problema (se mantiene por compatibilidad).
 
         Returns:
-            El modelo configurado en DefaultSettings.DEFAULT_MODEL
+            NLPModelType: El modelo configurado en DefaultSettings.DEFAULT_MODEL.
         """
         # Analizar complejidad para logging (opcional)
         problem_complexity = self.complexity_analyzer.analyze_problem(problem_text)
@@ -249,13 +251,13 @@ class ModelSelector:
 
     def get_fallback_models(self, current_model: NLPModelType) -> list[NLPModelType]:
         """
-        No hay modelos de respaldo ya que solo se usa Mistral 7B.
+        Retorna una lista vacía ya que solo se utiliza un modelo predeterminado.
 
         Args:
-            current_model: Modelo actual (ignorado)
+            current_model: Modelo actual (ignorado).
 
         Returns:
-            Lista vacía - no hay respaldos
+            list[NLPModelType]: Lista vacía - no hay modelos de respaldo.
         """
         self.logger.info("No fallback models available - using only Mistral 7B")
         return []

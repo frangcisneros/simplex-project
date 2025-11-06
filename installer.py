@@ -13,11 +13,13 @@ from typing import List, Optional
 
 # Importar el analizador de sistema desde tools
 sys.path.insert(0, str(Path(__file__).parent / "tools"))
-from system_analyzer import SystemAnalyzer
+from system_analyzer import SystemAnalyzer  # type: ignore
 
 
 class Color:
-    """Códigos de color para la consola (compatible con Windows)."""
+    """
+    Define códigos de color para la consola, asegurando compatibilidad con Windows.
+    """
 
     RESET = "\033[0m"
     BOLD = "\033[1m"
@@ -30,7 +32,9 @@ class Color:
 
 
 def enable_ansi_colors():
-    """Habilita los códigos ANSI en Windows 10+."""
+    """
+    Habilita los códigos ANSI en la consola de Windows 10 o superior.
+    """
     if platform.system() == "Windows":
         try:
             import ctypes
@@ -42,7 +46,10 @@ def enable_ansi_colors():
 
 
 def is_admin():
-    """Verifica si el script se está ejecutando con permisos de administrador."""
+    """
+    Verifica si el script se está ejecutando con permisos de administrador.
+    En sistemas Unix/Linux, verifica si el usuario es root.
+    """
     if platform.system() == "Windows":
         try:
             import ctypes
@@ -52,13 +59,23 @@ def is_admin():
             return False
     else:
         # En Unix/Linux, verificar si es root
-        return os.geteuid() == 0
+        try:
+            return os.geteuid() == 0  # type: ignore
+        except AttributeError:
+            # os.geteuid no está disponible en este sistema
+            return False
 
 
 class SimplexInstaller:
-    """Instalador interactivo del Simplex Solver."""
+    """
+    Clase principal para gestionar la instalación interactiva del Simplex Solver.
+    Proporciona opciones para analizar el sistema, instalar componentes y configurar el entorno.
+    """
 
     def __init__(self):
+        """
+        Inicializa el instalador, detectando permisos y configurando rutas necesarias.
+        """
         self.analyzer = SystemAnalyzer()
         self.install_ollama = False
         self.selected_models = []
@@ -68,13 +85,16 @@ class SimplexInstaller:
         # Detectar si estamos corriendo como .exe empaquetado
         if getattr(sys, "frozen", False):
             # Corriendo como .exe - PyInstaller extrae archivos a sys._MEIPASS
-            self.project_root = Path(sys._MEIPASS)
+            self.project_root = Path(getattr(sys, "_MEIPASS", "."))
         else:
             # Corriendo como script normal
             self.project_root = Path(__file__).parent.resolve()
 
     def _find_python_executable(self) -> Optional[str]:
-        """Encuentra el ejecutable de Python en el sistema."""
+        """
+        Busca el ejecutable de Python en el sistema utilizando varios métodos.
+        Retorna la ruta del ejecutable si se encuentra, o None en caso contrario.
+        """
         # Si estamos corriendo como .exe, sys.executable apunta al .exe
         # Necesitamos buscar el Python del sistema
 
@@ -131,45 +151,63 @@ class SimplexInstaller:
         return None
 
     def clear_screen(self):
-        """Limpia la pantalla de la consola."""
+        """
+        Limpia la pantalla de la consola para mejorar la legibilidad.
+        """
         os.system("cls" if os.name == "nt" else "clear")
 
     def print_header(self, title: str):
-        """Imprime un encabezado formateado."""
+        """
+        Imprime un encabezado formateado con el título proporcionado.
+        """
         print("\n" + "=" * 70)
         print(f"{Color.CYAN}{Color.BOLD}{title:^70}{Color.RESET}")
         print("=" * 70 + "\n")
 
     def print_section(self, title: str):
-        """Imprime un título de sección."""
+        """
+        Imprime un título de sección destacado.
+        """
         print(f"\n{Color.BLUE}{Color.BOLD}▶ {title}{Color.RESET}")
         print("-" * 70)
 
     def print_info(self, message: str):
-        """Imprime un mensaje informativo."""
+        """
+        Muestra un mensaje informativo en la consola.
+        """
         print(f"{Color.CYAN}ℹ {message}{Color.RESET}")
 
     def print_success(self, message: str):
-        """Imprime un mensaje de éxito."""
+        """
+        Muestra un mensaje indicando éxito en la operación.
+        """
         print(f"{Color.GREEN}✓ {message}{Color.RESET}")
 
     def print_warning(self, message: str):
-        """Imprime una advertencia."""
+        """
+        Muestra una advertencia en la consola.
+        """
         print(f"{Color.YELLOW}⚠ {message}{Color.RESET}")
 
     def print_error(self, message: str):
-        """Imprime un error."""
+        """
+        Muestra un mensaje de error en la consola.
+        """
         print(f"{Color.RED}✗ {message}{Color.RESET}")
 
     def log_operation(self, operation: str, success: bool, details: str = ""):
-        """Registra una operación en el log de instalación."""
+        """
+        Registra una operación en el log de instalación con su estado y detalles.
+        """
         status = "✓" if success else "✗"
         self.installation_log.append(
             {"operation": operation, "success": success, "details": details, "status": status}
         )
 
     def ask_yes_no(self, question: str, default: bool = True) -> bool:
-        """Pregunta sí/no al usuario."""
+        """
+        Realiza una pregunta de tipo sí/no al usuario y retorna la respuesta.
+        """
         options = "[S/n]" if default else "[s/N]"
         while True:
             response = input(f"{Color.YELLOW}? {question} {options}: {Color.RESET}").strip().lower()
@@ -184,7 +222,9 @@ class SimplexInstaller:
                 self.print_warning("Por favor responde 's' o 'n'")
 
     def ask_choice(self, question: str, options: List[str]) -> int:
-        """Pregunta al usuario que elija entre varias opciones."""
+        """
+        Presenta una lista de opciones al usuario y retorna la selección realizada.
+        """
         print(f"\n{Color.YELLOW}? {question}{Color.RESET}")
         for i, option in enumerate(options, 1):
             print(f"  {i}. {option}")
@@ -203,7 +243,9 @@ class SimplexInstaller:
                 self.print_warning("Por favor ingresa un número válido")
 
     def show_welcome(self):
-        """Muestra la pantalla de bienvenida."""
+        """
+        Muestra la pantalla de bienvenida con información general sobre el instalador.
+        """
         self.clear_screen()
         self.print_header("INSTALADOR DE SIMPLEX SOLVER")
 
@@ -233,7 +275,9 @@ class SimplexInstaller:
         input()
 
     def show_system_analysis(self):
-        """Muestra el análisis del sistema."""
+        """
+        Realiza y muestra un análisis del sistema, incluyendo compatibilidad con Ollama.
+        """
         self.clear_screen()
         self.print_header("ANÁLISIS DEL SISTEMA")
 
@@ -254,7 +298,9 @@ class SimplexInstaller:
         input()
 
     def ask_ollama_installation(self):
-        """Pregunta si desea instalar Ollama."""
+        """
+        Pregunta al usuario si desea instalar Ollama, mostrando sus beneficios.
+        """
         self.clear_screen()
         self.print_header("INSTALACIÓN DE OLLAMA")
 
@@ -277,7 +323,9 @@ class SimplexInstaller:
             self.install_ollama = self.ask_yes_no("¿Deseas instalar Ollama?", default=True)
 
     def select_ai_models(self):
-        """Permite seleccionar los modelos de IA a instalar."""
+        """
+        Permite al usuario seleccionar los modelos de IA a instalar, si aplica.
+        """
         if not self.install_ollama:
             return
 
@@ -342,7 +390,9 @@ class SimplexInstaller:
         input()
 
     def _select_models_manually(self, recommendations) -> List[str]:
-        """Permite seleccionar modelos manualmente."""
+        """
+        Permite al usuario seleccionar manualmente los modelos de IA de una lista.
+        """
         selected = []
 
         print(f"\n{Color.WHITE}Selecciona los modelos que deseas instalar:{Color.RESET}")
@@ -377,7 +427,10 @@ class SimplexInstaller:
         return selected
 
     def ask_context_menu(self):
-        """Pregunta si desea instalar el menú contextual (o instala automáticamente si es admin)."""
+        """
+        Pregunta al usuario si desea instalar el menú contextual de Windows.
+        Si se ejecuta como administrador, lo instala automáticamente.
+        """
         self.clear_screen()
         self.print_header("MENÚ CONTEXTUAL DE WINDOWS")
 
@@ -412,7 +465,9 @@ class SimplexInstaller:
             )
 
     def show_installation_summary(self):
-        """Muestra un resumen de lo que se va a instalar."""
+        """
+        Muestra un resumen de los componentes que se instalarán.
+        """
         self.clear_screen()
         self.print_header("RESUMEN DE INSTALACIÓN")
 
@@ -454,7 +509,10 @@ class SimplexInstaller:
             sys.exit(0)
 
     def install_python_dependencies(self):
-        """Instala las dependencias de Python."""
+        """
+        Instala las dependencias de Python necesarias para el Simplex Solver.
+        Verifica la existencia de un ejecutable de Python y el archivo de requisitos.
+        """
         self.print_section("Instalando Dependencias de Python")
 
         # Detectar el ejecutable de Python del sistema
@@ -538,7 +596,9 @@ class SimplexInstaller:
             return False
 
     def install_ollama_component(self):
-        """Instala Ollama."""
+        """
+        Gestiona la instalación de Ollama, verificando su disponibilidad en el sistema.
+        """
         if not self.install_ollama:
             return True
 
@@ -579,7 +639,10 @@ class SimplexInstaller:
         return False
 
     def download_ai_models(self):
-        """Descarga los modelos de IA seleccionados."""
+        """
+        Descarga los modelos de IA seleccionados por el usuario.
+        Verifica que Ollama esté disponible antes de proceder.
+        """
         if not self.selected_models:
             return True
 
@@ -639,7 +702,9 @@ class SimplexInstaller:
         return success
 
     def install_context_menu_component(self):
-        """Instala el menú contextual de Windows."""
+        """
+        Configura el menú contextual de Windows para facilitar el uso del Simplex Solver.
+        """
         if not self.install_context_menu:
             return True
 
@@ -724,7 +789,9 @@ class SimplexInstaller:
             return False
 
     def show_completion(self):
-        """Muestra el mensaje de finalización con log de instalación."""
+        """
+        Muestra un mensaje final con el log de instalación y próximos pasos.
+        """
         self.clear_screen()
         self.print_header("INSTALACIÓN COMPLETADA")
 
@@ -811,7 +878,9 @@ class SimplexInstaller:
         input()
 
     def run(self):
-        """Ejecuta el instalador."""
+        """
+        Ejecuta el flujo completo del instalador, desde la bienvenida hasta la finalización.
+        """
         enable_ansi_colors()
 
         try:
@@ -925,7 +994,10 @@ class SimplexInstaller:
 
 
 def main():
-    """Función principal."""
+    """
+    Punto de entrada principal del script.
+    Crea una instancia del instalador y ejecuta el proceso.
+    """
     installer = SimplexInstaller()
     success = installer.run()
     sys.exit(0 if success else 1)

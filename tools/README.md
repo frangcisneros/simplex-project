@@ -1,167 +1,167 @@
-# Development Tools - Simplex Solver
+# Herramientas de Desarrollo - Simplex Solver
 
-This directory contains consolidated development tools following SOLID principles. Each tool is designed for a single, well-defined purpose.
+Este directorio contiene herramientas de desarrollo consolidadas que siguen los principios SOLID. Cada herramienta está diseñada para un propósito único y bien definido.
 
-## Overview
+## Descripción General
 
-All tools in this directory are standalone Python scripts that can be executed from the project root. They provide unified interfaces for common development tasks.
+Todas las herramientas en este directorio son scripts independientes de Python que pueden ejecutarse desde la raíz del proyecto. Proporcionan interfaces unificadas para tareas comunes de desarrollo.
 
-## Available Tools
+## Herramientas Disponibles
 
-### build.py - Unified Build System
+### build.py - Sistema de Construcción Unificado
 
-Consolidates all build functionality for creating Windows executables using PyInstaller.
+Consolida toda la funcionalidad de construcción para crear ejecutables de Windows utilizando PyInstaller.
 
-**Usage:**
+**Uso:**
 
 ```powershell
-# Build the installer executable
+# Construir el ejecutable del instalador
 python tools/build.py --installer
 
-# Build the solver executable
+# Construir el ejecutable del solver
 python tools/build.py --solver
 
-# Build both executables
+# Construir ambos ejecutables
 python tools/build.py --all
 
-# Clean build artifacts (dist/, build/, *.spec)
+# Limpiar artefactos de construcción (dist/, build/, *.spec)
 python tools/build.py --clean
 
-# Clean and rebuild
+# Limpiar y reconstruir
 python tools/build.py --clean --all
 ```
 
-**Features:**
+**Características:**
 
-- Automatic PyInstaller installation if not present
-- Separate configurations for installer and solver
-- Generates .spec files dynamically
-- Verifies output and displays file sizes
-- Clean separation of concerns using SOLID principles
+- Instalación automática de PyInstaller si no está presente
+- Configuraciones separadas para instalador y solver
+- Genera archivos .spec dinámicamente
+- Verifica la salida y muestra tamaños de archivo
+- Separación clara de responsabilidades utilizando principios SOLID
 
-**Output:**
+**Salida:**
 
-- `dist/SimplexInstaller.exe` - Interactive installer (~40-50 MB)
-- `dist/SimplexSolver.exe` - Standalone solver (~30-40 MB)
+- `dist/SimplexInstaller.exe` - Instalador interactivo (~40-50 MB)
+- `dist/SimplexSolver.exe` - Solver independiente (~30-40 MB)
 
-**Build Configurations:**
+**Configuraciones de Construcción:**
 
-- **Installer**: Includes UAC admin manifest, full documentation, context menu scripts
-- **Solver**: Minimal package with core functionality only
+- **Installer**: Incluye manifiesto de administrador UAC, documentación completa, scripts de menú contextual
+- **Solver**: Paquete mínimo con funcionalidad principal únicamente
 
-**Architecture:**
+**Arquitectura:**
 
-- `BuildCleaner` - Removes build artifacts
-- `PyInstallerManager` - Ensures PyInstaller availability
-- `SpecFileGenerator` - Generates .spec files
-- `ExecutableBuilder` - Compiles executables
-- `BuildOrchestrator` - Coordinates the entire build process
+- `BuildCleaner` - Elimina artefactos de construcción
+- `PyInstallerManager` - Asegura la disponibilidad de PyInstaller
+- `SpecFileGenerator` - Genera archivos .spec
+- `ExecutableBuilder` - Compila ejecutables
+- `BuildOrchestrator` - Coordina todo el proceso de construcción
 
-### logs.py - Log Management Tool
+### logs.py - Herramienta de Gestión de Logs
 
-Provides access to the SQLite-based logging system with multiple viewing and analysis modes.
+Proporciona acceso al sistema de registro basado en SQLite con múltiples modos de visualización y análisis.
 
-**Usage:**
+**Uso:**
 
 ```powershell
-# Launch interactive log viewer (default)
+# Iniciar visor de logs interactivo (predeterminado)
 python tools/logs.py
 
-# Show quick statistics
+# Mostrar estadísticas rápidas
 python tools/logs.py --stats
 
-# Verify log system integrity
+# Verificar integridad del sistema de logs
 python tools/logs.py --verify
 ```
 
-**Features:**
+**Características:**
 
-**Interactive Mode:**
+**Modo Interactivo:**
 
-- View recent logs
-- Filter by level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- View logs by session
-- View solver events and file operations
-- Search functionality
-- Export logs
-- Clean old logs
+- Ver logs recientes
+- Filtrar por nivel (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Ver logs por sesión
+- Ver eventos del solver y operaciones de archivo
+- Funcionalidad de búsqueda
+- Exportar logs
+- Limpiar logs antiguos
 
-**Stats Mode:**
+**Modo Estadísticas:**
 
-- Total log count
-- Session count
-- Problems solved
-- Activity in last 24 hours
+- Conteo total de logs
+- Conteo de sesiones
+- Problemas resueltos
+- Actividad en las últimas 24 horas
 
-**Verify Mode:**
+**Modo Verificar:**
 
-- Database integrity check
-- Detailed statistics
-- Last 5 log entries
-- Last problem solved details
-- System health verification
+- Verificación de integridad de la base de datos
+- Estadísticas detalladas
+- Últimos 5 registros
+- Detalles del último problema resuelto
+- Verificación de salud del sistema
 
-**Log Database Location:**
+**Ubicación de la Base de Datos de Logs:**
 
-- **Development**: `logs/simplex_logs.db`
-- **Production**: `%APPDATA%\SimplexSolver\logs\simplex_logs.db`
+- **Desarrollo**: `logs/simplex_logs.db`
+- **Producción**: `%APPDATA%\SimplexSolver\logs\simplex_logs.db`
 
-### history.py - Problem History Management
+### history.py - Gestión del Historial de Problemas
 
-Manages the history of solved problems with interactive menu and diagnostics.
+Gestiona el historial de problemas resueltos con menú interactivo y diagnósticos.
 
-**Usage:**
+**Uso:**
 
 ```powershell
-# Launch interactive history menu (default)
+# Iniciar menú interactivo de historial (predeterminado)
 python tools/history.py
 
-# Test history system functionality
+# Probar funcionalidad del sistema de historial
 python tools/history.py --test
 
-# Show quick statistics
+# Mostrar estadísticas rápidas
 python tools/history.py --stats
 ```
 
-**Features:**
+**Características:**
 
-**Interactive Menu:**
+**Menú Interactivo:**
 
-- View all solved problems
-- Search by problem name
-- View detailed problem information
-- Re-solve problems from history
-- Display problem statistics
+- Ver todos los problemas resueltos
+- Buscar por nombre de problema
+- Ver información detallada del problema
+- Resolver problemas desde el historial
+- Mostrar estadísticas de problemas
 
-**Test Mode:**
+**Modo Prueba:**
 
-- Retrieves all problems
-- Displays problems table
-- Tests problem detail retrieval
-- Creates and verifies temporary files
-- Calculates comprehensive statistics
+- Recupera todos los problemas
+- Muestra tabla de problemas
+- Prueba la recuperación de detalles de problemas
+- Crea y verifica archivos temporales
+- Calcula estadísticas completas
 
-**Stats Mode:**
+**Modo Estadísticas:**
 
-- Total problems count
-- Success rate
-- Maximum variables/constraints
-- Recent problems list
+- Conteo total de problemas
+- Tasa de éxito
+- Máximo de variables/restricciones
+- Lista de problemas recientes
 
-**History Data:**
+**Datos del Historial:**
 
-Stored in same SQLite database as logs, includes:
+Almacenados en la misma base de datos SQLite que los logs, incluyen:
 
-- File content
-- Problem parameters
-- Solution details
-- Execution metadata
+- Contenido del archivo
+- Parámetros del problema
+- Detalles de la solución
+- Metadatos de ejecución
 
-### system_analyzer.py - System Capabilities Analyzer
+### system_analyzer.py - Analizador de Capacidades del Sistema
 
-Analyzes system hardware and provides recommendations for Ollama model selection.
+Analiza el hardware del sistema y proporciona recomendaciones para la selección de modelos Ollama.
 
-**Usage:**
+**Uso:**
 
 ```python
 from tools.system_analyzer import SystemAnalyzer
@@ -173,139 +173,139 @@ print(f"RAM: {capabilities.ram_gb} GB")
 print(f"CPU Cores: {capabilities.cpu_count}")
 print(f"Has NVIDIA GPU: {capabilities.has_nvidia_gpu}")
 
-# Get model recommendations
+# Obtener recomendaciones de modelos
 recommendations = analyzer.get_model_recommendations()
 for rec in recommendations:
     print(f"{rec.model_name}: {rec.recommendation_level}")
 ```
 
-**Used by:**
+**Usado por:**
 
-- `installer.py` for automatic model recommendations
+- `installer.py` para recomendaciones automáticas de modelos
 
-### test_installer.py - Installer Tests
+### test_installer.py - Pruebas del Instalador
 
-Test suite for the interactive installer functionality.
+Suite de pruebas para la funcionalidad del instalador interactivo.
 
-**Usage:**
+**Uso:**
 
 ```powershell
 python -m pytest tools/test_installer.py -v
 ```
 
-**Tests:**
+**Pruebas:**
 
-- System capabilities detection
-- Model recommendations
-- Installation workflows
+- Detección de capacidades del sistema
+- Recomendaciones de modelos
+- Flujos de trabajo de instalación
 
-## Requirements
+## Requisitos
 
-All tools require the project's base dependencies:
+Todas las herramientas requieren las dependencias base del proyecto:
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-For building executables:
+Para construir ejecutables:
 
 ```powershell
 pip install -r requirements-build.txt
 ```
 
-## Architecture Principles
+## Principios de Arquitectura
 
-All tools follow SOLID principles:
+Todas las herramientas siguen los principios SOLID:
 
-- **Single Responsibility**: Each class/function has one clear purpose
-- **Open/Closed**: Extendable without modifying existing code
-- **Liskov Substitution**: Interfaces are properly abstracted
-- **Interface Segregation**: No forced dependencies on unused methods
-- **Dependency Inversion**: Depend on abstractions, not concretions
+- **Responsabilidad Única**: Cada clase/función tiene un propósito claro
+- **Abierto/Cerrado**: Extensible sin modificar el código existente
+- **Sustitución de Liskov**: Las interfaces están correctamente abstraídas
+- **Segregación de Interfaces**: No hay dependencias forzadas en métodos no utilizados
+- **Inversión de Dependencias**: Dependencia en abstracciones, no en concreciones
 
-## Examples
+## Ejemplos
 
-### Building for Release
+### Construcción para Liberación
 
 ```powershell
-# Clean previous builds
+# Limpiar construcciones previas
 python tools/build.py --clean
 
-# Build both executables
+# Construir ambos ejecutables
 python tools/build.py --all
 
-# Verify outputs
+# Verificar salidas
 ls dist/
 ```
 
-### Checking Logs After Error
+### Verificación de Logs Después de un Error
 
 ```powershell
-# Quick check
+# Verificación rápida
 python tools/logs.py --stats
 
-# Full verification
+# Verificación completa
 python tools/logs.py --verify
 
-# Interactive viewing
+# Visualización interactiva
 python tools/logs.py
 ```
 
-### Reviewing Problem History
+### Revisión del Historial de Problemas
 
 ```powershell
-# Quick stats
+# Estadísticas rápidas
 python tools/history.py --stats
 
-# Find and re-solve a problem
+# Encontrar y resolver un problema
 python tools/history.py
-# Then select option to view/re-solve
+# Luego seleccionar opción para ver/solucionar
 ```
 
-## Output Format
+## Formato de Salida
 
-All tools use consistent output formatting:
+Todas las herramientas utilizan un formato de salida consistente:
 
-- `[OK]` - Successful operation
-- `[ERROR]` - Error occurred
-- `[WARNING]` - Warning message
-- `[INFO]` - Informational message
-- `[STATS]` - Statistical information
-- `[BUILD]` - Build-related message
-- `[CLEAN]` - Cleanup operation
+- `[OK]` - Operación exitosa
+- `[ERROR]` - Ocurrió un error
+- `[WARNING]` - Mensaje de advertencia
+- `[INFO]` - Mensaje informativo
+- `[STATS]` - Información estadística
+- `[BUILD]` - Mensaje relacionado con construcción
+- `[CLEAN]` - Operación de limpieza
 
-No emojis are used to maintain professional output.
+No se utilizan emojis para mantener una salida profesional.
 
-## Error Handling
+## Manejo de Errores
 
-All tools implement comprehensive error handling:
+Todas las herramientas implementan un manejo de errores completo:
 
-- Clear error messages
-- Traceback printing for debugging
-- Graceful failure with appropriate exit codes
-- File/database existence checks
+- Mensajes de error claros
+- Impresión de traceback para depuración
+- Fallo controlado con códigos de salida apropiados
+- Verificaciones de existencia de archivos/bases de datos
 
-## Testing
+## Pruebas
 
-Tools can be tested individually:
+Las herramientas pueden probarse individualmente:
 
 ```powershell
-# Test build system (dry run with --help)
+# Probar sistema de construcción (ejecución simulada con --help)
 python tools/build.py --help
 
-# Test log system
+# Probar sistema de logs
 python tools/logs.py --verify
 
-# Test history system
+# Probar sistema de historial
 python tools/history.py --test
 ```
 
-## Integration with CI/CD
+## Integración con CI/CD
 
-These tools are designed for CI/CD integration:
+Estas herramientas están diseñadas para integración con CI/CD:
 
 ```yaml
-# Example GitHub Actions workflow
+# Ejemplo de flujo de trabajo en GitHub Actions
 - name: Build executables
   run: python tools/build.py --all
 
@@ -313,11 +313,11 @@ These tools are designed for CI/CD integration:
   run: python tools/logs.py --verify
 ```
 
-## Maintenance
+## Mantenimiento
 
-### Adding New Build Targets
+### Agregar Nuevos Objetivos de Construcción
 
-Edit `build.py` and add a new `BuildConfig` to `BuildOrchestrator.CONFIGS`:
+Editar `build.py` y agregar un nuevo `BuildConfig` a `BuildOrchestrator.CONFIGS`:
 
 ```python
 CONFIGS = {
@@ -332,73 +332,73 @@ CONFIGS = {
 }
 ```
 
-### Extending Log Viewer
+### Extender el Visor de Logs
 
-Subclass `LogViewer` in `simplex_solver/log_viewer.py` to add new features.
+Subclasificar `LogViewer` en `simplex_solver/log_viewer.py` para agregar nuevas características.
 
-### Adding History Features
+### Agregar Funcionalidades al Historial
 
-Extend `ProblemHistory` class in `simplex_solver/problem_history.py`.
+Extender la clase `ProblemHistory` en `simplex_solver/problem_history.py`.
 
-## Troubleshooting
+## Resolución de Problemas
 
-### Build Fails
+### Fallos en la Construcción
 
 ```powershell
-# Ensure PyInstaller is installed
+# Asegurarse de que PyInstaller esté instalado
 pip install pyinstaller
 
-# Check for import errors
+# Verificar errores de importación
 python -c "import simplex_solver"
 
-# Verify all dependencies
+# Verificar todas las dependencias
 pip install -r requirements.txt
 ```
 
-### Log Viewer Errors
+### Errores en el Visor de Logs
 
 ```powershell
-# Check database exists
+# Verificar que la base de datos exista
 python tools/logs.py --verify
 
-# If missing, run solver once to create it
+# Si falta, ejecutar el solver una vez para crearla
 python simplex.py --interactive
 ```
 
-### History Empty
+### Historial Vacío
 
-The history only stores problems with optimal solutions. Solve at least one valid problem first.
+El historial solo almacena problemas con soluciones óptimas. Resolver al menos un problema válido primero.
 
-## Performance
+## Rendimiento
 
-- **Build time**: ~30-60 seconds per executable
-- **Log viewer**: Handles 10,000+ log entries efficiently
-- **History**: SQLite database scales to thousands of problems
+- **Tiempo de construcción**: ~30-60 segundos por ejecutable
+- **Visor de logs**: Maneja eficientemente más de 10,000 entradas de log
+- **Historial**: La base de datos SQLite escala a miles de problemas
 
-## Security
+## Seguridad
 
-- All tools run locally, no external network calls
-- SQLite databases use appropriate file permissions
-- Build artifacts are gitignored
+- Todas las herramientas se ejecutan localmente, sin llamadas externas a la red
+- Las bases de datos SQLite utilizan permisos de archivo apropiados
+- Los artefactos de construcción están ignorados en git
 
-## Contributing
+## Contribuir
 
-When adding new tools:
+Al agregar nuevas herramientas:
 
-1. Follow SOLID principles
-2. Add comprehensive docstrings
-3. Implement `--help` flag
-4. Use consistent error handling
-5. Update this README
-6. Add tests if applicable
+1. Seguir los principios SOLID
+2. Agregar docstrings completos
+3. Implementar la bandera `--help`
+4. Usar un manejo de errores consistente
+5. Actualizar este README
+6. Agregar pruebas si corresponde
 
-## References
+## Referencias
 
-- **Main Documentation**: `GUIA_DESARROLLADOR.md`
-- **User Guide**: `GUIA_USUARIO.md`
-- **Build Configuration**: `pyproject.toml`
+- **Documentación Principal**: `GUIA_DESARROLLADOR.md`
+- **Guía del Usuario**: `GUIA_USUARIO.md`
+- **Configuración de Construcción**: `pyproject.toml`
 
 ---
 
-**Last Updated**: November 2025
-**Version**: 3.1
+**Última Actualización**: Noviembre 2025
+**Versión**: 3.1

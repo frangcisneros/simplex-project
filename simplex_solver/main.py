@@ -1,6 +1,6 @@
 """
-Simplex Solver - Main program.
-Coordinates modules to solve linear programming problems.
+Simplex Solver - Programa principal.
+Coordina los módulos para resolver problemas de programación lineal.
 """
 
 import sys
@@ -20,7 +20,10 @@ from simplex_solver.config import Messages, Defaults
 
 
 class ProblemData:
-    """Encapsula los datos de un problema de programación lineal."""
+    """
+    Clase que encapsula los datos de un problema de programación lineal.
+    Contiene los coeficientes, restricciones y metadatos del problema.
+    """
 
     def __init__(
         self,
@@ -43,13 +46,13 @@ class ProblemData:
 
 class ApplicationOrchestrator:
     """
-    Orquesta el flujo completo de la aplicación.
+    Clase que orquesta el flujo completo de la aplicación.
 
-    Responsabilidades separadas:
-    - Cargar problemas desde diferentes fuentes
-    - Validar problemas
-    - Resolver problemas
-    - Gestionar salida (reportes, historial)
+    Responsabilidades:
+    - Cargar problemas desde diferentes fuentes.
+    - Validar los datos del problema.
+    - Resolver el problema utilizando el método Simplex.
+    - Gestionar la salida, incluyendo reportes y almacenamiento en historial.
     """
 
     def __init__(self):
@@ -60,41 +63,41 @@ class ApplicationOrchestrator:
         Ejecuta el flujo completo de la aplicación.
 
         Args:
-            args: Argumentos parseados de línea de comandos
+            args: Argumentos parseados de línea de comandos.
         """
         start_time = time.time()
 
         try:
-            # Cargar problema
+            # Cargar el problema desde la fuente especificada
             problem = self._load_problem(args)
             if problem is None:
                 return
 
-            # Validar problema
+            # Validar los datos del problema
             self._validate_problem(problem)
 
-            # Mostrar problema
+            # Mostrar los datos del problema en la interfaz de usuario
             UserInterface.display_problem(
                 problem.c, problem.A, problem.b, problem.constraint_types, problem.maximize
             )
 
-            # Resolver problema
+            # Resolver el problema utilizando el método Simplex
             result, solve_time = self._solve_problem(problem)
 
-            # Validar solución
+            # Validar la solución obtenida
             self._validate_solution(result, problem)
 
-            # Mostrar resultados
+            # Mostrar los resultados al usuario
             UserInterface.display_result(result)
 
             # Mostrar análisis de sensibilidad si la solución es óptima
             if result.get("status") == "optimal" and getattr(args, "sensitivity", False):
                 self._display_sensitivity_analysis(result)
 
-            # Gestionar salidas
+            # Gestionar las salidas (historial, reportes, etc.)
             self._handle_output(result, problem, args, solve_time)
 
-            # Resumen final
+            # Resumen final de la ejecución
             total_time = (time.time() - start_time) * 1000
             logger.info(f"Ejecución completada en {total_time:.2f} ms")
 
@@ -112,12 +115,12 @@ class ApplicationOrchestrator:
 
     def _load_problem(self, args: argparse.Namespace) -> Optional[ProblemData]:
         """
-        Carga un problema desde la fuente especificada.
+        Carga un problema desde la fuente especificada (archivo, entrada interactiva o historial).
 
         Returns:
-            ProblemData o None si el usuario canceló
+            ProblemData o None si el usuario cancela la operación.
         """
-        # Opción para ver historial
+        # Opción para ver historial de problemas resueltos
         if args.history:
             logger.info("Modo: Visualización de historial")
             temp_file = show_history_menu()
@@ -128,11 +131,11 @@ class ApplicationOrchestrator:
             else:
                 return None
 
-        # Cargar desde archivo
+        # Cargar problema desde un archivo
         if args.filename:
             return self._load_from_file(args.filename)
 
-        # Cargar desde entrada interactiva
+        # Cargar problema desde entrada interactiva
         elif args.interactive or len(sys.argv) == 1:
             return self._load_from_interactive()
 
@@ -143,13 +146,21 @@ class ApplicationOrchestrator:
             sys.exit(1)
 
     def _load_from_file(self, filename: str) -> ProblemData:
-        """Carga un problema desde un archivo."""
+        """
+        Carga un problema desde un archivo especificado.
+
+        Args:
+            filename: Ruta al archivo que contiene el problema.
+
+        Returns:
+            ProblemData con los datos del problema cargado.
+        """
         print(f"=== SIMPLEX SOLVER - Resolviendo archivo: {filename} ===\n")
         logger.info(f"Modo: Resolución desde archivo '{filename}'")
 
         c, A, b, constraint_types, maximize = FileParser.parse_file(filename)
 
-        # Leer contenido del archivo para historial
+        # Leer contenido del archivo para almacenarlo en el historial
         file_content = ""
         try:
             with open(filename, "r", encoding="utf-8") as f:
@@ -160,7 +171,12 @@ class ApplicationOrchestrator:
         return ProblemData(c, A, b, constraint_types, maximize, filename, file_content)
 
     def _load_from_interactive(self) -> ProblemData:
-        """Carga un problema desde entrada interactiva."""
+        """
+        Carga un problema desde la entrada interactiva del usuario.
+
+        Returns:
+            ProblemData con los datos ingresados por el usuario.
+        """
         logger.info("Modo: Entrada interactiva")
         c, A, b, constraint_types, maximize = UserInterface.interactive_input()
         return ProblemData(
@@ -175,10 +191,13 @@ class ApplicationOrchestrator:
 
     def _validate_problem(self, problem: ProblemData) -> None:
         """
-        Valida un problema antes de resolverlo.
+        Valida los datos de un problema antes de resolverlo.
+
+        Args:
+            problem: Datos del problema a validar.
 
         Raises:
-            SystemExit: Si el problema no es válido
+            SystemExit: Si el problema no es válido.
         """
         print(f"\n{Messages.VALIDATING}")
         logger.info("Iniciando validación del problema")
@@ -355,7 +374,10 @@ class ApplicationOrchestrator:
 
 
 def main():
-    """Función principal del programa."""
+    """
+    Punto de entrada principal del programa.
+    Configura el parser de argumentos y ejecuta el flujo principal.
+    """
     logger.info("=== Iniciando Simplex Solver ===")
     logger.debug(f"Argumentos de línea de comandos: {' '.join(sys.argv)}")
 
@@ -367,7 +389,12 @@ def main():
 
 
 def create_parser() -> argparse.ArgumentParser:
-    """Crea y configura el parser de argumentos de línea de comandos."""
+    """
+    Crea y configura el parser de argumentos de línea de comandos.
+
+    Returns:
+        argparse.ArgumentParser: Parser configurado.
+    """
     parser = argparse.ArgumentParser(
         description="Simplex Solver - Resuelve problemas de programación lineal"
     )

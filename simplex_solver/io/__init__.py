@@ -1,8 +1,9 @@
 """
-Input/output operations package.
+Paquete para operaciones de entrada/salida (I/O).
 
-This package is reserved for future I/O operations.
-Currently, file parsing is handled by simplex_solver.file_parser module.
+Este paquete está reservado para futuras operaciones de entrada/salida.
+Actualmente, el análisis de archivos (file parsing) es manejado por el módulo simplex_solver.file_parser.
 """
 
+# Lista de elementos públicos del paquete. Actualmente vacío ya que no hay implementaciones.
 __all__ = []

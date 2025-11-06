@@ -6,17 +6,22 @@ Contiene funciones para entrada interactiva y visualización de resultados.
 import sys
 from typing import List, Tuple
 
-# Agregar import del validador
-
+# Importar el validador de entrada
 from simplex_solver.input_validator import InputValidator
 
 
 class UserInterface:
-    """Maneja la interacción con el usuario y visualización de resultados."""
+    """Clase que maneja la interacción con el usuario y la visualización de resultados."""
 
     @staticmethod
     def interactive_input() -> Tuple[List[float], List[List[float]], List[float], List[str], bool]:
-        """Recoge entrada del problema de forma interactiva."""
+        """
+        Recoge la entrada del problema de forma interactiva.
+
+        Retorna:
+            Una tupla que contiene los coeficientes de la función objetivo, las restricciones,
+            los valores del lado derecho, los tipos de restricciones y el tipo de optimización.
+        """
         print("=== SIMPLEX SOLVER - Modo Interactivo ===\n")
 
         maximize = UserInterface._get_optimization_type()
@@ -34,7 +39,12 @@ class UserInterface:
 
     @staticmethod
     def _get_optimization_type() -> bool:
-        """Solicita el tipo de optimización al usuario."""
+        """
+        Solicita al usuario el tipo de optimización (maximizar o minimizar).
+
+        Retorna:
+            True si el usuario elige maximizar, False si elige minimizar.
+        """
         while True:
             opt_type = input("¿Desea maximizar o minimizar? (max/min): ").lower().strip()
             if opt_type in ["max", "maximize", "maximizar"]:
@@ -46,7 +56,12 @@ class UserInterface:
 
     @staticmethod
     def _get_objective_function() -> List[float]:
-        """Solicita la función objetivo al usuario."""
+        """
+        Solicita al usuario los coeficientes de la función objetivo.
+
+        Retorna:
+            Una lista de coeficientes de la función objetivo.
+        """
         while True:
             try:
                 c_input = input("Coeficientes de la función objetivo (separados por espacios): ")
@@ -77,7 +92,16 @@ class UserInterface:
     def _get_constraints(
         num_vars: int,
     ) -> Tuple[List[List[float]], List[float], List[str]]:
-        """Solicita las restricciones al usuario."""
+        """
+        Solicita al usuario las restricciones del problema.
+
+        Parámetros:
+            num_vars: Número de variables en el problema.
+
+        Retorna:
+            Una tupla que contiene las matrices de coeficientes, los valores del lado derecho
+            y los tipos de restricciones.
+        """
         print(f"\nIngrese las restricciones (formato: a1 a2 ... a{num_vars} [<=|>=|=] b):")
         print("Ejemplos: '2 1 <= 100' o '1 1 >= 20' o '1 0 = 5'")
         print("Escriba 'fin' cuando termine")
@@ -171,7 +195,16 @@ class UserInterface:
         constraint_types: List[str],
         maximize: bool,
     ) -> None:
-        """Muestra el problema formateado."""
+        """
+        Muestra el problema de optimización en un formato legible.
+
+        Parámetros:
+            c: Coeficientes de la función objetivo.
+            A: Matriz de coeficientes de las restricciones.
+            b: Valores del lado derecho de las restricciones.
+            constraint_types: Tipos de restricciones (<=, >=, =).
+            maximize: True si el problema es de maximización, False si es de minimización.
+        """
         print("\n" + "=" * 50)
         print("PROBLEMA A RESOLVER:")
         print("=" * 50)
@@ -211,7 +244,12 @@ class UserInterface:
 
     @staticmethod
     def display_result(result: dict) -> None:
-        """Muestra los resultados de la optimización."""
+        """
+        Muestra los resultados de la optimización.
+
+        Parámetros:
+            result: Diccionario que contiene el estado y los resultados de la optimización.
+        """
         print("\n" + "=" * 50)
         print("RESULTADO:")
         print("=" * 50)

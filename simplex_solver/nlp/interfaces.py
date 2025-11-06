@@ -18,16 +18,17 @@ class OptimizationProblem:
     """
 
     objective_type: str  # "maximize" o "minimize"
-    objective_coefficients: List[float]
+    objective_coefficients: List[float]  # Coeficientes de la función objetivo
     constraints: List[
         Dict[str, Any]
-    ]  # {"coefficients": [...], "operator": "<=", "rhs": float}
-    variable_names: Optional[List[str]] = None
+    ]  # Lista de restricciones con coeficientes, operadores y valores RHS
+    variable_names: Optional[List[str]] = None  # Nombres opcionales para las variables
 
     def __post_init__(self):
         """
-        Si no se especifican nombres para las variables, genera nombres por defecto
-        del tipo x1, x2, x3, etc.
+        Genera nombres por defecto para las variables si no se especifican.
+
+        Los nombres generados siguen el formato x1, x2, x3, etc.
         """
         if self.variable_names is None:
             num_vars = len(self.objective_coefficients)
@@ -44,10 +45,10 @@ class NLPResult:
     de la extracción realizada.
     """
 
-    success: bool
-    problem: Optional[OptimizationProblem] = None
-    error_message: Optional[str] = None
-    confidence_score: Optional[float] = None
+    success: bool  # Indica si el procesamiento fue exitoso
+    problem: Optional[OptimizationProblem] = None  # Problema extraído (si aplica)
+    error_message: Optional[str] = None  # Mensaje de error en caso de fallo
+    confidence_score: Optional[float] = None  # Nivel de confianza del modelo NLP
 
 
 class INLPProcessor(ABC):
@@ -63,14 +64,11 @@ class INLPProcessor(ABC):
         """
         Toma una descripción en lenguaje natural y extrae el problema de optimización.
 
-        Por ejemplo, convierte "Maximizar 3x + 2y sujeto a x + y <= 4" en una
-        estructura OptimizationProblem con coeficientes y restricciones.
-
         Args:
-            natural_language_text: Descripción del problema en lenguaje natural
+            natural_language_text: Descripción del problema en lenguaje natural.
 
         Returns:
-            NLPResult con el problema extraído o un mensaje de error
+            NLPResult con el problema extraído o un mensaje de error.
         """
         pass
 
@@ -99,14 +97,11 @@ class IModelGenerator(ABC):
         """
         Convierte el problema a un formato listo para resolver.
 
-        Por ejemplo, para Simplex necesitamos matrices y vectores (c, A, b).
-        Para PuLP necesitamos objetos LpProblem. Esta función hace esa conversión.
-
         Args:
-            problem: Problema de optimización estructurado
+            problem: Problema de optimización estructurado.
 
         Returns:
-            Diccionario con el modelo en el formato del solver correspondiente
+            Diccionario con el modelo en el formato del solver correspondiente.
         """
         pass
 
@@ -124,16 +119,12 @@ class IOptimizationSolver(ABC):
         """
         Resuelve el problema de optimización y devuelve la solución.
 
-        Ejecuta el algoritmo (Simplex, Branch & Bound, etc.) y encuentra
-        los valores óptimos de las variables, junto con el valor de la
-        función objetivo.
-
         Args:
-            model: Modelo de optimización en el formato del solver
+            model: Modelo de optimización en el formato del solver.
 
         Returns:
             Diccionario con la solución, el estado (óptimo, no factible, etc.)
-            y valores de las variables
+            y valores de las variables.
         """
         pass
 
@@ -151,14 +142,11 @@ class INLPConnector(ABC):
         """
         Ejecuta el pipeline completo de optimización desde texto hasta solución.
 
-        Toma una descripción en español, la procesa con NLP para extraer el problema,
-        valida que esté bien formado, genera el modelo matemático, y lo resuelve.
-
         Args:
-            natural_language_text: Descripción del problema en lenguaje natural
+            natural_language_text: Descripción del problema en lenguaje natural.
 
         Returns:
-            Diccionario con la solución, el problema extraído, y detalles del proceso
+            Diccionario con la solución, el problema extraído, y detalles del proceso.
         """
         pass
 
@@ -177,14 +165,11 @@ class IModelValidator(ABC):
         """
         Chequea si el problema está bien formado y se puede resolver.
 
-        Verifica dimensiones de matrices, tipos de datos, operadores válidos,
-        y que no haya inconsistencias lógicas en las restricciones.
-
         Args:
-            problem: Problema de optimización a validar
+            problem: Problema de optimización a validar.
 
         Returns:
-            True si pasa todas las validaciones, False si encuentra errores
+            True si pasa todas las validaciones, False si encuentra errores.
         """
         pass
 
@@ -194,6 +179,6 @@ class IModelValidator(ABC):
         Lista todos los problemas encontrados en la validación.
 
         Returns:
-            Lista de mensajes de error describiendo cada problema encontrado
+            Lista de mensajes de error describiendo cada problema encontrado.
         """
         pass

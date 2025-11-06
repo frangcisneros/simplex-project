@@ -298,31 +298,31 @@
 
 ## Principios de Diseño Aplicados
 
-### 🎯 Single Responsibility Principle (SRP)
+### Single Responsibility Principle (SRP)
 
 Cada clase tiene una responsabilidad única y bien definida.
 
 **Ejemplo**: `SimplexSolver` solo implementa el algoritmo, delegando I/O a `UserInterface` y logging a `LoggingSystem`.
 
-### 🔒 Open/Closed Principle (OCP)
+### Open/Closed Principle (OCP)
 
 El sistema está abierto a extensión pero cerrado a modificación.
 
 **Ejemplo**: Se pueden agregar nuevos procesadores NLP implementando `INLPProcessor` sin modificar el código existente.
 
-### 🔄 Liskov Substitution Principle (LSP)
+### Liskov Substitution Principle (LSP)
 
 Las implementaciones de interfaces son intercambiables.
 
 **Ejemplo**: `OllamaNLPProcessor`, `TransformerNLPProcessor` y `MockNLPProcessor` son intercambiables a través de `INLPProcessor`.
 
-### 🎨 Interface Segregation Principle (ISP)
+### Interface Segregation Principle (ISP)
 
 Interfaces específicas en lugar de una interfaz general.
 
 **Ejemplo**: `INLPProcessor`, `IModelGenerator`, `IModelValidator` son interfaces separadas y específicas.
 
-### 🔌 Dependency Inversion Principle (DIP)
+### Dependency Inversion Principle (DIP)
 
 Dependencias en abstracciones, no en implementaciones concretas.
 

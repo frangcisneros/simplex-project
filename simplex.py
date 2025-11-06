@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main script to run the Simplex Solver
+Script principal para ejecutar el Solver Simplex
 """
 
 from simplex_solver.main import main

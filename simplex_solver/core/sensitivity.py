@@ -1,8 +1,8 @@
 """
-Sensitivity Analysis module for Simplex method.
+Módulo de Análisis de Sensibilidad para el método Simplex.
 
-Calculates Shadow Prices, Optimality Ranges, and Feasibility Ranges
-after finding an optimal solution.
+Calcula Precios Sombra, Rangos de Optimalidad y Rangos de Factibilidad
+después de encontrar una solución óptima.
 """
 
 from typing import Dict, Tuple, Optional, Any
@@ -12,135 +12,134 @@ from simplex_solver.logging_system import logger
 
 class SensitivityAnalyzer:
     """
-    Performs sensitivity analysis on an optimal simplex tableau.
+    Realiza análisis de sensibilidad sobre un tableau óptimo del método Simplex.
 
-    Responsibilities:
-    - Calculate shadow prices (dual values)
-    - Determine optimality ranges for objective function coefficients
-    - Determine feasibility ranges for RHS values
+    Responsabilidades:
+    - Calcular precios sombra (valores duales)
+    - Determinar rangos de optimalidad para los coeficientes de la función objetivo
+    - Determinar rangos de factibilidad para los valores del lado derecho (RHS)
     """
 
     def __init__(self, tableau: np.ndarray, basic_vars: list, num_vars: int, num_constraints: int):
         """
-        Initialize the sensitivity analyzer.
+        Inicializa el analizador de sensibilidad.
 
         Args:
-            tableau: The optimal simplex tableau
-            basic_vars: List of basic variable indices
-            num_vars: Number of original decision variables
-            num_constraints: Number of constraints (excluding non-negativity)
+            tableau: El tableau óptimo del método Simplex.
+            basic_vars: Lista de índices de variables básicas.
+            num_vars: Número de variables de decisión originales.
+            num_constraints: Número de restricciones (excluyendo no negatividad).
         """
         self.tableau = tableau
         self.basic_vars = basic_vars
         self.num_vars = num_vars
         self.num_constraints = num_constraints
         logger.debug(
-            f"SensitivityAnalyzer initialized: {num_vars} vars, {num_constraints} constraints"
+            f"SensitivityAnalyzer inicializado: {num_vars} variables, {num_constraints} restricciones"
         )
 
     def calculate_shadow_prices(self) -> Dict[str, float]:
         """
-        Calculate shadow prices (dual values) for each constraint.
+        Calcula los precios sombra (valores duales) para cada restricción.
 
-        Shadow prices represent the marginal value of relaxing each constraint.
-        They are extracted from the objective row coefficients of slack variables.
+        Los precios sombra representan el valor marginal de relajar cada restricción.
+        Se extraen de los coeficientes de las variables de holgura en la fila objetivo.
 
         Returns:
-            Dictionary mapping constraint names to shadow prices
+            dict: Diccionario que mapea los nombres de las restricciones a sus precios sombra.
         """
-        logger.debug("Calculating shadow prices...")
+        logger.debug("Calculando precios sombra...")
         shadow_prices = {}
 
-        # The objective function row is the last row
+        # La fila de la función objetivo es la última fila del tableau
         obj_row = self.tableau[-1, :]
 
-        # Shadow prices are the negatives of the slack variable coefficients
-        # in the objective row
-        # Slack variables start after the decision variables
+        # Los precios sombra son los negativos de los coeficientes de las variables de holgura
+        # en la fila objetivo. Las variables de holgura comienzan después de las variables de decisión.
         for i in range(self.num_constraints):
             slack_col = self.num_vars + i
             shadow_price = -obj_row[slack_col]
             constraint_name = f"restriccion_{i + 1}"
             shadow_prices[constraint_name] = float(shadow_price)
-            logger.debug(f"Shadow price for {constraint_name}: {shadow_price:.6f}")
+            logger.debug(f"Precio sombra para {constraint_name}: {shadow_price:.6f}")
 
         return shadow_prices
 
     def calculate_optimality_ranges(self, original_c: np.ndarray) -> Dict[str, Tuple[float, float]]:
         """
-        Calculate optimality ranges for objective function coefficients.
+        Calcula los rangos de optimalidad para los coeficientes de la función objetivo.
 
-        For each decision variable, determines the range [c_min, c_max] within which
-        the coefficient can vary without changing the optimal basis.
+        Para cada variable de decisión, determina el rango [c_min, c_max] dentro del cual
+        el coeficiente puede variar sin cambiar la base óptima.
 
         Args:
-            original_c: Original objective function coefficients
+            original_c: Coeficientes originales de la función objetivo.
 
         Returns:
-            Dictionary mapping variable names to (min, max) tuples
+            dict: Diccionario que mapea los nombres de las variables a tuplas (min, max).
         """
-        logger.debug("Calculating optimality ranges...")
+        logger.debug("Calculando rangos de optimalidad...")
         opt_ranges = {}
 
         for j in range(self.num_vars):
             var_name = f"x{j + 1}"
             c_current = original_c[j]
 
-            # Check if variable is in basis
+            # Verifica si la variable está en la base
             if j in self.basic_vars:
-                # Basic variable: calculate range from reduced costs of non-basic vars
+                # Variable básica: calcula el rango a partir de los costos reducidos de las variables no básicas
                 min_delta, max_delta = self._calculate_basic_var_range(j)
             else:
-                # Non-basic variable: use reduced cost directly
+                # Variable no básica: usa directamente el costo reducido
                 min_delta, max_delta = self._calculate_nonbasic_var_range(j)
 
             c_min = c_current + min_delta
             c_max = c_current + max_delta
 
             opt_ranges[var_name] = (float(c_min), float(c_max))
-            logger.debug(f"Optimality range for {var_name}: [{c_min:.4f}, {c_max:.4f}]")
+            logger.debug(f"Rango de optimalidad para {var_name}: [{c_min:.4f}, {c_max:.4f}]")
 
         return opt_ranges
 
     def _calculate_basic_var_range(self, var_index: int) -> Tuple[float, float]:
         """
-        Calculate the range for a basic variable's objective coefficient.
+        Calcula el rango para el coeficiente de una variable básica.
 
         Args:
-            var_index: Index of the basic variable
+            var_index: Índice de la variable básica.
 
         Returns:
-            Tuple (min_delta, max_delta) for the coefficient change
+            tuple: (min_delta, max_delta) para el cambio del coeficiente.
         """
-        # Find which row this variable is basic in
+        # Encuentra en qué fila esta variable es básica
         try:
             row = self.basic_vars.index(var_index)
         except ValueError:
-            logger.warning(f"Variable {var_index} not found in basic vars")
+            logger.warning(f"Variable {var_index} no encontrada en las variables básicas")
             return (float("-inf"), float("inf"))
 
-        # Get the column of this variable in the tableau
+        # Obtiene la columna de esta variable en el tableau
         var_column = self.tableau[:, var_index]
 
-        # For a basic variable, we look at how changing its coefficient
-        # would affect the reduced costs of non-basic variables
+        # Para una variable básica, se analiza cómo cambiar su coeficiente
+        # afectaría los costos reducidos de las variables no básicas
         obj_row = self.tableau[-1, :]
 
         min_delta = float("-inf")
         max_delta = float("inf")
 
-        # Check each non-basic variable column
+        # Verifica cada columna de variable no básica
         for j in range(self.num_vars):
             if j not in self.basic_vars:
-                # Coefficient in the tableau for this non-basic variable in the basic var's row
+                # Coeficiente en el tableau para esta variable no básica en la fila de la variable básica
                 a_ij = self.tableau[row, j]
                 reduced_cost = obj_row[j]
 
                 if abs(a_ij) > 1e-10:
-                    # Delta must maintain reduced cost >= 0 (for maximization)
+                    # Delta debe mantener el costo reducido >= 0 (para maximización)
                     # reduced_cost - delta * a_ij >= 0
-                    # delta <= reduced_cost / a_ij (if a_ij > 0)
-                    # delta >= reduced_cost / a_ij (if a_ij < 0)
+                    # delta <= reduced_cost / a_ij (si a_ij > 0)
+                    # delta >= reduced_cost / a_ij (si a_ij < 0)
                     ratio = reduced_cost / a_ij
 
                     if a_ij > 0:
@@ -152,21 +151,21 @@ class SensitivityAnalyzer:
 
     def _calculate_nonbasic_var_range(self, var_index: int) -> Tuple[float, float]:
         """
-        Calculate the range for a non-basic variable's objective coefficient.
+        Calcula el rango para el coeficiente de una variable no básica.
 
         Args:
-            var_index: Index of the non-basic variable
+            var_index: Índice de la variable no básica.
 
         Returns:
-            Tuple (min_delta, max_delta) for the coefficient change
+            tuple: (min_delta, max_delta) para el cambio del coeficiente.
         """
-        # For a non-basic variable, the reduced cost tells us how much
-        # the coefficient needs to change to enter the basis
+        # Para una variable no básica, el costo reducido indica cuánto
+        # debe cambiar el coeficiente para entrar en la base
         obj_row = self.tableau[-1, :]
         reduced_cost = obj_row[var_index]
 
-        # For maximization: variable can increase by reduced_cost before entering basis
-        # It can decrease indefinitely without affecting optimality
+        # Para maximización: la variable puede aumentar en reduced_cost antes de entrar en la base
+        # Puede disminuir indefinidamente sin afectar la optimalidad
         min_delta = float("-inf")
         max_delta = reduced_cost
 
@@ -176,71 +175,75 @@ class SensitivityAnalyzer:
         self, original_b: np.ndarray
     ) -> Dict[str, Tuple[float, float]]:
         """
-        Calculate feasibility ranges for RHS values.
+        Calcula los rangos de factibilidad para los valores del lado derecho (RHS).
 
-        For each constraint, determines the range [b_min, b_max] within which
-        the RHS can vary without changing the optimal basis.
+        Para cada restricción, determina el rango [b_min, b_max] dentro del cual
+        el RHS puede variar sin cambiar la base óptima.
 
         Args:
-            original_b: Original RHS values
+            original_b: Valores originales del RHS.
 
         Returns:
-            Dictionary mapping constraint names to (min, max) tuples
+            dict: Diccionario que mapea los nombres de las restricciones a tuplas (min, max).
         """
-        logger.debug("Calculating feasibility ranges...")
+        logger.debug("Calculando rangos de factibilidad...")
         feas_ranges = {}
 
-        # Extract the current RHS (solution values) from the tableau
-        current_rhs = self.tableau[:-1, -1]  # All rows except objective, last column
+        # Extrae el RHS actual (valores de solución) del tableau
+        current_rhs = self.tableau[
+            :-1, -1
+        ]  # Todas las filas excepto la de la función objetivo, última columna
 
         for i in range(self.num_constraints):
             constraint_name = f"restriccion_{i + 1}"
             b_current = original_b[i]
 
-            # Calculate how much each basic variable can change
-            # when we perturb the i-th RHS value
+            # Calcula cuánto puede cambiar cada variable básica
+            # cuando perturbamos el valor RHS de la i-ésima restricción
             min_delta, max_delta = self._calculate_rhs_range(i)
 
             b_min = b_current + min_delta
             b_max = b_current + max_delta
 
             feas_ranges[constraint_name] = (float(b_min), float(b_max))
-            logger.debug(f"Feasibility range for {constraint_name}: [{b_min:.4f}, {b_max:.4f}]")
+            logger.debug(
+                f"Rango de factibilidad para {constraint_name}: [{b_min:.4f}, {b_max:.4f}]"
+            )
 
         return feas_ranges
 
     def _calculate_rhs_range(self, constraint_index: int) -> Tuple[float, float]:
         """
-        Calculate the range for a constraint's RHS value.
+        Calcula el rango para el valor RHS de una restricción.
 
         Args:
-            constraint_index: Index of the constraint
+            constraint_index: Índice de la restricción.
 
         Returns:
-            Tuple (min_delta, max_delta) for the RHS change
+            tuple: (min_delta, max_delta) para el cambio del RHS.
         """
-        # The constraint_index corresponds to a slack variable column
+        # El índice de la restricción corresponde a una columna de variable de holgura
         slack_col = self.num_vars + constraint_index
 
-        # Get the column for this slack variable
-        slack_column = self.tableau[:-1, slack_col]  # Exclude objective row
+        # Obtiene la columna para esta variable de holgura
+        slack_column = self.tableau[:-1, slack_col]  # Excluye la fila de la función objetivo
 
-        # Current RHS values (basic solution values)
+        # Valores actuales del RHS (valores básicos de solución)
         current_rhs = self.tableau[:-1, -1]
 
         min_delta = float("-inf")
         max_delta = float("inf")
 
-        # For each basic variable, calculate the ratio
+        # Para cada variable básica, calcula el ratio
         for row in range(len(current_rhs)):
             a_i = slack_column[row]
             b_i = current_rhs[row]
 
             if abs(a_i) > 1e-10:
-                # When we increase RHS by delta, basic var changes by delta * a_i
-                # We need: b_i + delta * a_i >= 0
-                # delta >= -b_i / a_i (if a_i > 0)
-                # delta <= -b_i / a_i (if a_i < 0)
+                # Cuando aumentamos RHS en delta, la variable básica cambia en delta * a_i
+                # Necesitamos: b_i + delta * a_i >= 0
+                # delta >= -b_i / a_i (si a_i > 0)
+                # delta <= -b_i / a_i (si a_i < 0)
                 ratio = -b_i / a_i
 
                 if a_i > 0:
@@ -252,16 +255,16 @@ class SensitivityAnalyzer:
 
     def analyze(self, original_c: np.ndarray, original_b: np.ndarray) -> Dict[str, Dict[str, Any]]:
         """
-        Perform complete sensitivity analysis.
+        Realiza un análisis completo de sensibilidad.
 
         Args:
-            original_c: Original objective function coefficients
-            original_b: Original RHS values
+            original_c: Coeficientes originales de la función objetivo.
+            original_b: Valores originales del RHS.
 
         Returns:
-            Dictionary containing shadow_prices, optimality_ranges, and feasibility_ranges
+            dict: Diccionario que contiene precios sombra, rangos de optimalidad y rangos de factibilidad.
         """
-        logger.info("Performing complete sensitivity analysis...")
+        logger.info("Realizando análisis completo de sensibilidad...")
 
         analysis = {
             "shadow_prices": self.calculate_shadow_prices(),
@@ -269,5 +272,5 @@ class SensitivityAnalyzer:
             "feasibility_ranges": self.calculate_feasibility_ranges(original_b),
         }
 
-        logger.info("Sensitivity analysis completed successfully")
+        logger.info("Análisis de sensibilidad completado exitosamente")
         return analysis

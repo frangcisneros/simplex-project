@@ -206,6 +206,9 @@ class Tableau:
             La última fila del tableau representa costos reducidos: r_j = c_j - z_j
             Para variables no básicas en Fase 1, buscamos r_j < 0 para mejorar.
         """
+        if self.tableau is None:
+            raise ValueError("El tableau no ha sido inicializado.")
+
         # Inicializar fila objetivo: minimizar suma de artificiales
         self.tableau[-1, :] = 0.0
         for art_var in self.artificial_vars:
@@ -222,6 +225,9 @@ class Tableau:
         CONVENCIÓN: la última fila almacena los costes reducidos r_j = c_j - z_j.
         Inicialmente z_j = 0, por lo tanto r_j = c_j.
         """
+        if self.tableau is None:
+            raise ValueError("El tableau no ha sido inicializado.")
+
         # Inicialmente colocar c en la última fila (r_j = c_j)
         self.tableau[-1, :] = 0.0
         self.tableau[-1, : len(c_arr)] = c_arr
@@ -262,6 +268,11 @@ class Tableau:
             con valor > 0, el problema es infactible. Este método asume que
             la verificación de factibilidad ya se realizó.
         """
+        if self.tableau is None:
+            raise ValueError(
+                "El tableau no ha sido inicializado. Llame a build_initial_tableau primero."
+            )
+
         self.phase = 2
 
         # Guardar mapa de columnas que se mantienen
@@ -314,6 +325,8 @@ class Tableau:
 
     def has_artificial_vars_in_basis(self) -> bool:
         """Verifica si hay variables artificiales en la base con valor positivo."""
+        if self.tableau is None:
+            return False
         for i, basic_var in enumerate(self.basic_vars):
             if basic_var in self.artificial_vars and abs(self.tableau[i, -1]) > self.tol:
                 return True
@@ -326,15 +339,17 @@ class Tableau:
         - Para maximización: óptimo si todos r_j <= 0 (no hay r_j > 0).
         - Para minimización: óptimo si todos r_j >= 0 (no hay r_j < 0).
         """
+        if self.tableau is None:
+            return False
         last_row = self.tableau[-1, :-1]
         if self.phase == 1:
             # Fase 1: estamos minimizando suma de artificiales -> óptimo si no hay coef negativos
-            return np.all(last_row >= -self.tol)
+            return bool(np.all(last_row >= -self.tol))
         else:
             if maximize:
-                return np.all(last_row <= self.tol)
+                return bool(np.all(last_row <= self.tol))
             else:
-                return np.all(last_row >= -self.tol)
+                return bool(np.all(last_row >= -self.tol))
 
     def get_entering_variable(self, maximize: bool) -> int:
         """Encuentra la variable que entra a la base (regla: mejor coeficiente).
@@ -346,6 +361,8 @@ class Tableau:
           - minimize: elegir columna con r_j < -tol (mínimo r_j)
         Se aplica regla de Bland en empates (elegir índice menor).
         """
+        if self.tableau is None:
+            return -1
         last_row = self.tableau[-1, :-1]
 
         if self.phase == 1:
@@ -379,13 +396,17 @@ class Tableau:
 
     def is_unbounded(self, entering_col: int) -> bool:
         """Verifica si el problema es no acotado (todas las entradas de la columna <= 0)."""
-        return np.all(self.tableau[:-1, entering_col] <= self.tol)
+        if self.tableau is None:
+            return False
+        return bool(np.all(self.tableau[:-1, entering_col] <= self.tol))
 
     def get_leaving_variable(self, entering_col: int) -> Tuple[int, float]:
         """Encuentra la variable que sale de la base y el elemento pivote (ratio test).
 
         Devuelve (fila, pivot_val) o (-1, 0) si no hay fila candidata.
         """
+        if self.tableau is None:
+            return -1, 0.0
         ratios = [float("inf")] * self.num_constraints
         for i in range(self.num_constraints):
             a_ij = self.tableau[i, entering_col]
@@ -404,6 +425,10 @@ class Tableau:
 
     def pivot(self, entering_col: int, leaving_row: int) -> None:
         """Realiza la operación de pivoteo."""
+        if self.tableau is None:
+            raise ValueError(
+                "El tableau no ha sido inicializado. Llame a build_initial_tableau primero."
+            )
         pivot = self.tableau[leaving_row, entering_col]
         if abs(pivot) < AlgorithmConfig.PIVOT_TOLERANCE:
             raise ZeroDivisionError(
@@ -426,6 +451,9 @@ class Tableau:
 
     def get_solution(self, maximize: bool) -> Tuple[dict, float]:
         """Extrae la solución del tableau actual y calcula el valor óptimo con c^T x."""
+        if self.tableau is None:
+            return {}, 0.0
+
         solution = {}
 
         # Inicializar todas las variables originales en cero

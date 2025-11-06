@@ -1,6 +1,6 @@
 """
-Tests for the input validation system of the Simplex solver.
-Converted from unittest to pytest with fixtures.
+Pruebas para el sistema de validación de entradas del solver Simplex.
+Convertido de unittest a pytest con fixtures.
 """
 
 import pytest
@@ -13,15 +13,15 @@ from simplex_solver.input_validator import InputValidator
 
 @pytest.fixture
 def validator():
-    """Return the InputValidator class (it uses static methods)."""
+    """Devuelve la clase InputValidator (utiliza métodos estáticos)."""
     return InputValidator
 
 
-# ==================== Valid Problem Tests ====================
+# ==================== Pruebas de Problemas Válidos ====================
 
 
 def test_valid_problem(validator):
-    """Valid problem should pass all validations."""
+    """Un problema válido debe pasar todas las validaciones."""
     c = [3, 2, 4]
     A = [[2, 1, 1], [1, 3, 2], [1, 1, 0]]
     b = [8, 12, 4]
@@ -33,11 +33,11 @@ def test_valid_problem(validator):
     assert "válido" in message.lower() or "correcto" in message.lower()
 
 
-# ==================== Invalid Input Tests ====================
+# ==================== Pruebas de Entradas Inválidas ====================
 
 
 def test_empty_objective(validator):
-    """Empty objective function should be rejected."""
+    """Una función objetivo vacía debe ser rechazada."""
     c = []
     A = [[1, 2]]
     b = [5]
@@ -50,7 +50,7 @@ def test_empty_objective(validator):
 
 
 def test_nan_coefficients(validator):
-    """NaN coefficients should be rejected."""
+    """Los coeficientes NaN deben ser rechazados."""
     c = [3, float("nan"), 2]
     A = [[1, 2, 3]]
     b = [5]
@@ -63,7 +63,7 @@ def test_nan_coefficients(validator):
 
 
 def test_infinite_values(validator):
-    """Infinite values should be rejected."""
+    """Los valores infinitos deben ser rechazados."""
     c = [3, float("inf")]
     A = [[1, 2]]
     b = [5]
@@ -75,15 +75,15 @@ def test_infinite_values(validator):
     assert "finito" in message.lower()
 
 
-# ==================== Constraint Consistency Tests ====================
+# ==================== Pruebas de Consistencia de Restricciones ====================
 
 
 def test_inconsistent_constraints(validator):
-    """Inconsistent number of constraints should be rejected."""
+    """Un número inconsistente de restricciones debe ser rechazado."""
     c = [3, 2]
-    A = [[1, 2], [2, 1]]  # 2 constraints
-    b = [5]  # 1 RHS
-    constraint_types = ["<=", "<="]  # 2 types
+    A = [[1, 2], [2, 1]]  # 2 restricciones
+    b = [5]  # 1 término independiente
+    constraint_types = ["<=", "<="]  # 2 tipos
     maximize = True
 
     is_valid, message = validator.validate_problem(c, A, b, constraint_types, maximize)
@@ -92,7 +92,7 @@ def test_inconsistent_constraints(validator):
 
 
 def test_all_zero_coefficients(validator):
-    """All zero coefficients should be rejected."""
+    """Los coeficientes completamente nulos deben ser rechazados."""
     c = [0, 0, 0]
     A = [[1, 2, 3]]
     b = [5]
@@ -105,11 +105,11 @@ def test_all_zero_coefficients(validator):
 
 
 def test_contradictory_constraints(validator):
-    """Contradictory constraints should be detected."""
+    """Las restricciones contradictorias deben ser detectadas."""
     c = [3, 2]
     A = [[1, 1], [1, 1]]
     b = [5, 10]
-    constraint_types = ["<=", ">="]  # Contradictory: x1+x2 <=5 and x1+x2 >=10
+    constraint_types = ["<=", ">="]  # Contradictorias: x1+x2 <=5 y x1+x2 >=10
     maximize = True
 
     is_valid, message = validator.validate_problem(c, A, b, constraint_types, maximize)
@@ -118,11 +118,11 @@ def test_contradictory_constraints(validator):
 
 
 def test_infeasible_problem(validator):
-    """Obviously infeasible problem should be detected."""
+    """Un problema obviamente infactible debe ser detectado."""
     c = [1, 1]
     A = [[-1, -1], [-2, -1]]
     b = [5, 8]
-    constraint_types = [">=", ">="]  # -x1-x2 >=5 with x1,x2>=0 is impossible
+    constraint_types = [">=", ">="]  # -x1-x2 >=5 con x1,x2>=0 es imposible
     maximize = False
 
     is_valid, message = validator.validate_problem(c, A, b, constraint_types, maximize)
@@ -131,9 +131,9 @@ def test_infeasible_problem(validator):
 
 
 def test_mismatched_variables(validator):
-    """Inconsistent number of variables should be rejected."""
+    """Un número inconsistente de variables debe ser rechazado."""
     c = [3, 2]  # 2 variables
-    A = [[1]]  # 1 coefficient (should be 2)
+    A = [[1]]  # 1 coeficiente (deberían ser 2)
     b = [5]
     constraint_types = ["<="]
     maximize = True
@@ -144,10 +144,10 @@ def test_mismatched_variables(validator):
 
 
 def test_negative_equality_rhs(validator):
-    """Equality constraints with negative RHS should be rejected."""
+    """Las restricciones de igualdad con términos independientes negativos deben ser rechazadas."""
     c = [3, 2]
     A = [[1, 1]]
-    b = [-5]  # Negative RHS in equality
+    b = [-5]  # Término independiente negativo en igualdad
     constraint_types = ["="]
     maximize = True
 
@@ -156,11 +156,11 @@ def test_negative_equality_rhs(validator):
     assert "negativo" in message.lower()
 
 
-# ==================== Solution Validation Tests ====================
+# ==================== Pruebas de Validación de Soluciones ====================
 
 
 def test_solution_validation_feasible(validator):
-    """Feasible solution should pass validation."""
+    """Una solución factible debe pasar la validación."""
     A = [[2, 1], [1, 2]]
     b = [8, 8]
     constraint_types = ["<=", "<="]
@@ -174,12 +174,12 @@ def test_solution_validation_feasible(validator):
 
 
 def test_solution_validation_infeasible(validator):
-    """Infeasible solution should be detected."""
+    """Una solución infactible debe ser detectada."""
     A = [[2, 1], [1, 2]]
     b = [8, 8]
     constraint_types = ["<=", "<="]
 
-    solution_infeasible = {"x1": 10.0, "x2": 10.0}  # Violates constraints
+    solution_infeasible = {"x1": 10.0, "x2": 10.0}  # Viola restricciones
     is_feasible, errors = validator.validate_solution_feasibility(
         solution_infeasible, A, b, constraint_types
     )
@@ -187,16 +187,16 @@ def test_solution_validation_infeasible(validator):
     assert len(errors) > 0
 
 
-# ==================== Parametrized Tests ====================
+# ==================== Pruebas Parametrizadas ====================
 
 
 @pytest.mark.parametrize(
     "c,A,b,constraint_types,maximize,should_pass,expected_error_keyword",
     [
-        # Valid cases
+        # Casos válidos
         ([3, 2], [[1, 1]], [5], ["<="], True, True, None),
         ([1, 2, 3], [[1, 1, 1], [2, 1, 0]], [10, 5], ["<=", ">="], False, True, None),
-        # Invalid cases
+        # Casos inválidos
         ([], [[1, 2]], [5], ["<="], True, False, "objetivo"),
         ([0, 0], [[1, 1]], [5], ["<="], True, False, "cero"),
         ([1, 2], [[1]], [5], ["<="], True, False, "coincide"),
@@ -206,24 +206,24 @@ def test_solution_validation_infeasible(validator):
 def test_validation_parametrized(
     validator, c, A, b, constraint_types, maximize, should_pass, expected_error_keyword
 ):
-    """Parametrized validation tests."""
+    """Pruebas parametrizadas para validación de problemas."""
     is_valid, message = validator.validate_problem(c, A, b, constraint_types, maximize)
 
     if should_pass:
-        assert is_valid, f"Expected valid but got: {message}"
+        assert is_valid, f"Se esperaba válido pero se obtuvo: {message}"
     else:
-        assert not is_valid, f"Expected invalid but validation passed"
+        assert not is_valid, f"Se esperaba inválido pero la validación pasó"
         if expected_error_keyword:
             assert (
                 expected_error_keyword in message.lower()
-            ), f"Expected '{expected_error_keyword}' in error message"
+            ), f"Se esperaba '{expected_error_keyword}' en el mensaje de error"
 
 
-# ==================== Edge Cases ====================
+# ==================== Casos Límite ====================
 
 
 def test_single_variable_problem(validator):
-    """Single variable problem should be valid."""
+    """Un problema con una sola variable debe ser válido."""
     c = [5]
     A = [[1]]
     b = [10]
@@ -235,7 +235,7 @@ def test_single_variable_problem(validator):
 
 
 def test_large_coefficients(validator):
-    """Large but finite coefficients should be valid."""
+    """Coeficientes grandes pero finitos deben ser válidos."""
     c = [1e6, 2e6]
     A = [[1e5, 2e5]]
     b = [1e7]
@@ -247,7 +247,7 @@ def test_large_coefficients(validator):
 
 
 def test_very_small_coefficients(validator):
-    """Very small but non-zero coefficients should be valid."""
+    """Coeficientes muy pequeños pero no nulos deben ser válidos."""
     c = [1e-6, 2e-6]
     A = [[1e-5, 2e-5]]
     b = [1e-4]

@@ -1,6 +1,7 @@
 @echo off
-:: Script rápido para reinstalar el menú contextual
-:: Ejecutar como Administrador
+:: Script rápido para reinstalar el menú contextual de Simplex Solver.
+:: Este script combina la desinstalación y la instalación en un solo paso.
+:: Debe ejecutarse con permisos de administrador.
 
 echo ===============================================
 echo  REINSTALACION DE MENU CONTEXTUAL
@@ -8,7 +9,7 @@ echo ===============================================
 echo.
 
 :: Verificar permisos de administrador
-net session >nul 2>&1
+net session >nul 2>&1  # Comprueba si el script tiene permisos de administrador.
 if %errorlevel% neq 0 (
     echo ERROR: Este script requiere permisos de administrador.
     echo Por favor, ejecutelo haciendo clic derecho y "Ejecutar como administrador"
@@ -16,16 +17,18 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Paso 1: Llamar al script de desinstalación
 echo Paso 1: Desinstalando configuracion anterior...
-call "%~dp0uninstall.bat"
+call "%~dp0uninstall.bat"  # Llama al script "uninstall.bat" ubicado en el mismo directorio.
 
 echo.
+:: Paso 2: Llamar al script de instalación
 echo Paso 2: Instalando nueva configuracion...
-call "%~dp0install.bat"
+call "%~dp0install.bat"  # Llama al script "install.bat" ubicado en el mismo directorio.
 
 echo.
 echo ===============================================
 echo  REINSTALACION COMPLETADA
 echo ===============================================
 echo.
-pause
+pause  # Pausa para que el usuario pueda leer el mensaje final antes de cerrar la ventana.

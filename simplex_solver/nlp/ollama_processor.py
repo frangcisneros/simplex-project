@@ -35,9 +35,9 @@ class OllamaNLPProcessor(INLPProcessor):
         Inicializa el procesador Ollama.
 
         Args:
-            model_type: Modelo de Ollama a usar
-            ollama_url: URL del servidor Ollama (por defecto localhost:11434)
-            custom_config: Configuración personalizada para el modelo
+            model_type: Modelo de Ollama a usar.
+            ollama_url: URL del servidor Ollama (por defecto localhost:11434).
+            custom_config: Configuración personalizada para el modelo.
         """
         self.model_type = model_type or DefaultSettings.DEFAULT_MODEL
         self.ollama_url = ollama_url.rstrip("/")
@@ -58,6 +58,9 @@ class OllamaNLPProcessor(INLPProcessor):
     def is_available(self) -> bool:
         """
         Verifica si Ollama está ejecutándose y el modelo está disponible.
+
+        Returns:
+            True si el servidor y el modelo están disponibles, False en caso contrario.
         """
         try:
             # Verificar que Ollama esté ejecutándose
@@ -74,9 +77,7 @@ class OllamaNLPProcessor(INLPProcessor):
             model_found = any(model_name in model.get("name", "") for model in models)
 
             if not model_found:
-                self.logger.warning(
-                    f"Model {model_name} not found in Ollama. Available models:"
-                )
+                self.logger.warning(f"Model {model_name} not found in Ollama. Available models:")
                 for model in models:
                     self.logger.warning(f"  - {model.get('name')}")
                 return False
@@ -95,10 +96,10 @@ class OllamaNLPProcessor(INLPProcessor):
         Procesa texto en lenguaje natural y extrae un problema de optimización.
 
         Args:
-            natural_language_text: Descripción del problema en español
+            natural_language_text: Descripción del problema en español.
 
         Returns:
-            NLPResult con el problema extraído o información del error
+            NLPResult con el problema extraído o información del error.
         """
         if not self.is_available():
             return NLPResult(
@@ -174,9 +175,7 @@ class OllamaNLPProcessor(INLPProcessor):
             elapsed_time = time.time() - start_time
 
             if response.status_code != 200:
-                self.logger.error(
-                    f"Ollama API error: {response.status_code} - {response.text}"
-                )
+                self.logger.error(f"Ollama API error: {response.status_code} - {response.text}")
                 return NLPResult(
                     success=False,
                     error_message=f"Error en API de Ollama: {response.status_code}",
@@ -200,19 +199,13 @@ class OllamaNLPProcessor(INLPProcessor):
 
             if problem:
                 confidence = self._calculate_confidence(generated_text, problem)
-                return NLPResult(
-                    success=True, problem=problem, confidence_score=confidence
-                )
+                return NLPResult(success=True, problem=problem, confidence_score=confidence)
             else:
-                return NLPResult(
-                    success=False, error_message=ErrorMessages.INVALID_JSON_RESPONSE
-                )
+                return NLPResult(success=False, error_message=ErrorMessages.INVALID_JSON_RESPONSE)
 
         except requests.Timeout:
             self.logger.error("Timeout waiting for Ollama response")
-            return NLPResult(
-                success=False, error_message="Timeout esperando respuesta del modelo"
-            )
+            return NLPResult(success=False, error_message="Timeout esperando respuesta del modelo")
         except Exception as e:
             self.logger.error(f"Unexpected error: {e}")
             return NLPResult(success=False, error_message=f"Error inesperado: {str(e)}")
@@ -220,6 +213,12 @@ class OllamaNLPProcessor(INLPProcessor):
     def _extract_optimization_problem(self, text: str) -> Optional[OptimizationProblem]:
         """
         Extrae y valida el problema de optimización del texto generado de forma robusta.
+
+        Args:
+            text: Respuesta generada por el modelo en formato texto.
+
+        Returns:
+            Un objeto OptimizationProblem si la extracción es exitosa, None en caso contrario.
         """
         try:
             # 1. Buscar el inicio y fin del bloque JSON
@@ -238,9 +237,7 @@ class OllamaNLPProcessor(INLPProcessor):
             # Eliminar comas finales en arrays o diccionarios, que son un error común de JSON
             json_str = re.sub(r",\s*([\]\}])", r"\1", json_str)
 
-            self.logger.debug(
-                f"Intentando parsear el siguiente bloque JSON: {json_str[:300]}..."
-            )
+            self.logger.debug(f"Intentando parsear el siguiente bloque JSON: {json_str[:300]}...")
 
             # 3. Parsear el JSON limpio
             data = json.loads(json_str)
@@ -254,9 +251,7 @@ class OllamaNLPProcessor(INLPProcessor):
                     "constraints",
                 ]
             ):
-                self.logger.warning(
-                    "El JSON extraído no tiene la estructura requerida."
-                )
+                self.logger.warning("El JSON extraído no tiene la estructura requerida.")
                 return None
 
             # 5. Crear el objeto OptimizationProblem
@@ -278,16 +273,19 @@ class OllamaNLPProcessor(INLPProcessor):
             )
             return None
         except Exception as e:
-            self.logger.error(
-                f"Error inesperado al extraer el problema de optimización: {e}"
-            )
+            self.logger.error(f"Error inesperado al extraer el problema de optimización: {e}")
             return None
 
-    def _calculate_confidence(
-        self, response_text: str, problem: OptimizationProblem
-    ) -> float:
+    def _calculate_confidence(self, response_text: str, problem: OptimizationProblem) -> float:
         """
         Calcula un score de confianza basado en la calidad de la respuesta.
+
+        Args:
+            response_text: Texto generado por el modelo.
+            problem: Problema de optimización extraído.
+
+        Returns:
+            Un valor entre 0 y 1 que representa la confianza en la extracción.
         """
         try:
             confidence = 0.5  # Base confidence
@@ -307,8 +305,7 @@ class OllamaNLPProcessor(INLPProcessor):
             # Verificar consistencia dimensional
             expected_vars = len(problem.objective_coefficients)
             constraints_ok = all(
-                len(c.get("coefficients", [])) == expected_vars
-                for c in problem.constraints
+                len(c.get("coefficients", [])) == expected_vars for c in problem.constraints
             )
             if constraints_ok:
                 confidence += 0.2

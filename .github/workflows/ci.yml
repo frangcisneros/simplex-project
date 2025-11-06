@@ -1,70 +1,75 @@
 name: CI/CD
 
 on:
+  # Este bloque define los eventos que activan el flujo de trabajo.
   push:
     branches:
-      - main
-      - quality/tests
+      - main # Se ejecuta cuando hay un push a la rama principal.
+      - quality/tests # También se ejecuta en la rama quality/tests.
     tags:
-      - "v*.*.*"
+      - "v*.*.*" # Se activa cuando se crea un tag que sigue el formato de versión semántica.
   pull_request:
     branches:
-      - main
-      - quality/tests
+      - main # Se ejecuta cuando se abre un pull request hacia la rama principal.
+      - quality/tests # También se ejecuta en pull requests hacia la rama quality/tests.
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Define que el trabajo se ejecutará en un contenedor con Ubuntu.
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # Acción para clonar el repositorio en el entorno de ejecución.
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v4 # Configura Python 3.10 en el entorno.
         with:
-          python-version: "3.10"
+          python-version: "3.10" # Especifica la versión de Python a utilizar.
 
       - name: Install dependencies
         run: |
+          # Actualiza pip y luego instala las dependencias necesarias para las pruebas.
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-full.txt
-          pip install -r requirements-dev.txt
+          pip install -r requirements.txt  # Dependencias principales.
+          pip install -r requirements-full.txt  # Dependencias adicionales.
+          pip install -r requirements-dev.txt  # Dependencias para desarrollo y pruebas.
 
       - name: Run tests
         run: |
+          # Ejecuta los tests definidos en el directorio "tests" usando pytest.
           pytest tests/
 
   build-and-release:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest # Define que este trabajo también se ejecutará en un contenedor con Ubuntu.
+    if: startsWith(github.ref, 'refs/tags/') # Condición: solo se ejecuta si el flujo es activado por un tag.
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # Clona el repositorio en el entorno de ejecución.
 
       - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v4 # Configura Python 3.10 en el entorno.
         with:
-          python-version: "3.10"
+          python-version: "3.10" # Especifica la versión de Python a utilizar.
 
       - name: Install build dependencies
         run: |
+          # Actualiza pip e instala las dependencias necesarias para construir el proyecto.
           python -m pip install --upgrade pip
-          pip install -r requirements-build.txt
+          pip install -r requirements-build.txt  # Dependencias específicas para el proceso de construcción.
 
       - name: Build executable
         run: |
+          # Ejecuta el script de construcción ubicado en la carpeta "tools".
           python tools/build.py
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v1 # Utiliza una acción para crear un release en GitHub.
         with:
-          name: Release ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }} # Asigna el nombre del release basado en el nombre del tag.
           files: |
-            dist/*
-            GUIA_USUARIO.md
-            GUIA_DESARROLLADOR.md
+            dist/*  # Incluye todos los archivos generados en el directorio "dist".
+            GUIA_USUARIO.md  # Incluye la guía de usuario.
+            GUIA_DESARROLLADOR.md  # Incluye la guía de desarrollador.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Token de autenticación para interactuar con la API de GitHub.

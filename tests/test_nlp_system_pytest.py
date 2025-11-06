@@ -1,6 +1,6 @@
 """
-Comprehensive test suite for the NLP optimization system.
-Converted from unittest to pytest with fixtures.
+Suite de pruebas exhaustiva para el sistema de optimización NLP.
+Convertido de unittest a pytest con fixtures.
 """
 
 import pytest
@@ -18,45 +18,45 @@ from simplex_solver.nlp.complexity_analyzer import ComplexityAnalyzer, ProblemCo
 
 @pytest.fixture
 def structure_detector():
-    """Create a ProblemStructureDetector instance."""
+    """Crea una instancia de ProblemStructureDetector."""
     return ProblemStructureDetector()
 
 
 @pytest.fixture
 def complexity_analyzer():
-    """Create a ComplexityAnalyzer instance."""
+    """Crea una instancia de ComplexityAnalyzer."""
     return ComplexityAnalyzer()
 
 
 @pytest.fixture
 def model_validator():
-    """Create a ModelValidator instance."""
+    """Crea una instancia de ModelValidator."""
     return ModelValidator()
 
 
 @pytest.fixture
 def model_generator():
-    """Create a SimplexModelGenerator instance."""
+    """Crea una instancia de SimplexModelGenerator."""
     return SimplexModelGenerator()
 
 
 @pytest.fixture
 def mock_nlp_processor():
-    """Create a MockNLPProcessor instance."""
+    """Crea una instancia de MockNLPProcessor."""
     return MockNLPProcessor()
 
 
 @pytest.fixture
 def nlp_connector():
-    """Create an NLP connector with mock processor."""
+    """Crea un conector NLP con un procesador simulado."""
     return NLPConnectorFactory.create_connector(use_mock_nlp=True, solver_type=SolverType.SIMPLEX)
 
 
-# ==================== Structure Detector Tests ====================
+# ==================== Pruebas del Detector de Estructura ====================
 
 
 def test_detect_simple_production(structure_detector):
-    """Test detection of simple production problem."""
+    """Prueba la detección de un problema de producción simple."""
     text = """
     Una carpintería fabrica mesas y sillas.
     Cada mesa da $80 de ganancia.
@@ -66,7 +66,7 @@ def test_detect_simple_production(structure_detector):
 
 
 def test_detect_diet_problem(structure_detector):
-    """Test detection of diet problem."""
+    """Prueba la detección de un problema de dieta."""
     text = """
     Una persona necesita planificar su dieta.
     Debe consumir al menos 2000 calorías.
@@ -78,7 +78,7 @@ def test_detect_diet_problem(structure_detector):
 
 
 def test_detect_transport_problem(structure_detector):
-    """Test detection of transport problem."""
+    """Prueba la detección de un problema de transporte."""
     text = """
     Una empresa debe transportar productos desde 2 almacenes a 3 tiendas.
     Minimizar el costo total de transporte.
@@ -89,34 +89,34 @@ def test_detect_transport_problem(structure_detector):
 
 
 def test_detect_food_items(structure_detector):
-    """Test detection of food items in diet problems."""
+    """Prueba la detección de alimentos en problemas de dieta."""
     text = "dieta con alimentos: pan, pollo y vegetales con calorías"
     foods = structure_detector._detect_food_items(text)
     assert len(foods) > 0
-    # Verify at least some common foods are detected
+    # Verifica que se detecten algunos alimentos comunes
     detected = any(food in ["pan", "pollo", "vegetales"] for food in foods)
     assert detected or len(foods) > 0
 
 
 def test_detect_transport_routes(structure_detector):
-    """Test detection of routes in transport problems."""
+    """Prueba la detección de rutas en problemas de transporte."""
     text = "transportar desde 2 almacenes a 3 tiendas"
     routes = structure_detector._detect_transport_routes(text)
     assert len(routes) == 6
 
 
-# ==================== Complexity Analyzer Tests ====================
+# ==================== Pruebas del Analizador de Complejidad ====================
 
 
 def test_simple_problem_complexity(complexity_analyzer):
-    """Test analysis of simple problem."""
+    """Prueba el análisis de un problema simple."""
     text = "Maximizar 2x + 3y sujeto a x + y <= 10"
     complexity = complexity_analyzer.analyze_problem(text)
     assert complexity == ProblemComplexity.SIMPLE
 
 
 def test_medium_problem_complexity(complexity_analyzer):
-    """Test analysis of medium complexity problem."""
+    """Prueba el análisis de un problema de complejidad media."""
     text = (
         """
     Una empresa fabrica 4 productos.
@@ -124,13 +124,13 @@ def test_medium_problem_complexity(complexity_analyzer):
     Maximizar la ganancia total.
     """
         * 3
-    )  # Repeat to increase length
+    )  # Repetir para aumentar la longitud
     complexity = complexity_analyzer.analyze_problem(text)
     assert complexity in [ProblemComplexity.SIMPLE, ProblemComplexity.MEDIUM]
 
 
 def test_complex_problem_complexity(complexity_analyzer):
-    """Test analysis of complex problem."""
+    """Prueba el análisis de un problema complejo."""
     text = (
         """
     Una empresa tiene 5 plantas y fabrica 6 productos.
@@ -139,16 +139,16 @@ def test_complex_problem_complexity(complexity_analyzer):
     Cada planta tiene diferentes costos.
     """
         * 10
-    )  # Repeat to increase length
+    )  # Repetir para aumentar la longitud
     complexity = complexity_analyzer.analyze_problem(text)
     assert complexity in [ProblemComplexity.MEDIUM, ProblemComplexity.COMPLEX]
 
 
-# ==================== Model Validator Tests ====================
+# ==================== Pruebas del Validador de Modelos ====================
 
 
 def test_valid_problem(model_validator):
-    """Test validation of correct problem."""
+    """Prueba la validación de un problema correcto."""
     problem = OptimizationProblem(
         objective_type="maximize",
         objective_coefficients=[2.0, 3.0],
@@ -161,9 +161,9 @@ def test_valid_problem(model_validator):
 
 
 def test_invalid_objective_type(model_validator):
-    """Test validation with invalid objective type."""
+    """Prueba la validación con un tipo de objetivo inválido."""
     problem = OptimizationProblem(
-        objective_type="optimizar",  # Invalid type
+        objective_type="optimizar",  # Tipo inválido
         objective_coefficients=[2.0, 3.0],
         constraints=[{"coefficients": [1.0, 1.0], "operator": "<=", "rhs": 10.0}],
         variable_names=["x1", "x2"],
@@ -174,12 +174,16 @@ def test_invalid_objective_type(model_validator):
 
 
 def test_dimension_mismatch(model_validator):
-    """Test validation with dimension error."""
+    """Prueba la validación con error de dimensiones."""
     problem = OptimizationProblem(
         objective_type="maximize",
         objective_coefficients=[2.0, 3.0],
         constraints=[
-            {"coefficients": [1.0, 1.0, 1.0], "operator": "<=", "rhs": 10.0}  # 3 coefs, 2 vars
+            {
+                "coefficients": [1.0, 1.0, 1.0],
+                "operator": "<=",
+                "rhs": 10.0,
+            }  # 3 coeficientes, 2 variables
         ],
         variable_names=["x1", "x2"],
     )
@@ -189,12 +193,12 @@ def test_dimension_mismatch(model_validator):
 
 
 def test_invalid_operator(model_validator):
-    """Test validation with invalid operator."""
+    """Prueba la validación con un operador inválido."""
     problem = OptimizationProblem(
         objective_type="maximize",
         objective_coefficients=[2.0, 3.0],
         constraints=[
-            {"coefficients": [1.0, 1.0], "operator": "~=", "rhs": 10.0}  # Invalid operator
+            {"coefficients": [1.0, 1.0], "operator": "~=", "rhs": 10.0}  # Operador inválido
         ],
         variable_names=["x1", "x2"],
     )
@@ -203,11 +207,11 @@ def test_invalid_operator(model_validator):
     assert any("Invalid operator" in err for err in errors)
 
 
-# ==================== Model Generator Tests ====================
+# ==================== Pruebas del Generador de Modelos ====================
 
 
 def test_generate_maximization_model(model_generator):
-    """Test generation of maximization model."""
+    """Prueba la generación de un modelo de maximización."""
     problem = OptimizationProblem(
         objective_type="maximize",
         objective_coefficients=[2.0, 3.0],
@@ -224,7 +228,7 @@ def test_generate_maximization_model(model_generator):
 
 
 def test_generate_minimization_model(model_generator):
-    """Test generation of minimization model."""
+    """Prueba la generación de un modelo de minimización."""
     problem = OptimizationProblem(
         objective_type="minimize",
         objective_coefficients=[2.0, 5.0, 3.0],
@@ -233,17 +237,17 @@ def test_generate_minimization_model(model_generator):
     )
     model = model_generator.generate_model(problem)
 
-    # For minimization, coefficients are negated
+    # Para minimización, los coeficientes se niegan
     assert model["c"] == [-2.0, -5.0, -3.0]
-    # >= constraints converted to <=
+    # Las restricciones >= se convierten en <=
     assert model["A"] == [[-150.0, -300.0, -80.0]]
     assert model["b"] == [-2000.0]
-    assert model["maximize"]  # Converted to maximization
-    assert model["is_minimization"]  # Flag to adjust result
+    assert model["maximize"]  # Convertido a maximización
+    assert model["is_minimization"]  # Bandera para ajustar el resultado
 
 
 def test_convert_equality_constraint(model_generator):
-    """Test conversion of equality constraints."""
+    """Prueba la conversión de restricciones de igualdad."""
     problem = OptimizationProblem(
         objective_type="maximize",
         objective_coefficients=[2.0, 3.0],
@@ -252,22 +256,22 @@ def test_convert_equality_constraint(model_generator):
     )
     model = model_generator.generate_model(problem)
 
-    # Equality becomes two constraints (<= and >=)
+    # La igualdad se convierte en dos restricciones (<= y >=)
     assert len(model["A"]) == 2
     assert model["A"] == [[1.0, 1.0], [-1.0, -1.0]]
     assert model["b"] == [10.0, -10.0]
 
 
-# ==================== Mock NLP Processor Tests ====================
+# ==================== Pruebas del Procesador NLP Simulado ====================
 
 
 def test_mock_is_available(mock_nlp_processor):
-    """Test that mock is always available."""
+    """Prueba que el procesador simulado siempre esté disponible."""
     assert mock_nlp_processor.is_available()
 
 
 def test_mock_process_simple_text(mock_nlp_processor):
-    """Test processing with mock."""
+    """Prueba el procesamiento con el simulador."""
     text = "Maximizar 2x + 3y sujeto a x + y <= 10"
     result = mock_nlp_processor.process_text(text)
 
@@ -277,11 +281,11 @@ def test_mock_process_simple_text(mock_nlp_processor):
     assert len(result.problem.objective_coefficients) >= 2
 
 
-# ==================== NLP Connector Integration Tests ====================
+# ==================== Pruebas de Integración del Conector NLP ====================
 
 
 def test_full_pipeline_maximization(nlp_connector):
-    """Test full pipeline with maximization problem."""
+    """Prueba la tubería completa con un problema de maximización."""
     text = """
     Una empresa fabrica productos A y B.
     Cada A da $50 de ganancia, cada B $30.
@@ -298,7 +302,7 @@ def test_full_pipeline_maximization(nlp_connector):
 
 
 def test_full_pipeline_minimization(nlp_connector):
-    """Test full pipeline with minimization problem."""
+    """Prueba la tubería completa con un problema de minimización."""
     text = """
     Minimizar costos.
     Producto A cuesta $10, producto B cuesta $20.
@@ -312,22 +316,22 @@ def test_full_pipeline_minimization(nlp_connector):
 
 
 def test_pipeline_validation_failure():
-    """Test that pipeline handles validation errors."""
+    """Prueba que la tubería maneje errores de validación."""
     connector = NLPConnectorFactory.create_connector(use_mock_nlp=True)
 
-    # Empty text should fail at some step
+    # Texto vacío debería fallar en algún paso
     result = connector.process_and_solve("")
 
-    # Should fail somewhere in the pipeline
+    # Debería fallar en algún lugar de la tubería
     if not result["success"]:
         assert "step_failed" in result or "error" in result
 
 
-# ==================== NLP Connector Factory Tests ====================
+# ==================== Pruebas de la Fábrica de Conectores NLP ====================
 
 
 def test_create_connector_with_mock():
-    """Test creation of connector with mock."""
+    """Prueba la creación de un conector con simulador."""
     connector = NLPConnectorFactory.create_connector(use_mock_nlp=True)
     assert connector is not None
     assert connector.nlp_processor is not None
@@ -335,7 +339,7 @@ def test_create_connector_with_mock():
 
 
 def test_create_connector_with_ollama():
-    """Test creation of connector with Ollama."""
+    """Prueba la creación de un conector con Ollama."""
     connector = NLPConnectorFactory.create_connector(
         nlp_model_type=NLPModelType.LLAMA3_1_8B, use_mock_nlp=False
     )
@@ -344,7 +348,7 @@ def test_create_connector_with_ollama():
 
 
 def test_create_connector_with_custom_config():
-    """Test creation with custom configuration."""
+    """Prueba la creación con configuración personalizada."""
     custom_config = {"temperature": 0.0, "max_tokens": 1024}
     connector = NLPConnectorFactory.create_connector(
         nlp_model_type=NLPModelType.LLAMA3_1_8B, custom_config=custom_config
@@ -352,11 +356,11 @@ def test_create_connector_with_custom_config():
     assert connector is not None
 
 
-# ==================== End-to-End Tests ====================
+# ==================== Pruebas de Extremo a Extremo ====================
 
 
 def test_production_problem(nlp_connector):
-    """Test complete production problem."""
+    """Prueba completa de un problema de producción."""
     text = """
     Una carpintería fabrica mesas y sillas.
     Cada mesa da $80 de ganancia, cada silla $50.
@@ -375,15 +379,15 @@ def test_production_problem(nlp_connector):
 
 
 def test_diet_problem(nlp_connector):
-    """Test complete diet problem."""
+    """Prueba completa de un problema de dieta."""
     text = """
     Una persona necesita planificar su dieta minimizando costos.
     Debe consumir al menos 2000 calorías, 50g proteína, 30g fibra.
-    
+
     Pan: $2, 150 calorías, 5g proteína, 3g fibra
     Pollo: $5, 300 calorías, 25g proteína, 0g fibra
     Vegetales: $3, 80 calorías, 3g proteína, 8g fibra
-    
+
     Minimizar costo.
     """
     result = nlp_connector.process_and_solve(text)
@@ -393,20 +397,20 @@ def test_diet_problem(nlp_connector):
 
 
 def test_transport_problem(nlp_connector):
-    """Test complete transport problem."""
+    """Prueba completa de un problema de transporte."""
     text = """
     Una empresa transporta desde 2 almacenes a 3 tiendas.
-    
+
     Costos: A1-T1: $4, A1-T2: $6, A1-T3: $8
             A2-T1: $5, A2-T2: $4, A2-T3: $7
-    
+
     Almacén 1: 100 unidades
     Almacén 2: 150 unidades
-    
+
     Tienda A: 80 unidades
     Tienda B: 90 unidades
     Tienda C: 60 unidades
-    
+
     Minimizar costo.
     """
     result = nlp_connector.process_and_solve(text)

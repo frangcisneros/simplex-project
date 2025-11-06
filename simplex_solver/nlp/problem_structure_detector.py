@@ -16,29 +16,37 @@ import logging
 class ProblemStructureDetector:
     """
     Detecta automáticamente la estructura de un problema de optimización
-    basándose en el análisis del texto.
+    basándose en el análisis del texto proporcionado.
+
+    Este detector utiliza palabras clave y patrones específicos para identificar
+    características del problema, como el tipo de problema, el número de instalaciones
+    y productos, y si el problema involucra mezclas o transporte.
     """
 
     def __init__(self):
+        # Inicializa el logger para registrar eventos y advertencias durante la detección.
         self.logger = logging.getLogger(__name__)
 
     def detect_structure(self, problem_text: str) -> Dict:
         """
         Analiza el texto y detecta la estructura del problema.
 
+        Args:
+            problem_text (str): Texto que describe el problema de optimización.
+
         Returns:
-            Dict con:
-            - problem_type: 'simple', 'multi_facility', 'blending_simple', 'blending_complex', 'diet', 'transport'
-            - num_facilities: número de plantas/instalaciones
-            - num_products: número de productos/tamaños
-            - expected_variables: número esperado de variables
-            - facility_names: lista de nombres de plantas detectadas
-            - product_names: lista de nombres de productos detectados
+            Dict: Un diccionario con información sobre la estructura del problema, incluyendo:
+                - problem_type: Tipo de problema detectado ('simple', 'multi_facility', etc.).
+                - num_facilities: Número de instalaciones detectadas.
+                - num_products: Número de productos detectados.
+                - expected_variables: Número esperado de variables en el modelo.
+                - facility_names: Lista de nombres de instalaciones detectadas.
+                - product_names: Lista de nombres de productos detectados.
+                - has_blending: Indica si el problema involucra mezclas.
         """
         text = problem_text.lower()
 
-        # Detectar tipo especial primero
-        # Problema de dieta
+        # Detectar si el problema es de tipo dieta.
         diet_keywords = ["dieta", "alimento", "calorías", "proteína", "porción"]
         if any(keyword in text for keyword in diet_keywords):
             foods = self._detect_food_items(text)
@@ -53,7 +61,7 @@ class ProblemStructureDetector:
                     "has_blending": False,
                 }
 
-        # Problema de transporte
+        # Detectar si el problema es de tipo transporte.
         transport_keywords = [
             "transporte",
             "transportar",
@@ -74,31 +82,26 @@ class ProblemStructureDetector:
                     "has_blending": False,
                 }
 
-        # Detectar plantas/instalaciones
+        # Detectar instalaciones y productos en el texto.
         facilities = self._detect_facilities(text)
         num_facilities = len(facilities) if facilities else 1
 
-        # Detectar productos/tamaños
         products = self._detect_products(text)
         num_products = len(products) if products else 1
 
-        # Detectar si hay mezclas
+        # Detectar si el problema involucra mezclas.
         has_blending = self._detect_blending(text)
 
-        # Determinar tipo de problema
-        # PRIORIDAD: Multi-instalación antes que mezclas
+        # Determinar el tipo de problema basado en las características detectadas.
         if num_facilities > 1 and num_products > 1:
-            # Problema multi-instalación claramente definido
             problem_type = "multi_facility"
             expected_variables = num_facilities * num_products
         elif has_blending:
-            # Detectar materias primas y mezclas finales
             raw_materials = self._detect_raw_materials(text)
             final_blends = self._detect_final_blends(text)
 
             if raw_materials and final_blends:
                 problem_type = "blending_complex"
-                # Variables: ventas directas + totales mezclas + componentes
                 expected_variables = (
                     len(raw_materials)
                     + len(final_blends)
@@ -106,7 +109,7 @@ class ProblemStructureDetector:
                 )
             else:
                 problem_type = "blending_simple"
-                expected_variables = num_products + 1  # productos + mezcla
+                expected_variables = num_products + 1
         elif num_facilities > 1 or "planta" in text:
             problem_type = "multi_facility"
             expected_variables = num_facilities * num_products
@@ -125,10 +128,18 @@ class ProblemStructureDetector:
         }
 
     def _detect_facilities(self, text: str) -> List[str]:
-        """Detecta plantas/instalaciones mencionadas en el texto."""
+        """
+        Detecta instalaciones (plantas) mencionadas en el texto.
+
+        Args:
+            text (str): Texto del problema.
+
+        Returns:
+            List[str]: Lista de nombres de instalaciones detectadas.
+        """
         facilities = []
 
-        # Buscar "tres plantas", "dos plantas", etc. PRIMERO (más confiable)
+        # Buscar patrones como "tres plantas", "dos plantas", etc.
         num_pattern = r"(tres|dos|cuatro|cinco|2|3|4|5)\s+plantas"
         match = re.search(num_pattern, text)
         if match:
@@ -147,12 +158,10 @@ class ProblemStructureDetector:
             facilities = [f"planta_{i+1}" for i in range(num)]
             return facilities
 
-        # Buscar patrones como "planta 1", "planta 2" o "plantas 1 2 y 3"
-        # Primero buscar todos los números cerca de "planta"
+        # Buscar patrones como "planta 1", "planta 2", etc.
         planta_pattern = r"planta[s]?\s*[\d\s,y]+"
         match = re.search(planta_pattern, text)
         if match:
-            # Extraer todos los números de esa sección
             numbers = re.findall(r"\d+", match.group())
             if numbers:
                 facilities = [f"planta_{n}" for n in sorted(set(numbers))]
@@ -160,20 +169,28 @@ class ProblemStructureDetector:
         return facilities
 
     def _detect_products(self, text: str) -> List[str]:
-        """Detecta productos/tamaños mencionados en el texto."""
+        """
+        Detecta productos o tamaños mencionados en el texto.
+
+        Args:
+            text (str): Texto del problema.
+
+        Returns:
+            List[str]: Lista de nombres de productos detectados.
+        """
         products = []
 
-        # Detectar alimentos en problemas de dieta
+        # Detectar alimentos en problemas de dieta.
         food_items = self._detect_food_items(text)
         if food_items:
             return food_items
 
-        # Detectar rutas en problemas de transporte
+        # Detectar rutas en problemas de transporte.
         transport_routes = self._detect_transport_routes(text)
         if transport_routes:
             return transport_routes
 
-        # PRIMERO: Buscar "tres tamaños", "dos productos", etc. (más confiable)
+        # Buscar patrones como "tres tamaños", "dos productos", etc.
         num_pattern = r"(tres|dos|cuatro|2|3|4)\s+(producto|tamaño|tipo)"
         match = re.search(num_pattern, text)
         if match:
@@ -183,7 +200,7 @@ class ProblemStructureDetector:
             products = [f"producto_{i+1}" for i in range(num)]
             return products
 
-        # Buscar tamaños explícitos
+        # Buscar tamaños explícitos como "grande", "mediano", etc.
         size_patterns = [
             r"(grande|mediano|chico)",
             r"(small|medium|large)",
@@ -192,14 +209,12 @@ class ProblemStructureDetector:
         for pattern in size_patterns:
             matches = re.findall(pattern, text)
             if matches:
-                # Eliminar duplicados inmediatamente
                 products.extend(list(set(matches)))
 
-        # Si encontramos productos específicos, devolverlos sin duplicados
         if products:
             return list(set(products))[:10]
 
-        # Buscar productos específicos (A, B, C, etc.)
+        # Buscar productos específicos como "producto A", "producto B", etc.
         product_pattern = r"producto[s]?\s*[:\-]?\s*([A-Z][,\s]*[A-Z]*[,\s]*[A-Z]*)"
         matches = re.findall(product_pattern, text)
         if matches:
@@ -207,11 +222,18 @@ class ProblemStructureDetector:
                 prods = re.findall(r"[A-Z]", match)
                 products.extend(prods)
 
-        return list(set(products))[:10]  # Limitar a 10 productos max
+        return list(set(products))[:10]
 
     def _detect_blending(self, text: str) -> bool:
-        """Detecta si el problema involucra mezclas."""
-        # Palabras clave fuertes que indican mezclas
+        """
+        Detecta si el problema involucra mezclas.
+
+        Args:
+            text (str): Texto del problema.
+
+        Returns:
+            bool: Verdadero si el problema involucra mezclas, Falso en caso contrario.
+        """
         strong_blending_keywords = [
             "avgas",
             "gasolina de aviación",
@@ -221,13 +243,8 @@ class ProblemStructureDetector:
             "porcentaje",
         ]
 
-        # Solo considerar mezclas si hay palabras clave FUERTES
-        # y NO es un problema multi-instalación típico
-        has_strong_keywords = any(
-            keyword in text for keyword in strong_blending_keywords
-        )
+        has_strong_keywords = any(keyword in text for keyword in strong_blending_keywords)
 
-        # Palabras que indican multi-instalación (no mezclas)
         facility_indicators = [
             "plantas",
             "fábrica",
@@ -237,7 +254,6 @@ class ProblemStructureDetector:
 
         has_facilities = any(indicator in text for indicator in facility_indicators)
 
-        # Si tiene plantas claramente definidas, probablemente NO es mezclas
         if has_facilities and not has_strong_keywords:
             return False
 
@@ -359,6 +375,10 @@ class ProblemStructureDetector:
         """
         Valida si las variables extraídas coinciden con la estructura esperada.
 
+        Args:
+            extracted_problem (Dict): Variables y parámetros extraídos del problema.
+            structure (Dict): Estructura del problema detectada.
+
         Returns:
             Tuple[bool, List[str]]: (es_válido, lista_de_advertencias)
         """
@@ -370,9 +390,7 @@ class ProblemStructureDetector:
 
         if num_extracted != expected:
             is_valid = False
-            warnings.append(
-                f"Número de variables: extraídas={num_extracted}, esperadas={expected}"
-            )
+            warnings.append(f"Número de variables: extraídas={num_extracted}, esperadas={expected}")
 
             # Dar sugerencias específicas
             if structure["problem_type"] == "multi_facility":
@@ -389,8 +407,6 @@ class ProblemStructureDetector:
         num_coeffs = len(extracted_problem.get("objective_coefficients", []))
         if num_coeffs != num_extracted:
             is_valid = False
-            warnings.append(
-                f"Coeficientes objetivo: {num_coeffs}, pero variables: {num_extracted}"
-            )
+            warnings.append(f"Coeficientes objetivo: {num_coeffs}, pero variables: {num_extracted}")
 
         return is_valid, warnings

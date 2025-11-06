@@ -39,18 +39,17 @@ from .complexity_analyzer import ModelSelector
 
 class TransformerNLPProcessor(INLPProcessor):
     """
-    Usa modelos de lenguaje avanzados para entender problemas de optimización.
+    Procesador avanzado que utiliza modelos de lenguaje para interpretar
+    descripciones de problemas de optimización en español.
 
-    Soporta varios modelos (FLAN-T5, Mistral, etc.) que pueden leer descripciones
-    en español y extraer automáticamente toda la información matemática necesaria:
-    qué maximizar/minimizar, las restricciones, y los coeficientes.
+    Este procesador soporta múltiples modelos (como FLAN-T5, Mistral) y
+    automatiza la extracción de información matemática necesaria para
+    resolver problemas de optimización.
 
-    El procesador maneja la carga del modelo, la generación de prompts, y la
-    extracción de información estructurada del texto generado.
-
-    Selecciona automáticamente el modelo óptimo basándose en:
-    - Complejidad del problema
-    - Capacidades del sistema (RAM, GPU, CPU)
+    Funcionalidades principales:
+    - Selección automática del modelo óptimo según la complejidad del problema.
+    - Generación de prompts especializados para extraer información estructurada.
+    - Manejo de modelos con soporte para quantización y uso eficiente de recursos.
     """
 
     def __init__(
@@ -60,25 +59,22 @@ class TransformerNLPProcessor(INLPProcessor):
         auto_select_model: bool = True,
     ):
         """
-        Prepara el procesador con un modelo específico o selección automática.
-
-        El modelo no se carga inmediatamente para ahorrar memoria. Se cargará
-        cuando se procese el primer texto.
+        Inicializa el procesador con un modelo específico o habilita la selección automática.
 
         Args:
-            model_type: Qué modelo usar. Si es None y auto_select_model=True,
-                       se seleccionará automáticamente según el problema.
-            custom_config: Parámetros adicionales como temperature, max_length, etc.
-            auto_select_model: Si es True, selecciona automáticamente el modelo óptimo
+            model_type (Optional[NLPModelType]): Tipo de modelo a usar. Si es None y auto_select_model=True,
+                se seleccionará automáticamente.
+            custom_config (Optional[Dict[str, Any]]): Configuración personalizada para el modelo.
+            auto_select_model (bool): Si es True, selecciona automáticamente el modelo óptimo.
         """
         self.model_type = model_type
         self.auto_select_model = auto_select_model
         self.custom_config = custom_config
 
-        # Inicializar selector de modelos si está habilitado
+        # Inicializar el selector de modelos si está habilitado
         self.model_selector = ModelSelector() if auto_select_model else None
 
-        # Estas se inicializarán cuando se cargue el modelo
+        # Variables para almacenar el modelo y su configuración
         self.config: Optional[Dict[str, Any]] = None
         self.tokenizer: Optional[Any] = None
         self.model: Optional[Any] = None
@@ -86,24 +82,27 @@ class TransformerNLPProcessor(INLPProcessor):
         self._is_loaded = False
         self._current_model_type: Optional[NLPModelType] = None
 
-        # Configurar logging
+        # Configurar logging para registrar eventos importantes
         self.logger = logging.getLogger(__name__)
 
     def is_available(self) -> bool:
         """
-        Chequea si podemos usar el procesador en este sistema.
+        Verifica si el procesador puede ejecutarse en el sistema actual.
 
-        Verifica que las librerías estén instaladas, que haya GPU disponible
-        (si el modelo lo requiere), y ajusta la configuración si es necesario.
+        Comprueba la disponibilidad de las librerías necesarias y ajusta
+        configuraciones según los recursos del sistema (como GPU).
+
+        Returns:
+            bool: True si el procesador está disponible, False en caso contrario.
         """
         if not TRANSFORMERS_AVAILABLE:
-            self.logger.error("transformers library not available")
+            self.logger.error("La librería transformers no está disponible.")
             return False
 
-        # Solo verificar config si ya está inicializado
+        # Ajustar configuración si ya está inicializada
         if self.config is not None:
             if not torch.cuda.is_available() and self.config.get("load_in_4bit", False):
-                self.logger.warning("CUDA not available, disabling quantization")
+                self.logger.warning("CUDA no está disponible, deshabilitando quantización.")
                 self.config["load_in_4bit"] = False
                 self.config["load_in_8bit"] = False
 
@@ -113,24 +112,26 @@ class TransformerNLPProcessor(INLPProcessor):
         """
         Carga el modelo de lenguaje en memoria.
 
-        Descarga el modelo si no está en caché, lo carga con la configuración
-        adecuada (quantización, device_map), y crea el pipeline para generar texto.
-
         Args:
-            model_type: Tipo de modelo a cargar. Si es None, usa self.model_type
+            model_type (Optional[NLPModelType]): Tipo de modelo a cargar. Si es None, usa self.model_type.
+
+        Returns:
+            bool: True si el modelo se cargó correctamente, False en caso de error.
         """
-        # Determinar qué modelo cargar
+        # Determinar el modelo objetivo
         target_model = model_type or self.model_type or DefaultSettings.DEFAULT_MODEL
 
-        # Si ya está cargado el modelo correcto, no hacer nada
+        # Evitar recargar el modelo si ya está cargado
         if self._is_loaded and self._current_model_type == target_model:
             return True
 
-        # Si hay un modelo diferente cargado, liberarlo primero
+        # Liberar el modelo anterior si es necesario
         if self._is_loaded and self._current_model_type != target_model:
-            self.logger.info(
-                f"Unloading previous model: {self._current_model_type.value}"
-            )
+            # Verificar que _current_model_type no sea None antes de acceder a .value
+            if self._current_model_type is not None:
+                self.logger.info(f"Liberando modelo anterior: {self._current_model_type.value}")
+            else:
+                self.logger.warning("No hay un modelo cargado para liberar.")
             self._unload_model()
 
         if not self.is_available():
@@ -138,9 +139,9 @@ class TransformerNLPProcessor(INLPProcessor):
 
         try:
             model_name = target_model.value
-            self.logger.info(f"Loading model: {model_name}")
+            self.logger.info(f"Cargando modelo: {model_name}")
 
-            # Obtener configuración del modelo
+            # Configuración del modelo
             self.config = ModelConfig.DEFAULT_CONFIGS[target_model].copy()
             if self.custom_config:
                 self.config.update(self.custom_config)
@@ -154,12 +155,10 @@ class TransformerNLPProcessor(INLPProcessor):
             elif self.config.get("load_in_8bit", False):
                 quantization_config = BitsAndBytesConfig(load_in_8bit=True)
 
-            # Cargar tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                model_name, trust_remote_code=True
-            )
+            # Cargar el tokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 
-            # Cargar modelo según el tipo
+            # Cargar el modelo según el tipo
             if "t5" in model_name.lower():
                 self.model = AutoModelForSeq2SeqLM.from_pretrained(
                     model_name,
@@ -176,12 +175,8 @@ class TransformerNLPProcessor(INLPProcessor):
                     torch_dtype=torch.float16,
                 )
 
-            # Crear pipeline
-            task = (
-                "text2text-generation"
-                if "t5" in model_name.lower()
-                else "text-generation"
-            )
+            # Crear el pipeline para generación de texto
+            task = "text2text-generation" if "t5" in model_name.lower() else "text-generation"
             self.pipeline = pipeline(
                 task,
                 model=self.model,
@@ -195,15 +190,17 @@ class TransformerNLPProcessor(INLPProcessor):
 
             self._is_loaded = True
             self._current_model_type = target_model
-            self.logger.info(f"Model loaded successfully: {model_name}")
+            self.logger.info(f"Modelo cargado exitosamente: {model_name}")
             return True
 
         except Exception as e:
-            self.logger.error(f"Error loading model: {e}")
+            self.logger.error(f"Error al cargar el modelo: {e}")
             return False
 
     def _unload_model(self):
-        """Libera la memoria del modelo actual."""
+        """
+        Libera la memoria ocupada por el modelo actual.
+        """
         if self.model is not None:
             del self.model
         if self.tokenizer is not None:
@@ -225,30 +222,23 @@ class TransformerNLPProcessor(INLPProcessor):
         """
         Convierte una descripción en español a un problema de optimización estructurado.
 
-        Lee el texto, selecciona automáticamente el modelo óptimo (si está habilitado),
-        genera un prompt especializado, pide al modelo que extraiga la información,
-        y parsea el JSON resultante. Si el modelo falla, intenta con modelos alternativos.
-
         Args:
-            natural_language_text: Descripción del problema en lenguaje natural
+            natural_language_text (str): Descripción del problema en lenguaje natural.
 
         Returns:
-            NLPResult con el problema extraído, un score de confianza, o un error
+            NLPResult: Resultado con el problema extraído o un mensaje de error.
         """
         # Seleccionar modelo óptimo si está habilitado
         if self.auto_select_model and self.model_selector:
             selected_model = self.model_selector.select_model(natural_language_text)
             models_to_try = [selected_model]
-            # Agregar fallbacks
-            models_to_try.extend(
-                self.model_selector.get_fallback_models(selected_model)
-            )
+            models_to_try.extend(self.model_selector.get_fallback_models(selected_model))
         elif self.model_type:
             models_to_try = [self.model_type]
         else:
             models_to_try = [DefaultSettings.DEFAULT_MODEL]
 
-        # Intentar con cada modelo en orden
+        # Intentar procesar con cada modelo en orden
         last_error = None
         for model_type in models_to_try:
             try:
@@ -257,7 +247,7 @@ class TransformerNLPProcessor(INLPProcessor):
                     return result
                 last_error = result.error_message
             except Exception as e:
-                self.logger.warning(f"Model {model_type.value} failed: {e}")
+                self.logger.warning(f"El modelo {model_type.value} falló: {e}")
                 last_error = str(e)
                 continue
 
@@ -274,16 +264,14 @@ class TransformerNLPProcessor(INLPProcessor):
         Procesa texto con un modelo específico.
 
         Args:
-            natural_language_text: Descripción del problema en lenguaje natural
-            model_type: Tipo de modelo a usar
+            natural_language_text (str): Descripción del problema en lenguaje natural.
+            model_type (NLPModelType): Tipo de modelo a usar.
 
         Returns:
-            NLPResult con el problema extraído, un score de confianza, o un error
+            NLPResult: Resultado con el problema extraído o un mensaje de error.
         """
         if not self._load_model(model_type):
-            return NLPResult(
-                success=False, error_message=ErrorMessages.MODEL_NOT_AVAILABLE
-            )
+            return NLPResult(success=False, error_message=ErrorMessages.MODEL_NOT_AVAILABLE)
 
         try:
             start_time = time.time()
@@ -294,18 +282,16 @@ class TransformerNLPProcessor(INLPProcessor):
             )
 
             # Generar respuesta
-            self.logger.info("Generating NLP response...")
+            self.logger.info("Generando respuesta NLP...")
             if self.pipeline is None:
-                self.logger.error("Model pipeline is not loaded.")
-                return NLPResult(
-                    success=False, error_message=ErrorMessages.MODEL_NOT_AVAILABLE
-                )
+                self.logger.error("El pipeline del modelo no está cargado.")
+                return NLPResult(success=False, error_message=ErrorMessages.MODEL_NOT_AVAILABLE)
 
             try:
                 response = self.pipeline(prompt)
-                self.logger.debug(f"Raw pipeline response: {response}")
+                self.logger.debug(f"Respuesta cruda del pipeline: {response}")
             except Exception as e:
-                self.logger.error(f"Error in pipeline execution: {e}")
+                self.logger.error(f"Error en la ejecución del pipeline: {e}")
                 raise
 
             # Procesar respuesta según el tipo de modelo
@@ -315,18 +301,16 @@ class TransformerNLPProcessor(INLPProcessor):
                 else:
                     generated_text = response.get("generated_text", "")
 
-                self.logger.debug(
-                    f"Generated text before processing: '{generated_text}'"
-                )
+                self.logger.debug(f"Texto generado antes del procesamiento: '{generated_text}'")
             except Exception as e:
-                self.logger.error(f"Error extracting generated text from response: {e}")
+                self.logger.error(f"Error al extraer el texto generado de la respuesta: {e}")
                 raise
 
             # Para modelos causales, extraer solo la parte nueva
-            if not "t5" in self.model_type.value.lower():
+            if self.model_type is not None and not "t5" in self.model_type.value.lower():
                 generated_text = generated_text.replace(prompt, "").strip()
 
-            self.logger.info(f"Model generated response: {generated_text}")
+            self.logger.info(f"Respuesta generada por el modelo: {generated_text}")
 
             # Extraer JSON de la respuesta
             problem = self._extract_optimization_problem(generated_text)
@@ -334,7 +318,7 @@ class TransformerNLPProcessor(INLPProcessor):
             # Si no se pudo extraer JSON, intentar con el texto original del problema
             if not problem:
                 self.logger.info(
-                    "Failed to extract from model response, trying fallback..."
+                    "Falló la extracción del JSON, intentando con el problema original..."
                 )
                 problem = self._extract_from_complex_problem(natural_language_text)
 
@@ -342,22 +326,16 @@ class TransformerNLPProcessor(INLPProcessor):
             confidence_score = self._calculate_confidence(generated_text, problem)
 
             if problem:
-                self.logger.info(
-                    f"Successfully extracted problem in {processing_time:.2f}s"
-                )
-                return NLPResult(
-                    success=True, problem=problem, confidence_score=confidence_score
-                )
+                self.logger.info(f"Problema extraído exitosamente en {processing_time:.2f}s")
+                return NLPResult(success=True, problem=problem, confidence_score=confidence_score)
             else:
-                return NLPResult(
-                    success=False, error_message=ErrorMessages.INVALID_JSON_RESPONSE
-                )
+                return NLPResult(success=False, error_message=ErrorMessages.INVALID_JSON_RESPONSE)
 
         except Exception as e:
-            self.logger.error(f"Error processing text: {e}")
+            self.logger.error(f"Error procesando el texto: {e}")
             # Intentar extracción de respaldo antes de fallar
             try:
-                self.logger.info("Attempting fallback extraction...")
+                self.logger.info("Intentando extracción de respaldo...")
                 problem = self._extract_from_complex_problem(natural_language_text)
                 if problem:
                     processing_time = time.time() - start_time
@@ -367,13 +345,11 @@ class TransformerNLPProcessor(INLPProcessor):
                         confidence_score=0.6,  # Confianza media para respaldo
                     )
             except Exception as fallback_error:
-                self.logger.error(f"Fallback extraction also failed: {fallback_error}")
+                self.logger.error(f"Falló también la extracción de respaldo: {fallback_error}")
 
-            return NLPResult(success=False, error_message=f"Processing error: {str(e)}")
+            return NLPResult(success=False, error_message=f"Error en el procesamiento: {str(e)}")
 
-    def _extract_optimization_problem(
-        self, response_text: str
-    ) -> Optional[OptimizationProblem]:
+    def _extract_optimization_problem(self, response_text: str) -> Optional[OptimizationProblem]:
         """
         Busca y parsea el JSON con el problema en la respuesta del modelo.
 
@@ -382,18 +358,16 @@ class TransformerNLPProcessor(INLPProcessor):
         los tipos de objetivo, y valida que todos los coeficientes sean numéricos.
 
         Args:
-            response_text: Texto generado por el modelo de lenguaje
+            response_text (str): Texto generado por el modelo de lenguaje.
 
         Returns:
-            OptimizationProblem si encontró y validó el JSON, None si no pudo extraerlo
+            Optional[OptimizationProblem]: Objeto con el problema extraído si se encontró y validó el JSON, None si no pudo extraerlo.
         """
         try:
             # Limpiar el texto de respuesta
             cleaned_text = response_text.strip()
 
-            self.logger.debug(
-                f"Attempting to extract JSON from response: {cleaned_text[:200]}..."
-            )
+            self.logger.debug(f"Intentando extraer JSON de la respuesta: {cleaned_text[:200]}...")
 
             # Buscar JSON en la respuesta usando múltiples patrones
             json_patterns = [
@@ -410,10 +384,10 @@ class TransformerNLPProcessor(INLPProcessor):
 
             # Si no encuentra JSON, intentar extraer manualmente del problema complejo
             if not all_matches:
-                self.logger.warning("No JSON patterns found in response")
+                self.logger.warning("No se encontraron patrones de JSON en la respuesta")
                 return self._extract_from_complex_problem(response_text)
 
-            self.logger.debug(f"Found {len(all_matches)} potential JSON matches")
+            self.logger.debug(f"Se encontraron {len(all_matches)} posibles coincidencias de JSON")
 
             for idx, json_str in enumerate(all_matches):
                 try:
@@ -423,7 +397,7 @@ class TransformerNLPProcessor(INLPProcessor):
                         continue
 
                     self.logger.debug(
-                        f"Attempting to parse JSON match {idx + 1}: {json_str[:100]}..."
+                        f"Intentando parsear coincidencia de JSON {idx + 1}: {json_str[:100]}..."
                     )
                     data = json.loads(json_str)
 
@@ -483,7 +457,7 @@ class TransformerNLPProcessor(INLPProcessor):
 
                     # Crear problema de optimización
                     self.logger.info(
-                        f"Successfully parsed and validated JSON from match {idx + 1}"
+                        f"JSON parseado y validado exitosamente desde la coincidencia {idx + 1}"
                     )
                     return OptimizationProblem(
                         objective_type=obj_type,
@@ -493,17 +467,19 @@ class TransformerNLPProcessor(INLPProcessor):
                     )
 
                 except json.JSONDecodeError as e:
-                    self.logger.debug(f"JSON decode error on match {idx + 1}: {e}")
+                    self.logger.debug(
+                        f"Error de decodificación JSON en la coincidencia {idx + 1}: {e}"
+                    )
                     continue
                 except Exception as e:
-                    self.logger.debug(f"Validation error on match {idx + 1}: {e}")
+                    self.logger.debug(f"Error de validación en la coincidencia {idx + 1}: {e}")
                     continue
 
-            self.logger.warning("No valid JSON found in any matches")
+            self.logger.warning("No se encontró un JSON válido en ninguna de las coincidencias")
             return None
 
         except Exception as e:
-            self.logger.error(f"Error extracting optimization problem: {e}")
+            self.logger.error(f"Error extrayendo el problema de optimización: {e}")
             return None
 
     def _extract_from_complex_problem(self, text: str) -> Optional[OptimizationProblem]:
@@ -516,11 +492,11 @@ class TransformerNLPProcessor(INLPProcessor):
         try:
             # Por ahora, este método no tiene una extracción genérica implementada
             # Si el modelo no genera JSON válido, simplemente retornamos None
-            self.logger.warning("No fallback extraction available for this problem")
+            self.logger.warning("No hay extracción de respaldo disponible para este problema")
             return None
 
         except Exception as e:
-            self.logger.error(f"Error in fallback extraction: {e}")
+            self.logger.error(f"Error en la extracción de respaldo: {e}")
             return None
 
     def _calculate_confidence(
@@ -534,11 +510,11 @@ class TransformerNLPProcessor(INLPProcessor):
         que el modelo entendió bien el problema.
 
         Args:
-            response_text: Texto generado por el modelo
-            problem: Problema extraído (None si falló)
+            response_text (str): Texto generado por el modelo.
+            problem (Optional[OptimizationProblem]): Problema extraído (None si falló).
 
         Returns:
-            Número entre 0 (no confiable) y 1 (muy confiable)
+            float: Número entre 0 (no confiable) y 1 (muy confiable).
         """
         if not problem:
             return 0.0
@@ -583,7 +559,7 @@ class MockNLPProcessor(INLPProcessor):
         Simula el procesamiento NLP con un problema de ejemplo.
         Ahora detecta problemas de transporte y genera la cantidad correcta de variables.
         """
-        self.logger.info("Using mock NLP processor")
+        self.logger.info("Usando procesador NLP simulado")
 
         text_lower = natural_language_text.lower()
 
@@ -614,15 +590,11 @@ class MockNLPProcessor(INLPProcessor):
             # Restricciones de oferta (una por almacén)
             for i in range(almacenes):
                 coefs = [1.0 if j // tiendas == i else 0.0 for j in range(n_vars)]
-                constraints.append(
-                    {"coefficients": coefs, "operator": "<=", "rhs": 100.0}
-                )
+                constraints.append({"coefficients": coefs, "operator": "<=", "rhs": 100.0})
             # Restricciones de demanda (una por tienda)
             for i in range(tiendas):
                 coefs = [1.0 if j % tiendas == i else 0.0 for j in range(n_vars)]
-                constraints.append(
-                    {"coefficients": coefs, "operator": ">=", "rhs": 50.0}
-                )
+                constraints.append({"coefficients": coefs, "operator": ">=", "rhs": 50.0})
             problem = OptimizationProblem(
                 objective_type=obj_type,
                 objective_coefficients=objective_coefficients,
@@ -665,11 +637,7 @@ class MockNLPProcessor(INLPProcessor):
             return NLPResult(success=True, problem=problem, confidence_score=0.9)
 
         # Problema de producción
-        if (
-            "fabrica" in text_lower
-            or "produccion" in text_lower
-            or "carpinteria" in text_lower
-        ):
+        if "fabrica" in text_lower or "produccion" in text_lower or "carpinteria" in text_lower:
             productos = re.findall(r"mesas|sillas|producto\s*[a-z]", text_lower)
             if not productos:
                 productos = ["mesas", "sillas"]

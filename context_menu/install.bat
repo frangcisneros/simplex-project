@@ -1,20 +1,21 @@
 @echo off
 setlocal enabledelayedexpansion
 :: Script para instalar el menú contextual de Simplex Solver
-:: Ejecutar como Administrador
+:: Este script debe ejecutarse con permisos de administrador.
 
+:: Mostrar encabezado informativo
 echo ===============================================
 echo  INSTALADOR DE MENU CONTEXTUAL - SIMPLEX SOLVER
 echo ===============================================
 echo.
 
-:: Obtener la ruta del directorio del proyecto (parent de context_menu)
-set "SCRIPT_DIR=%~dp0"
-set "PROJECT_DIR=%SCRIPT_DIR%.."
-set "PYTHON_SCRIPT=%SCRIPT_DIR%solve_from_context.py"
-set "BAT_WRAPPER=%SCRIPT_DIR%run_solver.bat"
-set "BAT_WRAPPER_AI=%SCRIPT_DIR%run_solver_ai.bat"
-set "ICON_PATH=%SCRIPT_DIR%simplex_icon.ico"
+:: Obtener la ruta del directorio del proyecto (padre de context_menu)
+set "SCRIPT_DIR=%~dp0"  # Obtiene la ruta del directorio donde se encuentra este script.
+set "PROJECT_DIR=%SCRIPT_DIR%.."  # Asume que el proyecto está en el directorio padre.
+set "PYTHON_SCRIPT=%SCRIPT_DIR%solve_from_context.py"  # Ruta al script de Python principal.
+set "BAT_WRAPPER=%SCRIPT_DIR%run_solver.bat"  # Ruta al archivo batch para resolver.
+set "BAT_WRAPPER_AI=%SCRIPT_DIR%run_solver_ai.bat"  # Ruta al archivo batch para resolver con IA.
+set "ICON_PATH=%SCRIPT_DIR%simplex_icon.ico"  # Ruta al icono del menú contextual.
 
 :: Verificar que existe el script de Python
 if not exist "%PYTHON_SCRIPT%" (
@@ -24,7 +25,7 @@ if not exist "%PYTHON_SCRIPT%" (
     exit /b 1
 )
 
-:: Verificar que existe el wrapper batch
+:: Verificar que existe el wrapper batch para el método clásico
 if not exist "%BAT_WRAPPER%" (
     echo ERROR: No se encontro el archivo run_solver.bat
     echo Asegurese de ejecutar este script desde la carpeta context_menu.
@@ -32,6 +33,7 @@ if not exist "%BAT_WRAPPER%" (
     exit /b 1
 )
 
+:: Verificar que existe el wrapper batch para el método con IA
 if not exist "%BAT_WRAPPER_AI%" (
     echo ERROR: No se encontro el archivo run_solver_ai.bat
     echo Asegurese de ejecutar este script desde la carpeta context_menu.
@@ -39,14 +41,15 @@ if not exist "%BAT_WRAPPER_AI%" (
     exit /b 1
 )
 
+:: Mostrar información de las rutas detectadas
 echo Directorio del proyecto: %PROJECT_DIR%
 echo Script de Python: %PYTHON_SCRIPT%
 echo Wrapper Batch: %BAT_WRAPPER%
 echo.
 
-:: Verificar que Python está disponible
+:: Verificar que Python está disponible en el sistema
 echo Verificando Python...
-where python >nul 2>&1
+where python >nul 2>&1  # Comprueba si el comando "python" está en el PATH.
 if %errorlevel% neq 0 (
     echo ADVERTENCIA: Python no esta en el PATH del sistema.
     echo Asegurese de que Python esta instalado y accesible desde la linea de comandos.
@@ -58,31 +61,31 @@ if %errorlevel% neq 0 (
         exit /b 1
     )
 ) else (
-    python --version
+    python --version  # Muestra la versión de Python detectada.
     echo Python detectado correctamente
 )
 echo.
 
 :: Detectar versión de Windows
 echo Detectando version de Windows...
-for /f "tokens=4-5 delims=. " %%i in ('ver') do set VERSION=%%i.%%j
+for /f "tokens=4-5 delims=. " %%i in ('ver') do set VERSION=%%i.%%j  # Extrae la versión de Windows.
 if "%VERSION%" == "10.0" (
     for /f "tokens=3" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v CurrentBuild ^| findstr CurrentBuild') do set BUILD=%%a
     if !BUILD! GEQ 22000 (
-        set "WIN_VERSION=11"
+        set "WIN_VERSION=11"  # Si el build es mayor o igual a 22000, es Windows 11.
         echo Windows 11 detectado ^(Build !BUILD!^)
     ) else (
-        set "WIN_VERSION=10"
+        set "WIN_VERSION=10"  # De lo contrario, es Windows 10.
         echo Windows 10 detectado ^(Build !BUILD!^)
     )
 ) else (
-    set "WIN_VERSION=10"
+    set "WIN_VERSION=10"  # Por defecto, se asume Windows 10.
     echo Windows %VERSION% detectado - usando modo Windows 10
 )
 echo.
 
 :: Verificar permisos de administrador
-net session >nul 2>&1
+net session >nul 2>&1  # Comprueba si el script tiene permisos de administrador.
 if %errorlevel% neq 0 (
     echo ADVERTENCIA: Este script requiere permisos de administrador.
     echo Por favor, ejecutelo haciendo clic derecho y "Ejecutar como administrador"
@@ -90,6 +93,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Agregar entradas al Registro de Windows
 echo Agregando entrada al Registro de Windows...
 echo.
 

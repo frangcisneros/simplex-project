@@ -1,15 +1,15 @@
-# Development dependencies (testing, linting, formatting)
-# Install with: pip install -r requirements-dev.txt
+# Dependencias de desarrollo (pruebas, análisis estático, formateo de código)
+# Instalar con: pip install -r requirements-dev.txt
 
-# Core dependencies
+# Dependencias principales
 -r requirements.txt
 
-# Testing
-pytest>=7.4.0
-pytest-cov>=4.1.0
+# Pruebas
+pytest>=7.4.0  # Framework para pruebas
+pytest-cov>=4.1.0  # Cobertura de pruebas
 
-# Code formatting and linting
-black>=23.7.0
-isort>=5.12.0
-flake8>=6.1.0
-mypy>=1.5.0
+# Formateo de código y análisis estático
+black>=23.7.0  # Formateador de código
+isort>=5.12.0  # Ordenador de imports
+flake8>=6.1.0  # Linter para análisis estático
+mypy>=1.5.0  # Comprobador de tipos estáticos

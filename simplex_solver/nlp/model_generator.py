@@ -125,9 +125,7 @@ class SimplexModelGenerator(IModelGenerator):
                 "constraint_types": constraint_types,
             }
 
-            self.logger.info(
-                f"Generated Simplex model: {len(c)} vars, {len(A)} constraints"
-            )
+            self.logger.info(f"Generated Simplex model: {len(c)} vars, {len(A)} constraints")
             return model
 
         except Exception as e:
@@ -156,14 +154,16 @@ class PuLPModelGenerator(IModelGenerator):
         Construye objetos LpVariable para cada variable de decisión,
         define la función objetivo usando lpSum, y agrega cada restricción
         con su operador correspondiente (<=, >=, =).
+
+        Args:
+            problem: Problema de optimización estructurado
+
+        Returns:
+            Diccionario con el problema PuLP y las variables creadas
         """
         try:
             # Crear problema
-            sense = (
-                pulp.LpMaximize
-                if problem.objective_type == "maximize"
-                else pulp.LpMinimize
-            )
+            sense = pulp.LpMaximize if problem.objective_type == "maximize" else pulp.LpMinimize
             prob = pulp.LpProblem("NLP_Generated_Problem", sense)
 
             # Crear variables
@@ -190,9 +190,7 @@ class PuLPModelGenerator(IModelGenerator):
                 operator = constraint["operator"]
                 rhs = constraint["rhs"]
 
-                lhs = pulp.lpSum(
-                    [coeffs[j] * variables[var_names[j]] for j in range(len(coeffs))]
-                )
+                lhs = pulp.lpSum([coeffs[j] * variables[var_names[j]] for j in range(len(coeffs))])
 
                 if operator == "<=":
                     prob += lhs <= rhs, f"constraint_{i}"
@@ -233,6 +231,12 @@ class ORToolsModelGenerator(IModelGenerator):
         Crea un solver GLOP (para programación lineal), define variables no negativas,
         establece los coeficientes del objetivo, y agrega restricciones con sus
         límites (bounds) según el operador.
+
+        Args:
+            problem: Problema de optimización estructurado
+
+        Returns:
+            Diccionario con el solver, variables y restricciones creadas
         """
         try:
             # Crear solver
@@ -245,9 +249,7 @@ class ORToolsModelGenerator(IModelGenerator):
             variables = []
 
             for i in range(num_vars):
-                var_name = (
-                    problem.variable_names[i] if problem.variable_names else f"x{i+1}"
-                )
+                var_name = problem.variable_names[i] if problem.variable_names else f"x{i+1}"
                 var = solver.NumVar(0, solver.infinity(), var_name)
                 variables.append(var)
 
@@ -354,9 +356,7 @@ class ModelValidator(IModelValidator):
             # Validar coeficientes objetivo
             if not problem.objective_coefficients:
                 errors.append("Empty objective coefficients")
-            elif not all(
-                isinstance(x, (int, float)) for x in problem.objective_coefficients
-            ):
+            elif not all(isinstance(x, (int, float)) for x in problem.objective_coefficients):
                 errors.append("Invalid objective coefficients (must be numeric)")
             elif len(problem.objective_coefficients) > self.max_variables:
                 errors.append(
@@ -392,9 +392,7 @@ class ModelValidator(IModelValidator):
                             f"Constraint {i}: Dimension mismatch ({len(coeffs)} vs {len(problem.objective_coefficients)})"
                         )
                     elif not all(isinstance(x, (int, float)) for x in coeffs):
-                        errors.append(
-                            f"Constraint {i}: Invalid coefficients (must be numeric)"
-                        )
+                        errors.append(f"Constraint {i}: Invalid coefficients (must be numeric)")
 
                     # Validar operador
                     operator = constraint["operator"]

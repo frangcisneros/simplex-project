@@ -175,7 +175,9 @@ class SystemAnalyzer:
 
             # Generar razón
             if available_ram < ram_needed:
-                reason = f"Requiere {ram_needed} GB RAM, solo hay {available_ram:.1f} GB disponibles"
+                reason = (
+                    f"Requiere {ram_needed} GB RAM, solo hay {available_ram:.1f} GB disponibles"
+                )
             elif recommended:
                 reason = "Compatible con tu sistema"
             else:
