@@ -12,22 +12,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 from tabulate import tabulate
 from simplex_solver.logging_system import logger
-
-
-class Colors:
-    """
-    Clase para definir colores ANSI utilizados en la terminal.
-    Facilita la personalización de la salida en consola.
-    """
-
-    CYAN = "\033[96m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    RED = "\033[91m"
-    MAGENTA = "\033[95m"
-    BLUE = "\033[94m"
-    BOLD = "\033[1m"
-    RESET = "\033[0m"
+from simplex_solver.ui import ConsoleColors
 
 
 class ProblemHistory:
@@ -212,7 +197,9 @@ class ProblemHistory:
             problems: Lista de problemas a mostrar.
         """
         if not problems:
-            print(f"\n{Colors.YELLOW}No se encontraron problemas en el historial.{Colors.RESET}\n")
+            print(
+                f"\n{ConsoleColors.YELLOW}No se encontraron problemas en el historial.{ConsoleColors.RESET}\n"
+            )
             return
 
         # Preparar datos para la tabla
@@ -253,43 +240,49 @@ class ProblemHistory:
             )
 
         headers = [
-            f"{Colors.BOLD}ID{Colors.RESET}",
-            f"{Colors.BOLD}Fecha/Hora{Colors.RESET}",
-            f"{Colors.BOLD}Archivo{Colors.RESET}",
-            f"{Colors.BOLD}Tipo{Colors.RESET}",
-            f"{Colors.BOLD}Var/Rest{Colors.RESET}",
-            f"{Colors.BOLD}Iter{Colors.RESET}",
-            f"{Colors.BOLD}Valor Ópt.{Colors.RESET}",
-            f"{Colors.BOLD}Tiempo{Colors.RESET}",
-            f"{Colors.BOLD}Estado{Colors.RESET}",
+            f"{ConsoleColors.BOLD}ID{ConsoleColors.RESET}",
+            f"{ConsoleColors.BOLD}Fecha/Hora{ConsoleColors.RESET}",
+            f"{ConsoleColors.BOLD}Archivo{ConsoleColors.RESET}",
+            f"{ConsoleColors.BOLD}Tipo{ConsoleColors.RESET}",
+            f"{ConsoleColors.BOLD}Var/Rest{ConsoleColors.RESET}",
+            f"{ConsoleColors.BOLD}Iter{ConsoleColors.RESET}",
+            f"{ConsoleColors.BOLD}Valor Ópt.{ConsoleColors.RESET}",
+            f"{ConsoleColors.BOLD}Tiempo{ConsoleColors.RESET}",
+            f"{ConsoleColors.BOLD}Estado{ConsoleColors.RESET}",
         ]
 
-        print(f"\n{Colors.CYAN}{'=' * 120}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.GREEN}HISTORIAL DE PROBLEMAS RESUELTOS{Colors.RESET}")
-        print(f"{Colors.CYAN}{'=' * 120}{Colors.RESET}\n")
+        print(f"\n{ConsoleColors.CYAN}{'=' * 120}{ConsoleColors.RESET}")
+        print(
+            f"{ConsoleColors.BOLD}{ConsoleColors.GREEN}HISTORIAL DE PROBLEMAS RESUELTOS{ConsoleColors.RESET}"
+        )
+        print(f"{ConsoleColors.CYAN}{'=' * 120}{ConsoleColors.RESET}\n")
         print(tabulate(table_data, headers=headers, tablefmt="grid"))
-        print(f"\n{Colors.CYAN}Total: {len(problems)} problema(s){Colors.RESET}\n")
+        print(f"\n{ConsoleColors.CYAN}Total: {len(problems)} problema(s){ConsoleColors.RESET}\n")
 
     def display_problem_detail(self, problem: Dict[str, Any]):
         """Muestra detalles completos de un problema."""
-        print(f"\n{Colors.CYAN}{'=' * 80}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.GREEN}DETALLES DEL PROBLEMA #{problem['id']}{Colors.RESET}")
-        print(f"{Colors.CYAN}{'=' * 80}{Colors.RESET}\n")
+        print(f"\n{ConsoleColors.CYAN}{'=' * 80}{ConsoleColors.RESET}")
+        print(
+            f"{ConsoleColors.BOLD}{ConsoleColors.GREEN}DETALLES DEL PROBLEMA #{problem['id']}{ConsoleColors.RESET}"
+        )
+        print(f"{ConsoleColors.CYAN}{'=' * 80}{ConsoleColors.RESET}\n")
 
         # Información general
-        print(f"{Colors.BOLD}Archivo:{Colors.RESET} {problem['file_name']}")
-        print(f"{Colors.BOLD}Ruta original:{Colors.RESET} {problem['file_path']}")
-        print(f"{Colors.BOLD}Fecha/Hora:{Colors.RESET} {problem['timestamp'][:19]}")
-        print(f"{Colors.BOLD}Tipo:{Colors.RESET} {problem['problem_type'] or 'N/A'}")
+        print(f"{ConsoleColors.BOLD}Archivo:{ConsoleColors.RESET} {problem['file_name']}")
+        print(f"{ConsoleColors.BOLD}Ruta original:{ConsoleColors.RESET} {problem['file_path']}")
+        print(f"{ConsoleColors.BOLD}Fecha/Hora:{ConsoleColors.RESET} {problem['timestamp'][:19]}")
+        print(f"{ConsoleColors.BOLD}Tipo:{ConsoleColors.RESET} {problem['problem_type'] or 'N/A'}")
 
-        print(f"\n{Colors.BOLD}Dimensiones:{Colors.RESET}")
+        print(f"\n{ConsoleColors.BOLD}Dimensiones:{ConsoleColors.RESET}")
         print(f"  Variables: {problem['num_variables'] or 0}")
         print(f"  Restricciones: {problem['num_constraints'] or 0}")
 
-        print(f"\n{Colors.BOLD}Resultado:{Colors.RESET}")
+        print(f"\n{ConsoleColors.BOLD}Resultado:{ConsoleColors.RESET}")
         print(f"  Estado: {problem['status'] or 'N/A'}")
         if problem["optimal_value"] is not None:
-            print(f"  Valor óptimo: {Colors.GREEN}{problem['optimal_value']:.6f}{Colors.RESET}")
+            print(
+                f"  Valor óptimo: {ConsoleColors.GREEN}{problem['optimal_value']:.6f}{ConsoleColors.RESET}"
+            )
         print(f"  Iteraciones: {problem['iterations'] or 0}")
         if problem["execution_time_ms"] is not None:
             print(f"  Tiempo de ejecución: {problem['execution_time_ms']:.2f} ms")
@@ -298,18 +291,18 @@ class ProblemHistory:
         if problem["solution_variables"]:
             try:
                 solution = json.loads(problem["solution_variables"])
-                print(f"\n{Colors.BOLD}Variables de solución:{Colors.RESET}")
+                print(f"\n{ConsoleColors.BOLD}Variables de solución:{ConsoleColors.RESET}")
                 for var, value in solution.items():
-                    print(f"  {var} = {Colors.GREEN}{value:.6f}{Colors.RESET}")
+                    print(f"  {var} = {ConsoleColors.GREEN}{value:.6f}{ConsoleColors.RESET}")
             except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
                 logger.warning(f"No se pudo parsear la solución guardada: {e}")
                 pass
 
         # Contenido del archivo
-        print(f"\n{Colors.BOLD}Contenido del archivo:{Colors.RESET}")
-        print(f"{Colors.CYAN}{'-' * 80}{Colors.RESET}")
+        print(f"\n{ConsoleColors.BOLD}Contenido del archivo:{ConsoleColors.RESET}")
+        print(f"{ConsoleColors.CYAN}{'-' * 80}{ConsoleColors.RESET}")
         print(problem["file_content"])
-        print(f"{Colors.CYAN}{'-' * 80}{Colors.RESET}\n")
+        print(f"{ConsoleColors.CYAN}{'-' * 80}{ConsoleColors.RESET}\n")
 
     def create_temp_file_from_history(self, problem_id: int) -> Optional[str]:
         """
@@ -341,7 +334,7 @@ class ProblemHistory:
 
             return temp_file.name
         except Exception as e:
-            print(f"{Colors.RED}Error creando archivo temporal: {e}{Colors.RESET}")
+            print(f"{ConsoleColors.RED}Error creando archivo temporal: {e}{ConsoleColors.RESET}")
             return None
 
     def get_statistics(self) -> Dict[str, Any]:
@@ -408,97 +401,119 @@ def show_history_menu():
     history = ProblemHistory()
 
     while True:
-        print(f"\n{Colors.CYAN}{'=' * 80}{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.GREEN}HISTORIAL DE PROBLEMAS{Colors.RESET}")
-        print(f"{Colors.CYAN}{'=' * 80}{Colors.RESET}\n")
-        print(f"{Colors.BOLD}1.{Colors.RESET} Ver todos los problemas")
-        print(f"{Colors.BOLD}2.{Colors.RESET} Buscar problema por nombre")
-        print(f"{Colors.BOLD}3.{Colors.RESET} Ver detalles de un problema")
-        print(f"{Colors.BOLD}4.{Colors.RESET} Re-resolver un problema del historial")
-        print(f"{Colors.BOLD}5.{Colors.RESET} Ver estadísticas")
-        print(f"{Colors.BOLD}6.{Colors.RESET} Volver al menú principal")
+        print(f"\n{ConsoleColors.CYAN}{'=' * 80}{ConsoleColors.RESET}")
+        print(
+            f"{ConsoleColors.BOLD}{ConsoleColors.GREEN}HISTORIAL DE PROBLEMAS{ConsoleColors.RESET}"
+        )
+        print(f"{ConsoleColors.CYAN}{'=' * 80}{ConsoleColors.RESET}\n")
+        print(f"{ConsoleColors.BOLD}1.{ConsoleColors.RESET} Ver todos los problemas")
+        print(f"{ConsoleColors.BOLD}2.{ConsoleColors.RESET} Buscar problema por nombre")
+        print(f"{ConsoleColors.BOLD}3.{ConsoleColors.RESET} Ver detalles de un problema")
+        print(f"{ConsoleColors.BOLD}4.{ConsoleColors.RESET} Re-resolver un problema del historial")
+        print(f"{ConsoleColors.BOLD}5.{ConsoleColors.RESET} Ver estadísticas")
+        print(f"{ConsoleColors.BOLD}6.{ConsoleColors.RESET} Volver al menú principal")
         print()
 
-        choice = input(f"{Colors.YELLOW}Selecciona una opción: {Colors.RESET}").strip()
+        choice = input(
+            f"{ConsoleColors.YELLOW}Selecciona una opción: {ConsoleColors.RESET}"
+        ).strip()
 
         if choice == "1":
             problems = history.get_all_problems()
             history.display_problems_table(problems)
             if problems:
-                input(f"\n{Colors.YELLOW}Presiona Enter para continuar...{Colors.RESET}")
+                input(
+                    f"\n{ConsoleColors.YELLOW}Presiona Enter para continuar...{ConsoleColors.RESET}"
+                )
 
         elif choice == "2":
-            keyword = input(f"\n{Colors.YELLOW}Ingresa palabra clave: {Colors.RESET}").strip()
+            keyword = input(
+                f"\n{ConsoleColors.YELLOW}Ingresa palabra clave: {ConsoleColors.RESET}"
+            ).strip()
             if keyword:
                 problems = history.search_problems(keyword)
                 history.display_problems_table(problems)
                 if problems:
-                    input(f"\n{Colors.YELLOW}Presiona Enter para continuar...{Colors.RESET}")
+                    input(
+                        f"\n{ConsoleColors.YELLOW}Presiona Enter para continuar...{ConsoleColors.RESET}"
+                    )
 
         elif choice == "3":
             try:
                 problem_id = int(
-                    input(f"\n{Colors.YELLOW}Ingresa el ID del problema: {Colors.RESET}").strip()
+                    input(
+                        f"\n{ConsoleColors.YELLOW}Ingresa el ID del problema: {ConsoleColors.RESET}"
+                    ).strip()
                 )
                 problem = history.get_problem_by_id(problem_id)
                 if problem:
                     history.display_problem_detail(problem)
                 else:
-                    print(f"\n{Colors.RED}Problema no encontrado.{Colors.RESET}")
-                input(f"\n{Colors.YELLOW}Presiona Enter para continuar...{Colors.RESET}")
+                    print(f"\n{ConsoleColors.RED}Problema no encontrado.{ConsoleColors.RESET}")
+                input(
+                    f"\n{ConsoleColors.YELLOW}Presiona Enter para continuar...{ConsoleColors.RESET}"
+                )
             except ValueError:
-                print(f"\n{Colors.RED}ID inválido.{Colors.RESET}")
+                print(f"\n{ConsoleColors.RED}ID inválido.{ConsoleColors.RESET}")
 
         elif choice == "4":
             try:
                 problem_id = int(
                     input(
-                        f"\n{Colors.YELLOW}Ingresa el ID del problema a re-resolver: {Colors.RESET}"
+                        f"\n{ConsoleColors.YELLOW}Ingresa el ID del problema a re-resolver: {ConsoleColors.RESET}"
                     ).strip()
                 )
                 temp_file = history.create_temp_file_from_history(problem_id)
                 if temp_file:
-                    print(f"\n{Colors.GREEN}✓ Archivo temporal creado: {temp_file}{Colors.RESET}")
+                    print(
+                        f"\n{ConsoleColors.GREEN}✓ Archivo temporal creado: {temp_file}{ConsoleColors.RESET}"
+                    )
                     return temp_file  # Retorna la ruta para que main.py lo use
                 else:
-                    print(f"\n{Colors.RED}No se pudo crear el archivo temporal.{Colors.RESET}")
-                    input(f"\n{Colors.YELLOW}Presiona Enter para continuar...{Colors.RESET}")
+                    print(
+                        f"\n{ConsoleColors.RED}No se pudo crear el archivo temporal.{ConsoleColors.RESET}"
+                    )
+                    input(
+                        f"\n{ConsoleColors.YELLOW}Presiona Enter para continuar...{ConsoleColors.RESET}"
+                    )
             except ValueError:
-                print(f"\n{Colors.RED}ID inválido.{Colors.RESET}")
+                print(f"\n{ConsoleColors.RED}ID inválido.{ConsoleColors.RESET}")
 
         elif choice == "5":
             stats = history.get_statistics()
-            print(f"\n{Colors.CYAN}{'=' * 80}{Colors.RESET}")
-            print(f"{Colors.BOLD}{Colors.GREEN}ESTADÍSTICAS DEL HISTORIAL{Colors.RESET}")
-            print(f"{Colors.CYAN}{'=' * 80}{Colors.RESET}\n")
+            print(f"\n{ConsoleColors.CYAN}{'=' * 80}{ConsoleColors.RESET}")
             print(
-                f"{Colors.BOLD}Total de problemas resueltos:{Colors.RESET} {stats['total_problems']}"
+                f"{ConsoleColors.BOLD}{ConsoleColors.GREEN}ESTADÍSTICAS DEL HISTORIAL{ConsoleColors.RESET}"
+            )
+            print(f"{ConsoleColors.CYAN}{'=' * 80}{ConsoleColors.RESET}\n")
+            print(
+                f"{ConsoleColors.BOLD}Total de problemas resueltos:{ConsoleColors.RESET} {stats['total_problems']}"
             )
 
             if stats["by_type"]:
-                print(f"\n{Colors.BOLD}Por tipo:{Colors.RESET}")
+                print(f"\n{ConsoleColors.BOLD}Por tipo:{ConsoleColors.RESET}")
                 for ptype, count in stats["by_type"].items():
                     print(f"  {ptype or 'N/A'}: {count}")
 
             if stats["by_status"]:
-                print(f"\n{Colors.BOLD}Por estado:{Colors.RESET}")
+                print(f"\n{ConsoleColors.BOLD}Por estado:{ConsoleColors.RESET}")
                 for status, count in stats["by_status"].items():
                     print(f"  {status or 'N/A'}: {count}")
 
             print(
-                f"\n{Colors.BOLD}Promedio de iteraciones:{Colors.RESET} {stats['avg_iterations']:.2f}"
+                f"\n{ConsoleColors.BOLD}Promedio de iteraciones:{ConsoleColors.RESET} {stats['avg_iterations']:.2f}"
             )
             print(
-                f"{Colors.BOLD}Promedio de tiempo de ejecución:{Colors.RESET} {stats['avg_execution_time']:.2f} ms"
+                f"{ConsoleColors.BOLD}Promedio de tiempo de ejecución:{ConsoleColors.RESET} {stats['avg_execution_time']:.2f} ms"
             )
 
-            input(f"\n{Colors.YELLOW}Presiona Enter para continuar...{Colors.RESET}")
+            input(f"\n{ConsoleColors.YELLOW}Presiona Enter para continuar...{ConsoleColors.RESET}")
 
         elif choice == "6":
             return None
 
         else:
-            print(f"\n{Colors.RED}Opción no válida.{Colors.RESET}")
+            print(f"\n{ConsoleColors.RED}Opción no válida.{ConsoleColors.RESET}")
 
 
 if __name__ == "__main__":

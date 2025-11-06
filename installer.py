@@ -15,34 +15,9 @@ from typing import List, Optional
 sys.path.insert(0, str(Path(__file__).parent / "tools"))
 from system_analyzer import SystemAnalyzer  # type: ignore
 
-
-class Color:
-    """
-    Define códigos de color para la consola, asegurando compatibilidad con Windows.
-    """
-
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    RED = "\033[91m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    BLUE = "\033[94m"
-    CYAN = "\033[96m"
-    WHITE = "\033[97m"
-
-
-def enable_ansi_colors():
-    """
-    Habilita los códigos ANSI en la consola de Windows 10 o superior.
-    """
-    if platform.system() == "Windows":
-        try:
-            import ctypes
-
-            kernel32 = ctypes.windll.kernel32
-            kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
-        except:
-            pass
+# Importar UI reutilizable
+sys.path.insert(0, str(Path(__file__).parent))
+from simplex_solver.ui import ConsoleUI, ConsoleColors, enable_ansi_colors
 
 
 def is_admin():
@@ -76,6 +51,7 @@ class SimplexInstaller:
         """
         Inicializa el instalador, detectando permisos y configurando rutas necesarias.
         """
+        self.ui = ConsoleUI()
         self.analyzer = SystemAnalyzer()
         self.install_ollama = False
         self.selected_models = []
@@ -150,51 +126,6 @@ class SimplexInstaller:
 
         return None
 
-    def clear_screen(self):
-        """
-        Limpia la pantalla de la consola para mejorar la legibilidad.
-        """
-        os.system("cls" if os.name == "nt" else "clear")
-
-    def print_header(self, title: str):
-        """
-        Imprime un encabezado formateado con el título proporcionado.
-        """
-        print("\n" + "=" * 70)
-        print(f"{Color.CYAN}{Color.BOLD}{title:^70}{Color.RESET}")
-        print("=" * 70 + "\n")
-
-    def print_section(self, title: str):
-        """
-        Imprime un título de sección destacado.
-        """
-        print(f"\n{Color.BLUE}{Color.BOLD}▶ {title}{Color.RESET}")
-        print("-" * 70)
-
-    def print_info(self, message: str):
-        """
-        Muestra un mensaje informativo en la consola.
-        """
-        print(f"{Color.CYAN}ℹ {message}{Color.RESET}")
-
-    def print_success(self, message: str):
-        """
-        Muestra un mensaje indicando éxito en la operación.
-        """
-        print(f"{Color.GREEN}✓ {message}{Color.RESET}")
-
-    def print_warning(self, message: str):
-        """
-        Muestra una advertencia en la consola.
-        """
-        print(f"{Color.YELLOW}⚠ {message}{Color.RESET}")
-
-    def print_error(self, message: str):
-        """
-        Muestra un mensaje de error en la consola.
-        """
-        print(f"{Color.RED}✗ {message}{Color.RESET}")
-
     def log_operation(self, operation: str, success: bool, details: str = ""):
         """
         Registra una operación en el log de instalación con su estado y detalles.
@@ -204,110 +135,84 @@ class SimplexInstaller:
             {"operation": operation, "success": success, "details": details, "status": status}
         )
 
-    def ask_yes_no(self, question: str, default: bool = True) -> bool:
-        """
-        Realiza una pregunta de tipo sí/no al usuario y retorna la respuesta.
-        """
-        options = "[S/n]" if default else "[s/N]"
-        while True:
-            response = input(f"{Color.YELLOW}? {question} {options}: {Color.RESET}").strip().lower()
-
-            if response == "":
-                return default
-            elif response in ["s", "si", "sí", "y", "yes"]:
-                return True
-            elif response in ["n", "no"]:
-                return False
-            else:
-                self.print_warning("Por favor responde 's' o 'n'")
-
-    def ask_choice(self, question: str, options: List[str]) -> int:
-        """
-        Presenta una lista de opciones al usuario y retorna la selección realizada.
-        """
-        print(f"\n{Color.YELLOW}? {question}{Color.RESET}")
-        for i, option in enumerate(options, 1):
-            print(f"  {i}. {option}")
-
-        while True:
-            try:
-                response = input(
-                    f"{Color.YELLOW}Elige una opción (1-{len(options)}): {Color.RESET}"
-                )
-                choice = int(response)
-                if 1 <= choice <= len(options):
-                    return choice - 1
-                else:
-                    self.print_warning(f"Por favor elige un número entre 1 y {len(options)}")
-            except ValueError:
-                self.print_warning("Por favor ingresa un número válido")
-
     def show_welcome(self):
         """
         Muestra la pantalla de bienvenida con información general sobre el instalador.
         """
-        self.clear_screen()
-        self.print_header("INSTALADOR DE SIMPLEX SOLVER")
+        self.ui.clear_screen()
+        self.ui.print_header("INSTALADOR DE SIMPLEX SOLVER")
 
         if self.is_admin:
-            print(f"{Color.GREEN}✓ Ejecutando con permisos de administrador{Color.RESET}")
-            print(f"{Color.GREEN}  El menú contextual se instalará automáticamente{Color.RESET}")
+            print(
+                f"{ConsoleColors.GREEN}✓ Ejecutando con permisos de administrador{ConsoleColors.RESET}"
+            )
+            print(
+                f"{ConsoleColors.GREEN}  El menú contextual se instalará automáticamente{ConsoleColors.RESET}"
+            )
         else:
-            print(f"{Color.YELLOW}⚠ Ejecutando sin permisos de administrador{Color.RESET}")
-            print(f"{Color.YELLOW}  El menú contextual no se podrá instalar{Color.RESET}")
+            print(
+                f"{ConsoleColors.YELLOW}⚠ Ejecutando sin permisos de administrador{ConsoleColors.RESET}"
+            )
+            print(
+                f"{ConsoleColors.YELLOW}  El menú contextual no se podrá instalar{ConsoleColors.RESET}"
+            )
         print()
-        print(f"{Color.WHITE}Bienvenido al instalador interactivo del Simplex Solver.{Color.RESET}")
-        print(f"{Color.WHITE}Este asistente te ayudará a:{Color.RESET}\n")
+        print(
+            f"{ConsoleColors.WHITE}Bienvenido al instalador interactivo del Simplex Solver.{ConsoleColors.RESET}"
+        )
+        print(f"{ConsoleColors.WHITE}Este asistente te ayudará a:{ConsoleColors.RESET}\n")
         print("  • Analizar las capacidades de tu sistema")
         print("  • Instalar Ollama (opcional)")
         print("  • Descargar modelos de IA recomendados")
         print(
             "  • Configurar el menú contextual de Windows"
             + (
-                f" {Color.GREEN}(automático){Color.RESET}"
+                f" {ConsoleColors.GREEN}(automático){ConsoleColors.RESET}"
                 if self.is_admin
-                else f" {Color.YELLOW}(requiere admin){Color.RESET}"
+                else f" {ConsoleColors.YELLOW}(requiere admin){ConsoleColors.RESET}"
             )
         )
         print("  • Instalar todas las dependencias necesarias")
 
-        print(f"\n{Color.CYAN}Presiona Enter para continuar...{Color.RESET}")
+        print(f"\n{ConsoleColors.CYAN}Presiona Enter para continuar...{ConsoleColors.RESET}")
         input()
 
     def show_system_analysis(self):
         """
         Realiza y muestra un análisis del sistema, incluyendo compatibilidad con Ollama.
         """
-        self.clear_screen()
-        self.print_header("ANÁLISIS DEL SISTEMA")
+        self.ui.clear_screen()
+        self.ui.print_header("ANÁLISIS DEL SISTEMA")
 
         # Mostrar información del sistema
         info = self.analyzer.get_system_info()
         for key, value in info.items():
-            print(f"  {Color.WHITE}{key:20}{Color.RESET}: {Color.CYAN}{value}{Color.RESET}")
+            print(
+                f"  {ConsoleColors.WHITE}{key:20}{ConsoleColors.RESET}: {ConsoleColors.CYAN}{value}{ConsoleColors.RESET}"
+            )
 
         # Verificar compatibilidad con Ollama
         print()
         can_run, reason = self.analyzer.can_run_ollama()
         if can_run:
-            self.print_success(f"Ollama compatible: {reason}")
+            self.ui.print_success(f"Ollama compatible: {reason}")
         else:
-            self.print_error(f"Ollama no compatible: {reason}")
+            self.ui.print_error(f"Ollama no compatible: {reason}")
 
-        print(f"\n{Color.CYAN}Presiona Enter para continuar...{Color.RESET}")
+        print(f"\n{ConsoleColors.CYAN}Presiona Enter para continuar...{ConsoleColors.RESET}")
         input()
 
     def ask_ollama_installation(self):
         """
         Pregunta al usuario si desea instalar Ollama, mostrando sus beneficios.
         """
-        self.clear_screen()
-        self.print_header("INSTALACIÓN DE OLLAMA")
+        self.ui.clear_screen()
+        self.ui.print_header("INSTALACIÓN DE OLLAMA")
 
         print(
-            f"{Color.WHITE}Ollama es un motor de IA local que permite ejecutar modelos de lenguaje.{Color.RESET}"
+            f"{ConsoleColors.WHITE}Ollama es un motor de IA local que permite ejecutar modelos de lenguaje.{ConsoleColors.RESET}"
         )
-        print(f"{Color.WHITE}Beneficios:{Color.RESET}")
+        print(f"{ConsoleColors.WHITE}Beneficios:{ConsoleColors.RESET}")
         print("  • Procesamiento de lenguaje natural para problemas de Simplex")
         print("  • Funciona completamente offline (sin enviar datos a internet)")
         print("  • Múltiples modelos optimizados disponibles")
@@ -316,11 +221,11 @@ class SimplexInstaller:
         can_run, reason = self.analyzer.can_run_ollama()
 
         if not can_run:
-            self.print_warning(f"Tu sistema no cumple los requisitos: {reason}")
-            self.print_info("Puedes continuar sin Ollama usando solo el solver básico.")
+            self.ui.print_warning(f"Tu sistema no cumple los requisitos: {reason}")
+            self.ui.print_info("Puedes continuar sin Ollama usando solo el solver básico.")
             self.install_ollama = False
         else:
-            self.install_ollama = self.ask_yes_no("¿Deseas instalar Ollama?", default=True)
+            self.install_ollama = self.ui.ask_yes_no("¿Deseas instalar Ollama?", default=True)
 
     def select_ai_models(self):
         """
@@ -329,47 +234,51 @@ class SimplexInstaller:
         if not self.install_ollama:
             return
 
-        self.clear_screen()
-        self.print_header("SELECCIÓN DE MODELOS DE IA")
+        self.ui.clear_screen()
+        self.ui.print_header("SELECCIÓN DE MODELOS DE IA")
 
         recommendations = self.analyzer.get_model_recommendations()
 
-        print(f"{Color.WHITE}Modelos disponibles (ordenados por tamaño):{Color.RESET}\n")
+        print(
+            f"{ConsoleColors.WHITE}Modelos disponibles (ordenados por tamaño):{ConsoleColors.RESET}\n"
+        )
 
         # Mostrar modelos con información detallada
         for i, rec in enumerate(recommendations, 1):
             status = (
-                f"{Color.GREEN}✓ RECOMENDADO{Color.RESET}"
+                f"{ConsoleColors.GREEN}✓ RECOMENDADO{ConsoleColors.RESET}"
                 if rec.recommended
-                else f"{Color.YELLOW}⚠ REQUIERE MÁS RAM{Color.RESET}"
+                else f"{ConsoleColors.YELLOW}⚠ REQUIERE MÁS RAM{ConsoleColors.RESET}"
             )
 
-            print(f"{Color.BOLD}{i}. {rec.name}{Color.RESET}")
+            print(f"{ConsoleColors.BOLD}{i}. {rec.name}{ConsoleColors.RESET}")
             print(f"   Tamaño: {rec.size} | RAM requerida: {rec.ram_required_gb} GB")
             print(f"   {rec.description}")
             print(f"   Estado: {status} - {rec.reason}")
             print()
 
         # Opción de instalar todos los recomendados
-        print(f"\n{Color.CYAN}Opciones de instalación:{Color.RESET}")
+        print(f"\n{ConsoleColors.CYAN}Opciones de instalación:{ConsoleColors.RESET}")
         print(f"  A. Instalar todos los modelos recomendados")
         print(f"  B. Seleccionar modelos manualmente")
         print(f"  C. No instalar ningún modelo ahora (puedes hacerlo después)")
 
         while True:
             choice = (
-                input(f"\n{Color.YELLOW}Elige una opción (A/B/C): {Color.RESET}").strip().upper()
+                input(f"\n{ConsoleColors.YELLOW}Elige una opción (A/B/C): {ConsoleColors.RESET}")
+                .strip()
+                .upper()
             )
 
             if choice == "A":
                 self.selected_models = [rec.name for rec in recommendations if rec.recommended]
                 if self.selected_models:
-                    print(f"\n{Color.GREEN}Modelos seleccionados:{Color.RESET}")
+                    print(f"\n{ConsoleColors.GREEN}Modelos seleccionados:{ConsoleColors.RESET}")
                     for model in self.selected_models:
                         print(f"  • {model}")
                 else:
-                    self.print_warning("No hay modelos recomendados para tu sistema.")
-                    self.print_info("Puedes instalar modelos manualmente después.")
+                    self.ui.print_warning("No hay modelos recomendados para tu sistema.")
+                    self.ui.print_info("Puedes instalar modelos manualmente después.")
                 break
 
             elif choice == "B":
@@ -378,15 +287,15 @@ class SimplexInstaller:
 
             elif choice == "C":
                 self.selected_models = []
-                self.print_info(
+                self.ui.print_info(
                     "No se instalarán modelos. Puedes hacerlo después con 'ollama pull <modelo>'"
                 )
                 break
 
             else:
-                self.print_warning("Por favor elige A, B o C")
+                self.ui.print_warning("Por favor elige A, B o C")
 
-        print(f"\n{Color.CYAN}Presiona Enter para continuar...{Color.RESET}")
+        print(f"\n{ConsoleColors.CYAN}Presiona Enter para continuar...{ConsoleColors.RESET}")
         input()
 
     def _select_models_manually(self, recommendations) -> List[str]:
@@ -395,12 +304,18 @@ class SimplexInstaller:
         """
         selected = []
 
-        print(f"\n{Color.WHITE}Selecciona los modelos que deseas instalar:{Color.RESET}")
-        print(f"{Color.CYAN}(Ingresa los números separados por comas, ej: 1,3,5){Color.RESET}")
+        print(
+            f"\n{ConsoleColors.WHITE}Selecciona los modelos que deseas instalar:{ConsoleColors.RESET}"
+        )
+        print(
+            f"{ConsoleColors.CYAN}(Ingresa los números separados por comas, ej: 1,3,5){ConsoleColors.RESET}"
+        )
 
         while True:
             try:
-                response = input(f"\n{Color.YELLOW}Números de modelos: {Color.RESET}").strip()
+                response = input(
+                    f"\n{ConsoleColors.YELLOW}Números de modelos: {ConsoleColors.RESET}"
+                ).strip()
 
                 if not response:
                     break
@@ -413,16 +328,16 @@ class SimplexInstaller:
                         if model_name not in selected:
                             selected.append(model_name)
                     else:
-                        self.print_warning(f"Índice {idx + 1} fuera de rango")
+                        self.ui.print_warning(f"Índice {idx + 1} fuera de rango")
 
                 if selected:
-                    print(f"\n{Color.GREEN}Modelos seleccionados:{Color.RESET}")
+                    print(f"\n{ConsoleColors.GREEN}Modelos seleccionados:{ConsoleColors.RESET}")
                     for model in selected:
                         print(f"  • {model}")
                     break
 
             except ValueError:
-                self.print_warning("Por favor ingresa números válidos separados por comas")
+                self.ui.print_warning("Por favor ingresa números válidos separados por comas")
 
         return selected
 
@@ -431,11 +346,11 @@ class SimplexInstaller:
         Pregunta al usuario si desea instalar el menú contextual de Windows.
         Si se ejecuta como administrador, lo instala automáticamente.
         """
-        self.clear_screen()
-        self.print_header("MENÚ CONTEXTUAL DE WINDOWS")
+        self.ui.clear_screen()
+        self.ui.print_header("MENÚ CONTEXTUAL DE WINDOWS")
 
         print(
-            f"{Color.WHITE}El menú contextual permite resolver problemas desde el explorador:{Color.RESET}\n"
+            f"{ConsoleColors.WHITE}El menú contextual permite resolver problemas desde el explorador:{ConsoleColors.RESET}\n"
         )
         print("  • Click derecho en archivos .txt con problemas de Simplex")
         print("  • Opción 'Resolver con Simplex Solver'")
@@ -445,22 +360,22 @@ class SimplexInstaller:
 
         # Si estamos ejecutando como administrador, instalar automáticamente
         if self.is_admin and platform.system() == "Windows":
-            self.print_success(
+            self.ui.print_success(
                 "✓ Ejecutando como administrador - El menú contextual se instalará automáticamente"
             )
             self.install_context_menu = True
-            print(f"\n{Color.CYAN}Presiona Enter para continuar...{Color.RESET}")
+            print(f"\n{ConsoleColors.CYAN}Presiona Enter para continuar...{ConsoleColors.RESET}")
             input()
         else:
             # Si no es admin, preguntar (aunque probablemente no se pueda instalar)
             if platform.system() == "Windows" and not self.is_admin:
-                self.print_warning("⚠ No se detectaron permisos de administrador")
-                self.print_info(
+                self.ui.print_warning("⚠ No se detectaron permisos de administrador")
+                self.ui.print_info(
                     "  El menú contextual requiere permisos de administrador para instalarse"
                 )
                 print()
 
-            self.install_context_menu = self.ask_yes_no(
+            self.install_context_menu = self.ui.ask_yes_no(
                 "¿Deseas instalar el menú contextual?", default=self.is_admin
             )
 
@@ -468,22 +383,24 @@ class SimplexInstaller:
         """
         Muestra un resumen de los componentes que se instalarán.
         """
-        self.clear_screen()
-        self.print_header("RESUMEN DE INSTALACIÓN")
+        self.ui.clear_screen()
+        self.ui.print_header("RESUMEN DE INSTALACIÓN")
 
-        print(f"{Color.WHITE}Se instalarán los siguientes componentes:{Color.RESET}\n")
+        print(
+            f"{ConsoleColors.WHITE}Se instalarán los siguientes componentes:{ConsoleColors.RESET}\n"
+        )
 
         # Componentes base
-        self.print_section("Componentes Base")
+        self.ui.print_section("Componentes Base")
         print("  ✓ Simplex Solver (siempre se instala)")
         print("  ✓ Dependencias de Python (numpy, psutil, etc.)")
 
         # Ollama
-        self.print_section("Ollama")
+        self.ui.print_section("Ollama")
         if self.install_ollama:
-            self.print_success("Se instalará Ollama")
+            self.ui.print_success("Se instalará Ollama")
             if self.selected_models:
-                print(f"\n  {Color.WHITE}Modelos de IA a descargar:{Color.RESET}")
+                print(f"\n  {ConsoleColors.WHITE}Modelos de IA a descargar:{ConsoleColors.RESET}")
                 total_size = 0
                 for model in self.selected_models:
                     # Buscar el tamaño del modelo
@@ -492,20 +409,20 @@ class SimplexInstaller:
                             print(f"    • {model} ({rec.size})")
                             break
             else:
-                self.print_info("No se descargarán modelos (puedes hacerlo después)")
+                self.ui.print_info("No se descargarán modelos (puedes hacerlo después)")
         else:
-            self.print_info("No se instalará Ollama")
+            self.ui.print_info("No se instalará Ollama")
 
         # Menú contextual
-        self.print_section("Menú Contextual")
+        self.ui.print_section("Menú Contextual")
         if self.install_context_menu:
-            self.print_success("Se instalará el menú contextual de Windows")
+            self.ui.print_success("Se instalará el menú contextual de Windows")
         else:
-            self.print_info("No se instalará el menú contextual")
+            self.ui.print_info("No se instalará el menú contextual")
 
         print()
-        if not self.ask_yes_no("¿Deseas continuar con la instalación?", default=True):
-            self.print_info("Instalación cancelada por el usuario")
+        if not self.ui.ask_yes_no("¿Deseas continuar con la instalación?", default=True):
+            self.ui.print_info("Instalación cancelada por el usuario")
             sys.exit(0)
 
     def install_python_dependencies(self):
@@ -513,21 +430,21 @@ class SimplexInstaller:
         Instala las dependencias de Python necesarias para el Simplex Solver.
         Verifica la existencia de un ejecutable de Python y el archivo de requisitos.
         """
-        self.print_section("Instalando Dependencias de Python")
+        self.ui.print_section("Instalando Dependencias de Python")
 
         # Detectar el ejecutable de Python del sistema
         python_exe = self._find_python_executable()
         if not python_exe:
-            self.print_error("No se pudo encontrar Python en el sistema")
-            self.print_info("Por favor, instala Python desde https://www.python.org/")
+            self.ui.print_error("No se pudo encontrar Python en el sistema")
+            self.ui.print_info("Por favor, instala Python desde https://www.python.org/")
             return False
 
-        self.print_info(f"Usando Python: {python_exe}")
+        self.ui.print_info(f"Usando Python: {python_exe}")
 
         requirements_file = self.project_root / "requirements.txt"
 
         if not requirements_file.exists():
-            self.print_error(f"No se encontró {requirements_file}")
+            self.ui.print_error(f"No se encontró {requirements_file}")
             return False
 
         try:
@@ -536,7 +453,7 @@ class SimplexInstaller:
                 packages = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
             total_packages = len(packages)
-            self.print_info(f"Se instalarán {total_packages} paquetes...")
+            self.ui.print_info(f"Se instalarán {total_packages} paquetes...")
             print()
 
             # Instalar cada paquete y mostrar progreso
@@ -561,13 +478,13 @@ class SimplexInstaller:
                     installed += 1
                 else:
                     print()  # Nueva línea
-                    self.print_warning(f"No se pudo instalar {package}")
+                    self.ui.print_warning(f"No se pudo instalar {package}")
 
             print()  # Nueva línea después de la barra
             print()
 
             if installed == total_packages:
-                self.print_success(
+                self.ui.print_success(
                     f"✓ {installed}/{total_packages} dependencias instaladas correctamente"
                 )
                 self.log_operation(
@@ -575,7 +492,7 @@ class SimplexInstaller:
                 )
                 return True
             elif installed > 0:
-                self.print_warning(
+                self.ui.print_warning(
                     f"⚠ {installed}/{total_packages} dependencias instaladas (algunas fallaron)"
                 )
                 self.log_operation(
@@ -585,13 +502,13 @@ class SimplexInstaller:
                 )
                 return True
             else:
-                self.print_error("✗ No se pudieron instalar las dependencias")
+                self.ui.print_error("✗ No se pudieron instalar las dependencias")
                 self.log_operation("Dependencias Python", False, "Error al instalar paquetes")
                 return False
 
         except Exception as e:
             print()  # Nueva línea
-            self.print_error(f"Error: {e}")
+            self.ui.print_error(f"Error: {e}")
             self.log_operation("Dependencias Python", False, str(e))
             return False
 
@@ -602,7 +519,7 @@ class SimplexInstaller:
         if not self.install_ollama:
             return True
 
-        self.print_section("Instalando Ollama")
+        self.ui.print_section("Instalando Ollama")
 
         # Verificar si ya está instalado
         try:
@@ -611,30 +528,32 @@ class SimplexInstaller:
             )
 
             if result.returncode == 0:
-                self.print_success(f"Ollama ya está instalado: {result.stdout.strip()}")
+                self.ui.print_success(f"Ollama ya está instalado: {result.stdout.strip()}")
                 self.log_operation("Ollama", True, "Ya instalado")
                 return True
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
 
         # Instrucciones para instalar Ollama
-        self.print_info("Ollama no está instalado en el sistema")
-        print(f"\n{Color.WHITE}Para instalar Ollama:{Color.RESET}")
-        print(f"  1. Visita: {Color.CYAN}https://ollama.ai/download{Color.RESET}")
+        self.ui.print_info("Ollama no está instalado en el sistema")
+        print(f"\n{ConsoleColors.WHITE}Para instalar Ollama:{ConsoleColors.RESET}")
+        print(f"  1. Visita: {ConsoleColors.CYAN}https://ollama.ai/download{ConsoleColors.RESET}")
         print(f"  2. Descarga el instalador para Windows")
         print(f"  3. Ejecuta el instalador")
         print(f"  4. Reinicia el terminal")
 
-        if self.ask_yes_no("¿Deseas abrir el sitio de descarga ahora?", default=True):
+        if self.ui.ask_yes_no("¿Deseas abrir el sitio de descarga ahora?", default=True):
             try:
                 if platform.system() == "Windows":
                     os.startfile("https://ollama.ai/download")
                 else:
                     subprocess.run(["xdg-open", "https://ollama.ai/download"])
             except:
-                self.print_warning("No se pudo abrir el navegador automáticamente")
+                self.ui.print_warning("No se pudo abrir el navegador automáticamente")
 
-        self.print_warning("Completa la instalación de Ollama y vuelve a ejecutar este instalador")
+        self.ui.print_warning(
+            "Completa la instalación de Ollama y vuelve a ejecutar este instalador"
+        )
         self.log_operation("Ollama", False, "No instalado - requiere instalación manual")
         return False
 
@@ -646,7 +565,7 @@ class SimplexInstaller:
         if not self.selected_models:
             return True
 
-        self.print_section("Descargando Modelos de IA")
+        self.ui.print_section("Descargando Modelos de IA")
 
         # Verificar que Ollama esté disponible
         try:
@@ -656,14 +575,16 @@ class SimplexInstaller:
             subprocess.TimeoutExpired,
             subprocess.CalledProcessError,
         ):
-            self.print_error("Ollama no está disponible. Instálalo primero.")
+            self.ui.print_error("Ollama no está disponible. Instálalo primero.")
             return False
 
         success = True
         total_models = len(self.selected_models)
 
         for idx, model in enumerate(self.selected_models, 1):
-            print(f"\n{Color.CYAN}[{idx}/{total_models}] Descargando {model}...{Color.RESET}")
+            print(
+                f"\n{ConsoleColors.CYAN}[{idx}/{total_models}] Descargando {model}...{ConsoleColors.RESET}"
+            )
             print("-" * 70)
 
             try:
@@ -687,15 +608,15 @@ class SimplexInstaller:
                 process.wait()
 
                 if process.returncode == 0:
-                    self.print_success(f"✓ Modelo {model} descargado correctamente")
+                    self.ui.print_success(f"✓ Modelo {model} descargado correctamente")
                     self.log_operation(f"Modelo IA: {model}", True, "Descargado")
                 else:
-                    self.print_error(f"✗ Error al descargar {model}")
+                    self.ui.print_error(f"✗ Error al descargar {model}")
                     self.log_operation(f"Modelo IA: {model}", False, "Error en descarga")
                     success = False
 
             except Exception as e:
-                self.print_error(f"✗ Error al descargar {model}: {e}")
+                self.ui.print_error(f"✗ Error al descargar {model}: {e}")
                 self.log_operation(f"Modelo IA: {model}", False, str(e))
                 success = False
 
@@ -708,27 +629,27 @@ class SimplexInstaller:
         if not self.install_context_menu:
             return True
 
-        self.print_section("Instalando Menú Contextual")
+        self.ui.print_section("Instalando Menú Contextual")
 
         # Verificar permisos de administrador
         if not self.is_admin and platform.system() == "Windows":
-            self.print_error(
+            self.ui.print_error(
                 "Se requieren permisos de administrador para instalar el menú contextual"
             )
-            self.print_info("Por favor, ejecuta el instalador como administrador")
+            self.ui.print_info("Por favor, ejecuta el instalador como administrador")
             self.log_operation("Menú Contextual", False, "Sin permisos de administrador")
             return False
 
         if platform.system() != "Windows":
-            self.print_error("El menú contextual solo está disponible en Windows")
+            self.ui.print_error("El menú contextual solo está disponible en Windows")
             self.log_operation("Menú Contextual", False, "Solo disponible en Windows")
             return False
 
         try:
-            self.print_info("Configurando menú contextual de Windows...")
+            self.ui.print_info("Configurando menú contextual de Windows...")
             print()
-            print(f"  {Color.CYAN}► Creando entradas en el registro{Color.RESET}")
-            print(f"  {Color.CYAN}► Configurando comandos del menú{Color.RESET}")
+            print(f"  {ConsoleColors.CYAN}► Creando entradas en el registro{ConsoleColors.RESET}")
+            print(f"  {ConsoleColors.CYAN}► Configurando comandos del menú{ConsoleColors.RESET}")
             print()
 
             # Rutas necesarias
@@ -738,14 +659,14 @@ class SimplexInstaller:
 
             # Verificar que existen los archivos
             if not bat_wrapper.exists():
-                self.print_error(f"No se encontró {bat_wrapper}")
+                self.ui.print_error(f"No se encontró {bat_wrapper}")
                 self.log_operation(
                     "Menú Contextual", False, f"Archivo no encontrado: run_solver.bat"
                 )
                 return False
 
             if not bat_wrapper_ai.exists():
-                self.print_error(f"No se encontró {bat_wrapper_ai}")
+                self.ui.print_error(f"No se encontró {bat_wrapper_ai}")
                 self.log_operation(
                     "Menú Contextual", False, f"Archivo no encontrado: run_solver_ai.bat"
                 )
@@ -771,20 +692,20 @@ class SimplexInstaller:
                     winreg.SetValueEx(key, value_name, 0, winreg.REG_SZ, value_data)
                     winreg.CloseKey(key)
                 except Exception as e:
-                    self.print_error(f"Error al crear {key_path}: {e}")
+                    self.ui.print_error(f"Error al crear {key_path}: {e}")
                     self.log_operation(
                         "Menú Contextual", False, f"Error en registro: {str(e)[:100]}"
                     )
                     return False
 
-            print(f"  {Color.GREEN}✓ Entradas del registro creadas{Color.RESET}")
-            print(f"  {Color.GREEN}✓ Comandos configurados{Color.RESET}")
-            self.print_success("✓ Menú contextual instalado correctamente")
+            print(f"  {ConsoleColors.GREEN}✓ Entradas del registro creadas{ConsoleColors.RESET}")
+            print(f"  {ConsoleColors.GREEN}✓ Comandos configurados{ConsoleColors.RESET}")
+            self.ui.print_success("✓ Menú contextual instalado correctamente")
             self.log_operation("Menú Contextual", True, "Registrado en Windows")
             return True
 
         except Exception as e:
-            self.print_error(f"Error inesperado: {e}")
+            self.ui.print_error(f"Error inesperado: {e}")
             self.log_operation("Menú Contextual", False, str(e))
             return False
 
@@ -792,30 +713,30 @@ class SimplexInstaller:
         """
         Muestra un mensaje final con el log de instalación y próximos pasos.
         """
-        self.clear_screen()
-        self.print_header("INSTALACIÓN COMPLETADA")
+        self.ui.clear_screen()
+        self.ui.print_header("INSTALACIÓN COMPLETADA")
 
         # Mostrar log de instalación
         print(
-            f"\n{Color.WHITE}═══ REGISTRO DE INSTALACIÓN ══════════════════════════════════════{Color.RESET}\n"
+            f"\n{ConsoleColors.WHITE}═══ REGISTRO DE INSTALACIÓN ══════════════════════════════════════{ConsoleColors.RESET}\n"
         )
 
         if self.installation_log:
             for entry in self.installation_log:
-                status_color = Color.GREEN if entry["success"] else Color.RED
+                status_color = ConsoleColors.GREEN if entry["success"] else ConsoleColors.RED
                 print(
-                    f"  {status_color}{entry['status']}{Color.RESET} {Color.WHITE}{entry['operation']:<30}{Color.RESET}",
+                    f"  {status_color}{entry['status']}{ConsoleColors.RESET} {ConsoleColors.WHITE}{entry['operation']:<30}{ConsoleColors.RESET}",
                     end="",
                 )
                 if entry["details"]:
-                    print(f" - {Color.CYAN}{entry['details']}{Color.RESET}")
+                    print(f" - {ConsoleColors.CYAN}{entry['details']}{ConsoleColors.RESET}")
                 else:
                     print()
         else:
-            print(f"  {Color.YELLOW}(No hay operaciones registradas){Color.RESET}")
+            print(f"  {ConsoleColors.YELLOW}(No hay operaciones registradas){ConsoleColors.RESET}")
 
         print(
-            f"\n{Color.WHITE}══════════════════════════════════════════════════════════════════{Color.RESET}\n"
+            f"\n{ConsoleColors.WHITE}══════════════════════════════════════════════════════════════════{ConsoleColors.RESET}\n"
         )
 
         # Contar éxitos y fallos
@@ -824,57 +745,61 @@ class SimplexInstaller:
         failures = total - successes
 
         if failures == 0:
-            self.print_success(
+            self.ui.print_success(
                 f"✓ Todas las operaciones completadas exitosamente ({successes}/{total})"
             )
         else:
-            self.print_warning(
+            self.ui.print_warning(
                 f"⚠ {successes}/{total} operaciones exitosas, {failures} con problemas"
             )
 
             # Mostrar detalles de los errores
-            print(f"\n{Color.YELLOW}Detalles de los problemas:{Color.RESET}")
+            print(f"\n{ConsoleColors.YELLOW}Detalles de los problemas:{ConsoleColors.RESET}")
             for entry in self.installation_log:
                 if not entry["success"]:
                     print(
-                        f"  {Color.RED}•{Color.RESET} {Color.WHITE}{entry['operation']}{Color.RESET}"
+                        f"  {ConsoleColors.RED}•{ConsoleColors.RESET} {ConsoleColors.WHITE}{entry['operation']}{ConsoleColors.RESET}"
                     )
                     if entry["details"]:
                         # Mostrar detalles completos del error
                         details_lines = entry["details"].split(" | ")
                         for detail in details_lines:
-                            print(f"    {Color.CYAN}{detail}{Color.RESET}")
+                            print(f"    {ConsoleColors.CYAN}{detail}{ConsoleColors.RESET}")
             print()
 
-        print(f"\n{Color.WHITE}Próximos pasos:{Color.RESET}\n")
+        print(f"\n{ConsoleColors.WHITE}Próximos pasos:{ConsoleColors.RESET}\n")
 
         print(f"1. Para usar el solver interactivo:")
-        print(f"   {Color.CYAN}python simplex.py --interactive{Color.RESET}")
+        print(f"   {ConsoleColors.CYAN}python simplex.py --interactive{ConsoleColors.RESET}")
 
         print(f"\n2. Para resolver un archivo:")
-        print(f"   {Color.CYAN}python simplex.py ejemplos/ejemplo_maximizacion.txt{Color.RESET}")
+        print(
+            f"   {ConsoleColors.CYAN}python simplex.py ejemplos/ejemplo_maximizacion.txt{ConsoleColors.RESET}"
+        )
 
         if self.install_ollama and self.selected_models:
             print(f"\n3. Para usar el modo IA:")
             print(
-                f'   {Color.CYAN}python simplex.py --ai "tu problema en lenguaje natural"{Color.RESET}'
+                f'   {ConsoleColors.CYAN}python simplex.py --ai "tu problema en lenguaje natural"{ConsoleColors.RESET}'
             )
 
         if self.install_context_menu:
             print(f"\n4. Desde el explorador de Windows:")
             print(
-                f"   {Color.CYAN}Click derecho en un archivo .txt > Resolver con Simplex{Color.RESET}"
+                f"   {ConsoleColors.CYAN}Click derecho en un archivo .txt > Resolver con Simplex{ConsoleColors.RESET}"
             )
 
-        print(f"\n{Color.WHITE}Documentación:{Color.RESET}")
+        print(f"\n{ConsoleColors.WHITE}Documentación:{ConsoleColors.RESET}")
         print(f"  • README.md - Guía general")
         print(f"  • docs/GUIA_IA.md - Guía del sistema de IA")
         print(f"  • ejemplos/ - Problemas de ejemplo")
 
-        print(f"\n{Color.GREEN}¡Gracias por usar Simplex Solver!{Color.RESET}\n")
+        print(f"\n{ConsoleColors.GREEN}¡Gracias por usar Simplex Solver!{ConsoleColors.RESET}\n")
 
         # Esperar antes de cerrar
-        print(f"{Color.CYAN}Presiona Enter para cerrar el instalador...{Color.RESET}")
+        print(
+            f"{ConsoleColors.CYAN}Presiona Enter para cerrar el instalador...{ConsoleColors.RESET}"
+        )
         input()
 
     def run(self):
@@ -903,8 +828,8 @@ class SimplexInstaller:
             self.show_installation_summary()
 
             # Paso 7: Instalación
-            self.clear_screen()
-            self.print_header("PROCESO DE INSTALACIÓN")
+            self.ui.clear_screen()
+            self.ui.print_header("PROCESO DE INSTALACIÓN")
 
             # Calcular total de tareas
             total_tasks = 1  # Dependencias siempre
@@ -923,23 +848,23 @@ class SimplexInstaller:
                 bar = "█" * progress + "░" * (50 - progress)
                 percentage = int((task_num / total) * 100)
                 print(
-                    f"\n{Color.CYAN}╔══════════════════════════════════════════════════════════════════════╗{Color.RESET}"
+                    f"\n{ConsoleColors.CYAN}╔══════════════════════════════════════════════════════════════════════╗{ConsoleColors.RESET}"
                 )
                 print(
-                    f"{Color.CYAN}║{Color.RESET} PROGRESO GENERAL: [{bar}] {percentage}%{' ' * (70 - 34 - len(str(percentage)))}║"
+                    f"{ConsoleColors.CYAN}║{ConsoleColors.RESET} PROGRESO GENERAL: [{bar}] {percentage}%{' ' * (70 - 34 - len(str(percentage)))}║"
                 )
                 print(
-                    f"{Color.CYAN}║{Color.RESET} Tarea {task_num}/{total}: {task_name[:52]:<52}{' ' * (70 - 67)}║"
+                    f"{ConsoleColors.CYAN}║{ConsoleColors.RESET} Tarea {task_num}/{total}: {task_name[:52]:<52}{' ' * (70 - 67)}║"
                 )
                 print(
-                    f"{Color.CYAN}╚══════════════════════════════════════════════════════════════════════╝{Color.RESET}\n"
+                    f"{ConsoleColors.CYAN}╚══════════════════════════════════════════════════════════════════════╝{ConsoleColors.RESET}\n"
                 )
 
             # Instalar dependencias de Python
             current_task += 1
             show_overall_progress("Instalando dependencias de Python", current_task, total_tasks)
             if not self.install_python_dependencies():
-                self.print_error("Fallo en la instalación de dependencias")
+                self.ui.print_error("Fallo en la instalación de dependencias")
                 return False
 
             # Instalar Ollama
@@ -947,7 +872,7 @@ class SimplexInstaller:
                 current_task += 1
                 show_overall_progress("Verificando Ollama", current_task, total_tasks)
                 if not self.install_ollama_component():
-                    self.print_warning("Continúa la instalación sin Ollama")
+                    self.ui.print_warning("Continúa la instalación sin Ollama")
                 else:
                     # Descargar modelos
                     if self.selected_models:
@@ -967,14 +892,16 @@ class SimplexInstaller:
 
             # Mostrar completado
             print(
-                f"\n{Color.CYAN}╔══════════════════════════════════════════════════════════════════════╗{Color.RESET}"
-            )
-            print(f"{Color.CYAN}║{Color.RESET} PROGRESO GENERAL: [{'█' * 50}] 100%{' ' * 13}║")
-            print(
-                f"{Color.CYAN}║{Color.RESET} {Color.GREEN}✓ TODAS LAS TAREAS COMPLETADAS{Color.RESET}{' ' * 39}║"
+                f"\n{ConsoleColors.CYAN}╔══════════════════════════════════════════════════════════════════════╗{ConsoleColors.RESET}"
             )
             print(
-                f"{Color.CYAN}╚══════════════════════════════════════════════════════════════════════╝{Color.RESET}\n"
+                f"{ConsoleColors.CYAN}║{ConsoleColors.RESET} PROGRESO GENERAL: [{'█' * 50}] 100%{' ' * 13}║"
+            )
+            print(
+                f"{ConsoleColors.CYAN}║{ConsoleColors.RESET} {ConsoleColors.GREEN}✓ TODAS LAS TAREAS COMPLETADAS{ConsoleColors.RESET}{' ' * 39}║"
+            )
+            print(
+                f"{ConsoleColors.CYAN}╚══════════════════════════════════════════════════════════════════════╝{ConsoleColors.RESET}\n"
             )
 
             # Paso 8: Finalización
@@ -983,10 +910,12 @@ class SimplexInstaller:
             return True
 
         except KeyboardInterrupt:
-            print(f"\n\n{Color.YELLOW}Instalación cancelada por el usuario{Color.RESET}")
+            print(
+                f"\n\n{ConsoleColors.YELLOW}Instalación cancelada por el usuario{ConsoleColors.RESET}"
+            )
             return False
         except Exception as e:
-            self.print_error(f"Error inesperado: {e}")
+            self.ui.print_error(f"Error inesperado: {e}")
             import traceback
 
             traceback.print_exc()

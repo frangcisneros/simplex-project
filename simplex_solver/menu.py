@@ -9,127 +9,132 @@ import platform
 from pathlib import Path
 from typing import Optional
 from simplex_solver.logging_system import logger
-
-
-class Color:
-    """Códigos de color para la consola."""
-
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    RED = "\033[91m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    BLUE = "\033[94m"
-    CYAN = "\033[96m"
-    WHITE = "\033[97m"
-
-
-def enable_ansi_colors():
-    """Habilita los códigos ANSI en Windows 10+."""
-    if platform.system() == "Windows":
-        try:
-            import ctypes
-
-            kernel32 = ctypes.windll.kernel32
-            kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
-        except Exception:
-            pass
+from simplex_solver.ui import ConsoleUI, ConsoleColors, enable_ansi_colors
 
 
 class SimplexMenu:
-    """Menú interactivo principal del Simplex Solver."""
+    """
+    Menú interactivo principal del Simplex Solver.
+
+    Proporciona una interfaz de usuario basada en texto con opciones para:
+    - Resolver problemas desde archivos
+    - Entrada interactiva de problemas
+    - Visualización de historial
+    - Gestión de logs
+    - Acceso a documentación y ejemplos
+
+    Attributes:
+        running (bool): Controla el bucle principal del menú
+    """
 
     def __init__(self):
         enable_ansi_colors()
         self.running = True
+        self.ui = ConsoleUI()  # Instancia de la interfaz de consola
 
     def clear_screen(self):
         """Limpia la pantalla de la consola."""
-        os.system("cls" if os.name == "nt" else "clear")
+        self.ui.clear_screen()
 
     def print_header(self):
         """Imprime el encabezado del menú."""
-        print(f"{Color.CYAN}{'='*70}{Color.RESET}")
-        print(f"{Color.CYAN}{Color.BOLD}{'SIMPLEX SOLVER - Menú Principal':^70}{Color.RESET}")
-        print(f"{Color.CYAN}{'='*70}{Color.RESET}")
+        self.ui.print_header("SIMPLEX SOLVER - Menú Principal")
 
     def print_menu_options(self):
-        """Imprime las opciones del menú."""
-        print(f"\n{Color.WHITE}Opciones disponibles:{Color.RESET}\n")
-        print(f"  {Color.GREEN}1.{Color.RESET} Resolver problema desde archivo")
-        print(f"  {Color.GREEN}2.{Color.RESET} Modo interactivo (ingresar problema manualmente)")
-        print(f"  {Color.GREEN}3.{Color.RESET} Ver historial de problemas resueltos")
-        print(f"  {Color.GREEN}4.{Color.RESET} Ver logs del sistema")
-        print(f"  {Color.GREEN}5.{Color.RESET} Ver ubicación de logs")
-        print(f"  {Color.GREEN}6.{Color.RESET} Ver ejemplos disponibles")
-        print(f"  {Color.GREEN}7.{Color.RESET} Ayuda y documentación")
-        print(f"  {Color.GREEN}0.{Color.RESET} Salir")
-        print(f"\n{Color.CYAN}{'-'*70}{Color.RESET}")
+        """
+        Imprime las opciones del menú principal.
+
+        Muestra una lista numerada de todas las opciones disponibles
+        para el usuario, con formato colorizado para mejor legibilidad.
+        """
+        print(f"\n{ConsoleColors.WHITE}Opciones disponibles:{ConsoleColors.RESET}\n")
+        print(f"  {ConsoleColors.GREEN}1.{ConsoleColors.RESET} Resolver problema desde archivo")
+        print(
+            f"  {ConsoleColors.GREEN}2.{ConsoleColors.RESET} Modo interactivo (ingresar problema manualmente)"
+        )
+        print(
+            f"  {ConsoleColors.GREEN}3.{ConsoleColors.RESET} Ver historial de problemas resueltos"
+        )
+        print(f"  {ConsoleColors.GREEN}4.{ConsoleColors.RESET} Ver logs del sistema")
+        print(f"  {ConsoleColors.GREEN}5.{ConsoleColors.RESET} Ver ubicación de logs")
+        print(f"  {ConsoleColors.GREEN}6.{ConsoleColors.RESET} Ver ejemplos disponibles")
+        print(f"  {ConsoleColors.GREEN}7.{ConsoleColors.RESET} Ayuda y documentación")
+        print(f"  {ConsoleColors.GREEN}0.{ConsoleColors.RESET} Salir")
+        print(f"\n{ConsoleColors.CYAN}{'-'*70}{ConsoleColors.RESET}")
 
     def get_user_choice(self) -> str:
-        """Obtiene la elección del usuario."""
-        try:
-            choice = input(f"\n{Color.YELLOW}Selecciona una opción: {Color.RESET}").strip()
-            return choice
-        except (KeyboardInterrupt, EOFError):
-            return "0"
+        """
+        Obtiene la elección del usuario desde la entrada estándar.
+
+        Returns:
+            str: La opción seleccionada por el usuario (sin espacios en blanco)
+
+        Note:
+            Si el usuario presiona Ctrl+C o Ctrl+D, retorna "0" para salir.
+        """
+        return self.ui.get_input("Selecciona una opción")
 
     def pause(self, message: str = "Presiona Enter para continuar..."):
-        """Pausa la ejecución hasta que el usuario presione Enter."""
-        try:
-            input(f"\n{Color.CYAN}{message}{Color.RESET}")
-        except (KeyboardInterrupt, EOFError):
-            pass
+        """
+        Pausa la ejecución hasta que el usuario presione Enter.
+
+        Args:
+            message: Mensaje a mostrar al usuario mientras espera
+
+        Note:
+            Si el usuario presiona Ctrl+C o Ctrl+D, la función continúa
+            sin error para permitir salir del menú de forma elegante.
+        """
+        self.ui.pause(message)
 
     def option_solve_file(self):
-        """Opción 1: Resolver problema desde archivo."""
+        """
+        Opción 1: Resolver problema desde archivo.
+
+        Solicita al usuario la ruta de un archivo con un problema de programación
+        lineal, valida su existencia y permite configurar opciones adicionales
+        como generación de PDF y análisis de sensibilidad.
+        """
         self.clear_screen()
-        print(f"\n{Color.BLUE}{Color.BOLD}▶ Resolver problema desde archivo{Color.RESET}")
-        print(f"{Color.CYAN}{'-'*70}{Color.RESET}\n")
+        self.ui.print_section("Resolver problema desde archivo")
 
         # Pedir ruta del archivo
-        file_path = input(
-            f"{Color.YELLOW}Ingresa la ruta del archivo (o arrastra el archivo aquí): {Color.RESET}"
-        ).strip()
+        file_path = self.ui.get_input("Ingresa la ruta del archivo (o arrastra el archivo aquí)")
 
         # Limpiar comillas si el usuario arrastró el archivo
         file_path = file_path.strip('"').strip("'")
 
         if not file_path:
-            print(f"\n{Color.RED}✗ No se proporcionó ningún archivo{Color.RESET}")
+            self.ui.print_error("No se proporcionó ningún archivo")
             self.pause()
             return
 
         if not os.path.exists(file_path):
-            print(f"\n{Color.RED}✗ El archivo no existe: {file_path}{Color.RESET}")
+            self.ui.print_error(f"El archivo no existe: {file_path}")
             self.pause()
             return
 
-        print(f"\n{Color.GREEN}✓ Archivo encontrado: {file_path}{Color.RESET}")
+        self.ui.print_success(f"Archivo encontrado: {file_path}")
 
         # Preguntar opciones adicionales
-        print(f"\n{Color.WHITE}Opciones adicionales:{Color.RESET}")
+        print(f"\n{ConsoleColors.WHITE}Opciones adicionales:{ConsoleColors.RESET}")
 
-        gen_pdf = input(f"¿Generar reporte PDF? (s/N): {Color.RESET}").strip().lower()
-        sensitivity = (
-            input(f"¿Mostrar análisis de sensibilidad? (s/N): {Color.RESET}").strip().lower()
-        )
+        gen_pdf = self.ui.ask_yes_no("¿Generar reporte PDF?", default=False)
+        sensitivity = self.ui.ask_yes_no("¿Mostrar análisis de sensibilidad?", default=False)
 
         # Construir argumentos
         args = [file_path]
 
-        if gen_pdf in ["s", "si", "sí", "y", "yes"]:
-            pdf_name = input(f"Nombre del PDF (Enter para 'reporte.pdf'): {Color.RESET}").strip()
-            if not pdf_name:
-                pdf_name = "reporte.pdf"
+        if gen_pdf:
+            pdf_name = self.ui.get_input("Nombre del PDF", default="reporte.pdf")
             if not pdf_name.endswith(".pdf"):
                 pdf_name += ".pdf"
             args.extend(["--pdf", pdf_name])
 
-        if sensitivity in ["s", "si", "sí", "y", "yes"]:
+        if sensitivity:
             args.append("--sensitivity")
 
-        print(f"\n{Color.CYAN}{'='*70}{Color.RESET}\n")
+        print(f"\n{ConsoleColors.CYAN}{'='*70}{ConsoleColors.RESET}\n")
 
         # Importar y ejecutar
         from simplex_solver.main import ApplicationOrchestrator, create_parser
@@ -146,10 +151,15 @@ class SimplexMenu:
         self.pause()
 
     def option_interactive_mode(self):
-        """Opción 2: Modo interactivo."""
+        """
+        Opción 2: Modo interactivo.
+
+        Inicia el modo de entrada interactiva donde el usuario puede
+        ingresar manualmente todos los datos del problema (función objetivo,
+        restricciones, etc.) a través de la consola.
+        """
         self.clear_screen()
-        print(f"\n{Color.BLUE}{Color.BOLD}▶ Modo Interactivo{Color.RESET}")
-        print(f"{Color.CYAN}{'-'*70}{Color.RESET}\n")
+        self.ui.print_section("Modo Interactivo")
 
         from simplex_solver.main import ApplicationOrchestrator, create_parser
 
@@ -165,10 +175,15 @@ class SimplexMenu:
         self.pause()
 
     def option_view_history(self):
-        """Opción 3: Ver historial."""
+        """
+        Opción 3: Ver historial de problemas resueltos.
+
+        Muestra el historial de todos los problemas que han sido resueltos
+        exitosamente, permitiendo al usuario ver detalles y re-resolver
+        problemas anteriores.
+        """
         self.clear_screen()
-        print(f"\n{Color.BLUE}{Color.BOLD}▶ Historial de Problemas Resueltos{Color.RESET}")
-        print(f"{Color.CYAN}{'-'*70}{Color.RESET}\n")
+        self.ui.print_section("Historial de Problemas Resueltos")
 
         from simplex_solver.main import ApplicationOrchestrator, create_parser
 
@@ -184,60 +199,86 @@ class SimplexMenu:
         self.pause()
 
     def option_view_logs(self):
-        """Opción 4: Ver logs del sistema."""
+        """
+        Opción 4: Ver logs del sistema.
+
+        Abre el visor interactivo de logs que permite navegar por todos
+        los registros del sistema, filtrar por nivel de severidad, buscar
+        y exportar logs.
+        """
         self.clear_screen()
-        print(f"\n{Color.BLUE}{Color.BOLD}▶ Visor de Logs del Sistema{Color.RESET}")
-        print(f"{Color.CYAN}{'-'*70}{Color.RESET}\n")
+        self.ui.print_section("Visor de Logs del Sistema")
 
         try:
             from simplex_solver.log_viewer import LogViewer
 
-            viewer = LogViewer()
-            viewer.run()
-        except ImportError as e:
-            print(f"{Color.RED}✗ Error al importar el visor de logs: {e}{Color.RESET}")
-        except Exception as e:
-            print(f"{Color.RED}✗ Error al abrir el visor de logs: {e}{Color.RESET}")
-            print(
-                f"\n{Color.YELLOW}Puedes acceder directamente a la base de datos en:{Color.RESET}"
-            )
             logs_path = self._get_logs_path()
-            print(f"{Color.CYAN}{logs_path}{Color.RESET}")
+
+            if not os.path.exists(logs_path):
+                self.ui.print_warning("No se encontró la base de datos de logs")
+                self.ui.print_info("Ejecuta el programa al menos una vez para crear los logs.")
+                self.pause()
+                return
+
+            viewer = LogViewer(logs_path)
+            viewer.show_menu()
+        except ImportError as e:
+            self.ui.print_error(f"Error al importar el visor de logs: {e}")
+        except FileNotFoundError as e:
+            self.ui.print_error(f"Error: {e}")
+            self.ui.print_info("Puedes acceder directamente a la base de datos en:")
+            logs_path = self._get_logs_path()
+            print(f"{ConsoleColors.CYAN}{logs_path}{ConsoleColors.RESET}")
+        except Exception as e:
+            self.ui.print_error(f"Error al abrir el visor de logs: {e}")
+            self.ui.print_info("Puedes acceder directamente a la base de datos en:")
+            logs_path = self._get_logs_path()
+            print(f"{ConsoleColors.CYAN}{logs_path}{ConsoleColors.RESET}")
 
         self.pause()
 
     def option_logs_location(self):
-        """Opción 5: Ver ubicación de logs."""
+        """
+        Opción 5: Ver ubicación de logs.
+
+        Muestra la ruta completa donde se almacena la base de datos de logs,
+        su tamaño y estado actual. Proporciona información sobre cómo acceder
+        a los logs con herramientas externas.
+        """
         self.clear_screen()
-        print(f"\n{Color.BLUE}{Color.BOLD}▶ Ubicación de Logs{Color.RESET}")
-        print(f"{Color.CYAN}{'-'*70}{Color.RESET}\n")
+        self.ui.print_section("Ubicación de Logs")
 
         logs_path = self._get_logs_path()
 
-        print(f"{Color.WHITE}La base de datos de logs se encuentra en:{Color.RESET}\n")
-        print(f"  {Color.CYAN}{logs_path}{Color.RESET}\n")
+        self.ui.print_info("La base de datos de logs se encuentra en:")
+        print(f"  {ConsoleColors.CYAN}{logs_path}{ConsoleColors.RESET}\n")
 
         if os.path.exists(logs_path):
             size = os.path.getsize(logs_path)
-            print(f"  {Color.GREEN}✓ Estado: Base de datos ENCONTRADA{Color.RESET}")
-            print(f"  {Color.WHITE}Tamaño: {size:,} bytes ({size/1024:.2f} KB){Color.RESET}\n")
-            print(f"{Color.WHITE}Puedes abrir este archivo con:{Color.RESET}")
+            self.ui.print_success(f"Estado: Base de datos ENCONTRADA")
+            print(
+                f"  {ConsoleColors.WHITE}Tamaño: {size:,} bytes ({size/1024:.2f} KB){ConsoleColors.RESET}\n"
+            )
+            self.ui.print_info("Puedes abrir este archivo con:")
             print(f"  • DB Browser for SQLite (https://sqlitebrowser.org/)")
             print(f"  • Cualquier cliente SQLite")
             print(f"  • O usar el visor integrado (opción 4 del menú)")
         else:
-            print(f"  {Color.YELLOW}⚠ Estado: Base de datos NO ENCONTRADA{Color.RESET}")
-            print(
-                f"  {Color.WHITE}Ejecuta el programa al menos una vez para crear los logs.{Color.RESET}"
-            )
+            self.ui.print_warning("Estado: Base de datos NO ENCONTRADA")
+            self.ui.print_info("Ejecuta el programa al menos una vez para crear los logs.")
 
         self.pause()
 
     def option_view_examples(self):
-        """Opción 6: Ver ejemplos disponibles."""
+        """
+        Opción 6: Ver ejemplos disponibles.
+
+        Lista todos los archivos de ejemplo disponibles en el proyecto,
+        mostrando sus nombres y tamaños. Proporciona instrucciones sobre
+        cómo ejecutar estos ejemplos.
+        """
         self.clear_screen()
-        print(f"\n{Color.BLUE}{Color.BOLD}▶ Ejemplos Disponibles{Color.RESET}")
-        print(f"{Color.CYAN}{'-'*70}{Color.RESET}\n")
+        self.ui.print_section("Ejemplos Disponibles")
 
         # Buscar carpeta de ejemplos
         examples_dirs = [
@@ -252,7 +293,7 @@ class SimplexMenu:
                 break
 
         if not examples_dir:
-            print(f"{Color.RED}✗ No se encontró la carpeta de ejemplos{Color.RESET}")
+            self.ui.print_error("No se encontró la carpeta de ejemplos")
             self.pause()
             return
 
@@ -260,52 +301,61 @@ class SimplexMenu:
         example_files = sorted(examples_dir.glob("*.txt"))
 
         if not example_files:
-            print(f"{Color.YELLOW}⚠ No se encontraron archivos de ejemplo{Color.RESET}")
+            self.ui.print_warning("No se encontraron archivos de ejemplo")
             self.pause()
             return
 
-        print(f"{Color.WHITE}Archivos de ejemplo encontrados:{Color.RESET}\n")
+        self.ui.print_info("Archivos de ejemplo encontrados:")
 
         for i, file in enumerate(example_files, 1):
             size = file.stat().st_size
             print(
-                f"  {Color.GREEN}{i:2}.{Color.RESET} {Color.CYAN}{file.name:<40}{Color.RESET} ({size} bytes)"
+                f"  {ConsoleColors.GREEN}{i:2}.{ConsoleColors.RESET} {ConsoleColors.CYAN}{file.name:<40}{ConsoleColors.RESET} ({size} bytes)"
             )
 
-        print(f"\n{Color.WHITE}Para ejecutar un ejemplo:{Color.RESET}")
+        self.ui.print_info("\nPara ejecutar un ejemplo:")
         print(f"  • Usa la opción 1 del menú")
         print(
-            f"  • Ingresa la ruta: {Color.CYAN}{examples_dir / 'nombre_archivo.txt'}{Color.RESET}"
+            f"  • Ingresa la ruta: {ConsoleColors.CYAN}{examples_dir / 'nombre_archivo.txt'}{ConsoleColors.RESET}"
         )
 
         self.pause()
 
     def option_help(self):
-        """Opción 7: Ayuda y documentación."""
+        """
+        Opción 7: Ayuda y documentación.
+
+        Muestra información completa sobre el uso del programa, incluyendo:
+        - Formato de archivos de entrada
+        - Ejemplos de uso
+        - Características avanzadas disponibles
+        - Referencias a documentación adicional
+        """
         self.clear_screen()
-        print(f"\n{Color.BLUE}{Color.BOLD}▶ Ayuda y Documentación{Color.RESET}")
-        print(f"{Color.CYAN}{'-'*70}{Color.RESET}\n")
+        self.ui.print_section("Ayuda y Documentación")
 
-        print(f"{Color.WHITE}SIMPLEX SOLVER - Sistema de Programación Lineal{Color.RESET}\n")
+        print(
+            f"{ConsoleColors.WHITE}SIMPLEX SOLVER - Sistema de Programación Lineal{ConsoleColors.RESET}\n"
+        )
 
-        print(f"{Color.GREEN}Uso básico:{Color.RESET}")
+        self.ui.print_success("Uso básico:")
         print(f"  1. Selecciona la opción 1 para resolver un archivo")
         print(f"  2. O usa la opción 2 para ingresar el problema manualmente")
         print(f"  3. El programa mostrará el paso a paso del método Simplex\n")
 
-        print(f"{Color.GREEN}Formato de archivos:{Color.RESET}")
+        self.ui.print_success("Formato de archivos:")
         print(f"  • Primera línea: 'MAX' o 'MIN'")
         print(f"  • Segunda línea: Coeficientes de la función objetivo")
         print(f"  • Líneas siguientes: Restricciones en formato:")
         print(f"    coef1 coef2 ... coefN <= valor  (o >=, =)\n")
 
-        print(f"{Color.GREEN}Ejemplo:{Color.RESET}")
-        print(f"  {Color.CYAN}MAX")
+        self.ui.print_success("Ejemplo:")
+        print(f"  {ConsoleColors.CYAN}MAX")
         print(f"  3 2")
         print(f"  2 1 <= 100")
-        print(f"  1 1 <= 80{Color.RESET}\n")
+        print(f"  1 1 <= 80{ConsoleColors.RESET}\n")
 
-        print(f"{Color.GREEN}Documentación:{Color.RESET}")
+        self.ui.print_success("Documentación:")
         docs_files = [
             ("README.md", "Guía general del proyecto"),
             ("GUIA_USUARIO.md", "Guía completa para usuarios"),
@@ -315,9 +365,11 @@ class SimplexMenu:
         for doc_file, description in docs_files:
             doc_path = Path(__file__).parent.parent / doc_file
             if doc_path.exists():
-                print(f"  • {Color.CYAN}{doc_file:<25}{Color.RESET} - {description}")
+                print(
+                    f"  • {ConsoleColors.CYAN}{doc_file:<25}{ConsoleColors.RESET} - {description}"
+                )
 
-        print(f"\n{Color.GREEN}Características avanzadas:{Color.RESET}")
+        self.ui.print_success("\nCaracterísticas avanzadas:")
         print(f"  • Análisis de sensibilidad (--sensitivity)")
         print(f"  • Generación de reportes PDF (--pdf)")
         print(f"  • Historial de problemas resueltos")
@@ -327,13 +379,27 @@ class SimplexMenu:
         self.pause()
 
     def option_exit(self):
-        """Opción 0: Salir del programa."""
+        """
+        Opción 0: Salir del programa.
+
+        Finaliza la ejecución del menú y cierra el programa de forma limpia,
+        mostrando un mensaje de despedida al usuario.
+        """
         self.clear_screen()
-        print(f"\n{Color.GREEN}¡Gracias por usar Simplex Solver!{Color.RESET}\n")
+        self.ui.print_success("\n¡Gracias por usar Simplex Solver!\n")
         self.running = False
 
     def _get_logs_path(self) -> str:
-        """Obtiene la ruta de la base de datos de logs."""
+        """
+        Obtiene la ruta completa de la base de datos de logs.
+
+        La ubicación varía según el sistema operativo:
+        - Windows: %APPDATA%/SimplexSolver/logs/simplex_logs.db
+        - Linux/macOS: ~/.simplex_solver/logs/simplex_logs.db
+
+        Returns:
+            str: Ruta absoluta al archivo de base de datos de logs
+        """
         if platform.system() == "Windows":
             appdata = os.getenv("APPDATA", "")
             logs_dir = os.path.join(appdata, "SimplexSolver", "logs")
@@ -344,7 +410,17 @@ class SimplexMenu:
         return os.path.join(logs_dir, "simplex_logs.db")
 
     def run(self):
-        """Ejecuta el menú principal."""
+        """
+        Ejecuta el bucle principal del menú interactivo.
+
+        Muestra el menú repetidamente hasta que el usuario seleccione
+        la opción de salir. Maneja todas las opciones del menú y
+        redirige a las funciones correspondientes.
+
+        Note:
+            Este método registra el inicio y fin de la sesión en el
+            sistema de logging.
+        """
         logger.info("=== Iniciando Simplex Solver - Menú Interactivo ===")
 
         while self.running:
@@ -372,7 +448,7 @@ class SimplexMenu:
                 self.option_exit()
             else:
                 print(
-                    f"\n{Color.RED}✗ Opción no válida. Por favor, selecciona una opción del 0 al 7.{Color.RESET}"
+                    f"\n{ConsoleColors.RED}✗ Opción no válida. Por favor, selecciona una opción del 0 al 7.{ConsoleColors.RESET}"
                 )
                 self.pause("Presiona Enter para volver al menú...")
 
@@ -380,7 +456,13 @@ class SimplexMenu:
 
 
 def show_menu():
-    """Función principal para mostrar el menú."""
+    """
+    Función principal para inicializar y mostrar el menú interactivo.
+
+    Crea una instancia de SimplexMenu y ejecuta su bucle principal.
+    Esta es la función que debe ser llamada desde main.py cuando
+    no se proporcionan argumentos de línea de comandos.
+    """
     menu = SimplexMenu()
     menu.run()
 
