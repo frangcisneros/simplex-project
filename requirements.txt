@@ -1,8 +1,5 @@
-# Dependencias principales en tiempo de ejecución (instalación mínima)
-# Instalar con: pip install -r requirements.txt
-
-numpy>=1.24.0  # Operaciones numéricas y matrices
-psutil>=5.9.0  # Información del sistema y procesos
-tabulate>=0.9.0  # Formateo de tablas en texto
-requests>=2.31.0  # Realización de solicitudes HTTP
-reportlab>=4.0.0  # Generación de documentos PDF
+numpy>=1.24.0
+psutil>=5.9.0
+tabulate>=0.9.0
+requests>=2.31.0
+reportlab>=4.0.0

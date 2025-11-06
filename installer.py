@@ -51,20 +51,33 @@ class SimplexInstaller:
         """
         Inicializa el instalador, detectando permisos y configurando rutas necesarias.
         """
-        self.ui = ConsoleUI()
-        self.analyzer = SystemAnalyzer()
-        self.install_ollama = False
-        self.selected_models = []
-        self.install_context_menu = False
-        self.is_admin = is_admin()  # Detectar si tiene permisos de administrador
-        self.installation_log = []  # Log de operaciones realizadas
-        # Detectar si estamos corriendo como .exe empaquetado
-        if getattr(sys, "frozen", False):
-            # Corriendo como .exe - PyInstaller extrae archivos a sys._MEIPASS
-            self.project_root = Path(getattr(sys, "_MEIPASS", "."))
-        else:
-            # Corriendo como script normal
-            self.project_root = Path(__file__).parent.resolve()
+        try:
+            self.ui = ConsoleUI()
+            self.analyzer = SystemAnalyzer()
+            self.install_ollama = False
+            self.selected_models = []
+            self.install_context_menu = False
+            self.is_admin = is_admin()  # Detectar si tiene permisos de administrador
+            self.installation_log = []  # Log de operaciones realizadas
+
+            # Detectar si estamos corriendo como .exe empaquetado
+            if getattr(sys, "frozen", False):
+                # Corriendo como .exe - PyInstaller extrae archivos a sys._MEIPASS
+                self.project_root = Path(getattr(sys, "_MEIPASS", "."))
+            else:
+                # Corriendo como script normal
+                self.project_root = Path(__file__).parent.resolve()
+
+            # Verificar que project_root existe
+            if not self.project_root.exists():
+                raise RuntimeError(f"El directorio del proyecto no existe: {self.project_root}")
+
+        except Exception as e:
+            print(f"ERROR CRÍTICO al inicializar el instalador: {e}")
+            import traceback
+
+            traceback.print_exc()
+            raise
 
     def _find_python_executable(self) -> Optional[str]:
         """
@@ -449,8 +462,19 @@ class SimplexInstaller:
 
         try:
             # Leer las dependencias del archivo
-            with open(requirements_file, "r") as f:
-                packages = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+            with open(requirements_file, "r", encoding="utf-8") as f:
+                packages = []
+                for line in f:
+                    line = line.strip()
+                    # Saltar líneas vacías o comentarios completos
+                    if not line or line.startswith("#"):
+                        continue
+                    # Eliminar comentarios inline (después del #)
+                    if "#" in line:
+                        line = line.split("#")[0].strip()
+                    # Agregar solo si quedó algo después de limpiar
+                    if line:
+                        packages.append(line)
 
             total_packages = len(packages)
             self.ui.print_info(f"Se instalarán {total_packages} paquetes...")
@@ -676,13 +700,22 @@ class SimplexInstaller:
             import winreg
 
             # Configurar para archivos .txt
+            # Los comandos deben ejecutarse con cmd.exe /c para que funcionen desde el menú contextual
             entries = [
                 # Opción normal
                 (r"txtfile\shell\SimplexSolver", "", "Resolver con Simplex Solver"),
-                (r"txtfile\shell\SimplexSolver\command", "", f'"{bat_wrapper}" "%1"'),
+                (
+                    r"txtfile\shell\SimplexSolver\command",
+                    "",
+                    f'cmd.exe /c ""{bat_wrapper}"" ""%1""',
+                ),
                 # Opción con IA
                 (r"txtfile\shell\SimplexSolverAI", "", "Resolver con Simplex Solver (IA)"),
-                (r"txtfile\shell\SimplexSolverAI\command", "", f'"{bat_wrapper_ai}" "%1"'),
+                (
+                    r"txtfile\shell\SimplexSolverAI\command",
+                    "",
+                    f'cmd.exe /c ""{bat_wrapper_ai}"" ""%1""',
+                ),
             ]
 
             # Agregar entradas
@@ -806,7 +839,11 @@ class SimplexInstaller:
         """
         Ejecuta el flujo completo del instalador, desde la bienvenida hasta la finalización.
         """
-        enable_ansi_colors()
+        try:
+            enable_ansi_colors()
+        except Exception as e:
+            print(f"Advertencia: No se pudieron habilitar colores ANSI: {e}")
+            print("Continuando sin colores...")
 
         try:
             # Paso 1: Bienvenida
@@ -913,12 +950,30 @@ class SimplexInstaller:
             print(
                 f"\n\n{ConsoleColors.YELLOW}Instalación cancelada por el usuario{ConsoleColors.RESET}"
             )
+            print(f"{ConsoleColors.CYAN}Presiona Enter para salir...{ConsoleColors.RESET}")
+            try:
+                input()
+            except:
+                pass
             return False
         except Exception as e:
-            self.ui.print_error(f"Error inesperado: {e}")
+            self.ui.print_error(f"Error inesperado durante la instalación: {e}")
+            print(f"\n{ConsoleColors.WHITE}Tipo de error:{ConsoleColors.RESET} {type(e).__name__}")
+            print(f"{ConsoleColors.WHITE}Detalles:{ConsoleColors.RESET} {str(e)}\n")
+
             import traceback
 
+            print(f"{ConsoleColors.YELLOW}Stack trace completo:{ConsoleColors.RESET}")
             traceback.print_exc()
+
+            print(
+                f"\n{ConsoleColors.CYAN}Presiona Enter para ver el log y salir...{ConsoleColors.RESET}"
+            )
+            try:
+                input()
+            except:
+                pass
+
             return False
 
 
@@ -927,8 +982,57 @@ def main():
     Punto de entrada principal del script.
     Crea una instancia del instalador y ejecuta el proceso.
     """
-    installer = SimplexInstaller()
-    success = installer.run()
+    try:
+        installer = SimplexInstaller()
+        success = installer.run()
+
+        if not success:
+            print(
+                f"\n{ConsoleColors.RED}═══════════════════════════════════════════════════════════════════════{ConsoleColors.RESET}"
+            )
+            print(
+                f"{ConsoleColors.RED}║ La instalación no se completó exitosamente                           ║{ConsoleColors.RESET}"
+            )
+            print(
+                f"{ConsoleColors.RED}═══════════════════════════════════════════════════════════════════════{ConsoleColors.RESET}\n"
+            )
+
+    except Exception as e:
+        print(
+            f"\n{ConsoleColors.RED}═══════════════════════════════════════════════════════════════════════{ConsoleColors.RESET}"
+        )
+        print(
+            f"{ConsoleColors.RED}║ ERROR CRÍTICO EN EL INSTALADOR                                       ║{ConsoleColors.RESET}"
+        )
+        print(
+            f"{ConsoleColors.RED}═══════════════════════════════════════════════════════════════════════{ConsoleColors.RESET}"
+        )
+        print(f"\n{ConsoleColors.WHITE}Tipo de error:{ConsoleColors.RESET} {type(e).__name__}")
+        print(f"{ConsoleColors.WHITE}Mensaje:{ConsoleColors.RESET} {str(e)}\n")
+
+        import traceback
+
+        print(f"{ConsoleColors.YELLOW}Stack trace completo:{ConsoleColors.RESET}")
+        traceback.print_exc()
+
+        success = False
+
+    finally:
+        # PAUSA FINAL - Siempre esperar antes de cerrar
+        print(
+            f"\n{ConsoleColors.CYAN}═══════════════════════════════════════════════════════════════════════{ConsoleColors.RESET}"
+        )
+        print(
+            f"{ConsoleColors.CYAN}Presiona Enter para cerrar esta ventana...{ConsoleColors.RESET}"
+        )
+        print(
+            f"{ConsoleColors.CYAN}═══════════════════════════════════════════════════════════════════════{ConsoleColors.RESET}"
+        )
+        try:
+            input()
+        except:
+            pass  # Si input() falla, al menos intentamos
+
     sys.exit(0 if success else 1)
 
 

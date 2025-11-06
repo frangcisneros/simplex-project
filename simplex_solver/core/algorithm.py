@@ -313,6 +313,16 @@ class SimplexSolver:
             # Almacena el resultado para análisis de sensibilidad
             self._last_result = result
 
+            # Incluir análisis de sensibilidad automáticamente
+            try:
+                logger.info("Calculando análisis de sensibilidad...")
+                sensitivity = self.get_sensitivity_analysis()
+                result["sensitivity_analysis"] = sensitivity
+                logger.info("Análisis de sensibilidad incluido en el resultado")
+            except Exception as e:
+                logger.warning(f"No se pudo calcular el análisis de sensibilidad: {e}")
+                result["sensitivity_analysis"] = None
+
             return result
         else:
             return {**phase2_result, "iterations": total_iterations}

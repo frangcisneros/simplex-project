@@ -233,6 +233,8 @@ class BuildOrchestrator:
                 "context_menu;context_menu",
                 "docs;docs",
                 "README.md;.",
+                "tools/system_analyzer.py;tools",
+                "simplex_solver/ui;simplex_solver/ui",
             ],
             hidden_imports=[
                 "numpy",
@@ -241,6 +243,9 @@ class BuildOrchestrator:
                 "psutil",
                 "psutil._psutil_windows",
                 "tabulate",
+                "system_analyzer",
+                "simplex_solver.ui",
+                "simplex_solver.ui.console",
             ],
             excludes=[
                 "test",

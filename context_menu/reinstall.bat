@@ -9,7 +9,7 @@ echo ===============================================
 echo.
 
 :: Verificar permisos de administrador
-net session >nul 2>&1  # Comprueba si el script tiene permisos de administrador.
+net session >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: Este script requiere permisos de administrador.
     echo Por favor, ejecutelo haciendo clic derecho y "Ejecutar como administrador"
@@ -19,16 +19,16 @@ if %errorlevel% neq 0 (
 
 :: Paso 1: Llamar al script de desinstalación
 echo Paso 1: Desinstalando configuracion anterior...
-call "%~dp0uninstall.bat"  # Llama al script "uninstall.bat" ubicado en el mismo directorio.
+call "%~dp0uninstall.bat"
 
 echo.
 :: Paso 2: Llamar al script de instalación
 echo Paso 2: Instalando nueva configuracion...
-call "%~dp0install.bat"  # Llama al script "install.bat" ubicado en el mismo directorio.
+call "%~dp0install.bat"
 
 echo.
 echo ===============================================
 echo  REINSTALACION COMPLETADA
 echo ===============================================
 echo.
-pause  # Pausa para que el usuario pueda leer el mensaje final antes de cerrar la ventana.
+pause

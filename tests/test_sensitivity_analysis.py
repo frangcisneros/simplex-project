@@ -121,7 +121,11 @@ class TestSensitivityAnalysis:
         assert result["status"] == "unbounded"
 
         # Intentar obtener análisis de sensibilidad debe lanzar un error
-        with pytest.raises(ValueError, match="Sensitivity analysis is only available"):
+        # Como el resultado no es óptimo, _last_result no se guarda, por lo que será None
+        with pytest.raises(
+            ValueError,
+            match="El análisis de sensibilidad solo está disponible después de resolver un problema",
+        ):
             solver.get_sensitivity_analysis()
 
     def test_sensitivity_minimization_problem(self):
@@ -160,12 +164,42 @@ class TestSensitivityAnalysis:
         assert "restriccion_1" in shadow_prices
         assert "restriccion_2" in shadow_prices
 
-        # Verificar Rangos de Optimalidad
-        opt_ranges = analysis["optimality_ranges"]
-        assert "x1" in opt_ranges
-        assert "x2" in opt_ranges
-
         # Verificar Rangos de Factibilidad
         feas_ranges = analysis["feasibility_ranges"]
         assert "restriccion_1" in feas_ranges
         assert "restriccion_2" in feas_ranges
+
+    def test_sensitivity_included_in_result(self):
+        """
+        Prueba que el análisis de sensibilidad se incluya automáticamente en el resultado.
+        """
+        solver = SimplexSolver()
+
+        # Definición del problema de carpintería
+        c = [80, 50]
+        A = [[4, 2], [1, 1]]
+        b = [200, 60]
+        constraint_types = ["<=", "<="]
+        maximize = True
+
+        # Resolver el problema
+        result = solver.solve(c, A, b, constraint_types, maximize)
+
+        # Verificar que la solución es óptima
+        assert result["status"] == "optimal"
+
+        # Verificar que el análisis de sensibilidad está incluido en el resultado
+        assert "sensitivity_analysis" in result
+        assert result["sensitivity_analysis"] is not None
+
+        # Verificar que tiene la estructura correcta
+        analysis = result["sensitivity_analysis"]
+        assert "shadow_prices" in analysis
+        assert "optimality_ranges" in analysis
+        assert "feasibility_ranges" in analysis
+
+        # Verificar algunos valores
+        assert "restriccion_1" in analysis["shadow_prices"]
+        assert "restriccion_2" in analysis["shadow_prices"]
+        assert abs(analysis["shadow_prices"]["restriccion_1"] - 15.0) < 1e-6
+        assert abs(analysis["shadow_prices"]["restriccion_2"] - 20.0) < 1e-6

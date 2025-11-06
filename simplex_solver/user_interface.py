@@ -263,6 +263,10 @@ class UserInterface:
             print("\n Solución:")
             for var, value in sorted(result["solution"].items()):
                 print(f"  {var} = {value:.6f}")
+
+            # Mostrar análisis de sensibilidad si está disponible
+            if "sensitivity_analysis" in result and result["sensitivity_analysis"] is not None:
+                UserInterface._display_sensitivity_analysis(result["sensitivity_analysis"])
         elif result["status"] == "infeasible":
             print("Estado: Problema no factible")
             print(f"Mensaje: {result['message']}")
@@ -272,3 +276,59 @@ class UserInterface:
         else:
             print("Estado: Error en la resolución")
             print(f"Mensaje: {result['message']}")
+
+        print("=" * 50)
+
+    @staticmethod
+    def _display_sensitivity_analysis(analysis: dict) -> None:
+        """
+        Muestra el análisis de sensibilidad de forma legible.
+
+        Parámetros:
+            analysis: Diccionario con el análisis de sensibilidad (precios sombra, rangos).
+        """
+        print("\n" + "=" * 50)
+        print("ANÁLISIS DE SENSIBILIDAD:")
+        print("=" * 50)
+
+        # Precios Sombra
+        if "shadow_prices" in analysis:
+            print("\nPRECIOS SOMBRA (Valores Duales):")
+            print("  (Cuánto cambia el valor óptimo por unidad adicional del recurso)")
+            shadow_prices = analysis["shadow_prices"]
+            for constraint, price in sorted(shadow_prices.items()):
+                print(f"  {constraint}: {price:>10.6f}")
+
+        # Rangos de Optimalidad
+        if "optimality_ranges" in analysis:
+            print("\nRANGOS DE OPTIMALIDAD:")
+            print("  (Rangos donde los coeficientes de la F.O. mantienen la solución actual)")
+            opt_ranges = analysis["optimality_ranges"]
+            for var, (lower, upper) in sorted(opt_ranges.items()):
+                if lower == float("-inf"):
+                    lower_str = "-∞"
+                else:
+                    lower_str = f"{lower:.6f}"
+                if upper == float("inf"):
+                    upper_str = "+∞"
+                else:
+                    upper_str = f"{upper:.6f}"
+                print(f"  {var}: [{lower_str}, {upper_str}]")
+
+        # Rangos de Factibilidad
+        if "feasibility_ranges" in analysis:
+            print("\nRANGOS DE FACTIBILIDAD:")
+            print("  (Rangos donde los valores RHS mantienen la misma base óptima)")
+            feas_ranges = analysis["feasibility_ranges"]
+            for constraint, (lower, upper) in sorted(feas_ranges.items()):
+                if lower == float("-inf"):
+                    lower_str = "-∞"
+                else:
+                    lower_str = f"{lower:.6f}"
+                if upper == float("inf"):
+                    upper_str = "+∞"
+                else:
+                    upper_str = f"{upper:.6f}"
+                print(f"  {constraint}: [{lower_str}, {upper_str}]")
+
+        print("=" * 50)

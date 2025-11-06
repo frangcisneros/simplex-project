@@ -83,9 +83,7 @@ def export_to_pdf(result: dict, filename: str):
                 expr = re.sub(r"(\d)(x\d+)", r"\1 \2", expr)
                 # Espaciado alrededor de + y -
                 expr = re.sub(r"\+", " + ", expr)
-                expr = re.sub(
-                    r"(?<!^)-", " - ", expr
-                )  # evita espacio al inicio si es negativo
+                expr = re.sub(r"(?<!^)-", " - ", expr)  # evita espacio al inicio si es negativo
                 # Quitar posibles espacios dobles
                 expr = re.sub(r"\s+", " ", expr)
                 return expr.strip()
@@ -173,9 +171,7 @@ def export_to_pdf(result: dict, filename: str):
                     styles["Normal"],
                 )
             )
-            solution_content.append(
-                Spacer(1, 4)
-            )  # Espaciado extra antes de las variables
+            solution_content.append(Spacer(1, 4))  # Espaciado extra antes de las variables
 
             solution = result.get("solution", {})
             if solution:
@@ -183,14 +179,10 @@ def export_to_pdf(result: dict, filename: str):
                     f"<b><font color='{highlight_color}'>{var}={val:.2f}</font></b>"
                     for var, val in solution.items()
                 )
-                solution_content.append(
-                    Paragraph(f"<b>Para</b> {vars_str}", styles["Normal"])
-                )
+                solution_content.append(Paragraph(f"<b>Para</b> {vars_str}", styles["Normal"]))
 
         elif status == "unbounded":
-            solution_content.append(
-                Paragraph("Problema no acotado", styles["Heading3"])
-            )
+            solution_content.append(Paragraph("Problema no acotado", styles["Heading3"]))
 
         else:
             solution_content.append(
@@ -221,6 +213,121 @@ def export_to_pdf(result: dict, filename: str):
 
         elements.append(Spacer(1, 8))
 
+        # --- Análisis de Sensibilidad ---
+        if (
+            status == "optimal"
+            and "sensitivity_analysis" in result
+            and result["sensitivity_analysis"] is not None
+        ):
+            analysis = result["sensitivity_analysis"]
+
+            elements.append(Paragraph("Análisis de Sensibilidad", custom_heading2_style))
+            elements.append(Spacer(1, 4))
+
+            sensitivity_content = []
+
+            # Precios Sombra
+            if "shadow_prices" in analysis:
+                sensitivity_content.append(
+                    Paragraph("<b>Precios Sombra (Valores Duales):</b>", styles["Normal"])
+                )
+                sensitivity_content.append(Spacer(1, 2))
+
+                shadow_prices = analysis["shadow_prices"]
+                for constraint, price in sorted(shadow_prices.items()):
+                    sensitivity_content.append(
+                        Paragraph(
+                            f"<b><font color='{highlight_color}'>{constraint}:</font></b> {price:.6f}",
+                            styles["Normal"],
+                        )
+                    )
+                sensitivity_content.append(Spacer(1, 6))
+
+            # Rangos de Optimalidad
+            if "optimality_ranges" in analysis:
+                sensitivity_content.append(
+                    Paragraph("<b>Rangos de Optimalidad:</b>", styles["Normal"])
+                )
+                sensitivity_content.append(
+                    Paragraph(
+                        "<i>(Rangos donde los coeficientes de la F.O. mantienen la solución actual)</i>",
+                        styles["Normal"],
+                    )
+                )
+                sensitivity_content.append(Spacer(1, 2))
+
+                opt_ranges = analysis["optimality_ranges"]
+                for var, (lower, upper) in sorted(opt_ranges.items()):
+                    if lower == float("-inf"):
+                        lower_str = "-∞"
+                    else:
+                        lower_str = f"{lower:.6f}"
+                    if upper == float("inf"):
+                        upper_str = "+∞"
+                    else:
+                        upper_str = f"{upper:.6f}"
+
+                    sensitivity_content.append(
+                        Paragraph(
+                            f"<b><font color='{highlight_color}'>{var}:</font></b> [{lower_str}, {upper_str}]",
+                            styles["Normal"],
+                        )
+                    )
+                sensitivity_content.append(Spacer(1, 6))
+
+            # Rangos de Factibilidad
+            if "feasibility_ranges" in analysis:
+                sensitivity_content.append(
+                    Paragraph("<b>Rangos de Factibilidad:</b>", styles["Normal"])
+                )
+                sensitivity_content.append(
+                    Paragraph(
+                        "<i>(Rangos donde los valores RHS mantienen la misma base óptima)</i>",
+                        styles["Normal"],
+                    )
+                )
+                sensitivity_content.append(Spacer(1, 2))
+
+                feas_ranges = analysis["feasibility_ranges"]
+                for constraint, (lower, upper) in sorted(feas_ranges.items()):
+                    if lower == float("-inf"):
+                        lower_str = "-∞"
+                    else:
+                        lower_str = f"{lower:.6f}"
+                    if upper == float("inf"):
+                        upper_str = "+∞"
+                    else:
+                        upper_str = f"{upper:.6f}"
+
+                    sensitivity_content.append(
+                        Paragraph(
+                            f"<b><font color='{highlight_color}'>{constraint}:</font></b> [{lower_str}, {upper_str}]",
+                            styles["Normal"],
+                        )
+                    )
+
+            # Crear tabla de análisis de sensibilidad
+            if sensitivity_content:
+                sensitivity_table = Table(
+                    [[sensitivity_content]], colWidths=[available_width * 0.95]
+                )
+                sensitivity_table.setStyle(
+                    TableStyle(
+                        [
+                            ("BACKGROUND", (0, 0), (-1, -1), colors.lightyellow),
+                            ("BOX", (0, 0), (-1, -1), 1, colors.grey),
+                            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                            ("TOPPADDING", (0, 0), (-1, -1), 6),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                        ]
+                    )
+                )
+                elements.append(sensitivity_table)
+                elements.append(Spacer(1, 8))
+
         # Función auxiliar para formatear nombres de variables
         def format_var_name(var_idx, n_original_vars):
             if isinstance(var_idx, int):
@@ -239,18 +346,14 @@ def export_to_pdf(result: dict, filename: str):
             elements.append(Spacer(1, 0))
 
             steps = result["steps"]
-            n_original_vars = result.get(
-                "n_original_vars", 0
-            )  # Número de variables originales
+            n_original_vars = result.get("n_original_vars", 0)  # Número de variables originales
 
             for idx, step in enumerate(steps):
                 iter_num = step["iteration"]
 
                 # Detectar título de la iteración
                 if step["entering_var"] is None:
-                    iter_title = (
-                        f"Iteración {iter_num} – Estado inicial (tableau inicial)"
-                    )
+                    iter_title = f"Iteración {iter_num} – Estado inicial (tableau inicial)"
                 elif idx == len(steps) - 1:
                     iter_title = f"Iteración {iter_num} – Estado final (tableau final)"
                 else:
@@ -262,9 +365,7 @@ def export_to_pdf(result: dict, filename: str):
                 # --- Título y subtítulo (a la izquierda) ---
                 iteration_block.append(Paragraph(iter_title, styles["Heading3"]))
                 if step["entering_var"] is not None:
-                    entering_name = format_var_name(
-                        step["entering_var"], n_original_vars
-                    )
+                    entering_name = format_var_name(step["entering_var"], n_original_vars)
                     leaving_name = format_var_name(step["leaving_var"], n_original_vars)
                     iteration_block.append(
                         Paragraph(
@@ -282,11 +383,7 @@ def export_to_pdf(result: dict, filename: str):
                 n = n_plus - 1  # columnas de variables (RHS no incluida)
 
                 # Cabecera: VB + nombres (usando format_var_name para consistencia) + b
-                header = (
-                    ["VB"]
-                    + [format_var_name(i, n_original_vars) for i in range(n)]
-                    + ["b"]
-                )
+                header = ["VB"] + [format_var_name(i, n_original_vars) for i in range(n)] + ["b"]
                 data = [header]
 
                 # Variables básicas de la iteración
@@ -371,9 +468,7 @@ def export_to_pdf(result: dict, filename: str):
 
                     # Resaltar variables básicas de decisión (no de holgura)
                     for row_idx, vb in enumerate(basic_vars):
-                        if (
-                            isinstance(vb, int) and vb < n_original_vars
-                        ):  # Filtra VB reales
+                        if isinstance(vb, int) and vb < n_original_vars:  # Filtra VB reales
                             styles_list.append(
                                 (
                                     "BACKGROUND",
@@ -409,7 +504,7 @@ def export_to_pdf(result: dict, filename: str):
                 arrow_para = Paragraph(
                     f"<font size=14>{iter_num}</font> <font size=14>➤</font>",
                     ParagraphStyle(
-                        name="ArrowStyle", alignment=TA_CENTER, textColor="#7F7F7F"
+                        name="ArrowStyle", alignment=TA_CENTER, textColor=colors.HexColor("#7F7F7F")
                     ),
                 )
 
