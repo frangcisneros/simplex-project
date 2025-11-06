@@ -32,7 +32,8 @@ simplex-project/
 │   │
 │   ├── core/                        # Algoritmo Simplex
 │   │   ├── __init__.py
-│   │   └── algorithm.py             # Implementación del algoritmo
+│   │   ├── algorithm.py             # Implementación del algoritmo
+│   │   └── sensitivity.py           # Análisis de sensibilidad
 │   │
 │   ├── utils/                       # Utilidades
 │   │   ├── __init__.py
@@ -301,6 +302,225 @@ def verificar_ollama():
     except:
         return None
 ```
+
+## Sistema de Análisis de Sensibilidad
+
+### Descripción General
+
+El módulo de análisis de sensibilidad (`simplex_solver/core/sensitivity.py`) proporciona información post-optimización sobre cómo cambios en los parámetros del problema afectan la solución óptima.
+
+### Componentes del Análisis
+
+#### 1. Precios Sombra (Shadow Prices)
+
+Los precios sombra representan el **valor marginal** de relajar cada restricción en una unidad.
+
+**Cálculo:**
+
+- Se extraen de la fila objetivo del tableau óptimo
+- Corresponden a los coeficientes de las variables de holgura
+- Fórmula: `shadow_price[i] = -tableau[última_fila, columna_holgura_i]`
+
+**Interpretación:**
+
+- **Precio sombra positivo**: Incrementar el RHS de esa restricción mejora la función objetivo
+- **Precio sombra = 0**: La restricción no está activa (hay holgura disponible)
+- **Precio sombra negativo**: En problemas de minimización, indica reducción de costo
+
+**Ejemplo:**
+
+```python
+# Problema de carpintería: MAX 80x1 + 50x2
+# Restricción 1: 4x1 + 2x2 <= 200 (madera)
+# Restricción 2: x1 + x2 <= 60 (trabajo)
+
+shadow_prices = {
+    "restriccion_1": 15.0,  # Cada unidad extra de madera vale $15
+    "restriccion_2": 20.0   # Cada hora extra vale $20
+}
+```
+
+#### 2. Rangos de Optimalidad
+
+Determinan cuánto puede variar cada **coeficiente de la función objetivo** sin cambiar la base óptima.
+
+**Cálculo:**
+
+Para **variables básicas**:
+
+```python
+# Para cada variable no básica j:
+# Si a_ij > 0: max_delta = min(max_delta, reduced_cost_j / a_ij)
+# Si a_ij < 0: min_delta = max(min_delta, reduced_cost_j / a_ij)
+```
+
+Para **variables no básicas**:
+
+```python
+# El coeficiente puede incrementarse hasta su costo reducido
+min_delta = -∞
+max_delta = reduced_cost
+```
+
+**Interpretación:**
+
+- Si `c1 ∈ [c1_min, c1_max]`, la solución actual sigue siendo óptima
+- Fuera de este rango, la base óptima cambia
+- Rangos amplios = solución robusta, poco sensible
+- Rangos estrechos = solución frágil, muy sensible
+
+**Ejemplo:**
+
+```python
+optimality_ranges = {
+    "x1": [60.0, 120.0],   # c1 puede variar entre 60 y 120
+    "x2": [25.0, 100.0]    # c2 puede variar entre 25 y 100
+}
+```
+
+#### 3. Rangos de Factibilidad
+
+Determinan cuánto puede variar cada **valor RHS** (lado derecho de restricciones) sin cambiar la base óptima.
+
+**Cálculo:**
+
+```python
+# Para cada restricción i con slack variable en columna k:
+# Para cada fila básica:
+# Si a_ik > 0: min_delta = max(min_delta, -b_i / a_ik)
+# Si a_ik < 0: max_delta = min(max_delta, -b_i / a_ik)
+
+b_min = b_actual + min_delta
+b_max = b_actual + max_delta
+```
+
+**Interpretación:**
+
+- Indica rangos seguros para cambios en disponibilidad de recursos
+- Los precios sombra son válidos solo dentro de estos rangos
+- Útil para planificación de recursos y análisis "what-if"
+
+**Ejemplo:**
+
+```python
+feasibility_ranges = {
+    "restriccion_1": [120.0, 240.0],  # Madera puede variar entre 120 y 240
+    "restriccion_2": [50.0, 100.0]    # Trabajo puede variar entre 50 y 100
+}
+```
+
+### Uso del Análisis de Sensibilidad
+
+#### Desde Código
+
+```python
+from simplex_solver.core.algorithm import SimplexSolver
+import numpy as np
+
+# Resolver problema
+solver = SimplexSolver()
+result = solver.solve(c, A, b, constraint_types, maximize=True)
+
+# Obtener análisis de sensibilidad (solo si la solución es óptima)
+if result["status"] == "optimal":
+    analysis = solver.get_sensitivity_analysis()
+
+    # Acceder a resultados
+    print("Precios Sombra:", analysis["shadow_prices"])
+    print("Rangos de Optimalidad:", analysis["optimality_ranges"])
+    print("Rangos de Factibilidad:", analysis["feasibility_ranges"])
+```
+
+#### Desde Línea de Comandos
+
+```bash
+# Usar la opción --sensitivity o -s
+python simplex.py ejemplos/ejemplo_carpinteria.txt --sensitivity
+
+# Combinar con otras opciones
+python simplex.py problema.txt -s --pdf reporte.pdf
+```
+
+### Clase SensitivityAnalyzer
+
+**Ubicación**: `simplex_solver/core/sensitivity.py`
+
+**Responsabilidades**:
+
+- Calcular precios sombra desde el tableau óptimo
+- Calcular rangos de optimalidad para coeficientes de F.O.
+- Calcular rangos de factibilidad para valores RHS
+- Integrar resultados en un formato estructurado
+
+**Métodos Principales**:
+
+```python
+class SensitivityAnalyzer:
+    def __init__(self, tableau, basic_vars, num_vars, num_constraints):
+        """Inicializa el analizador con el estado óptimo."""
+
+    def calculate_shadow_prices(self) -> Dict[str, float]:
+        """Calcula precios sombra de restricciones."""
+
+    def calculate_optimality_ranges(self, original_c) -> Dict[str, Tuple[float, float]]:
+        """Calcula rangos de optimalidad para variables."""
+
+    def calculate_feasibility_ranges(self, original_b) -> Dict[str, Tuple[float, float]]:
+        """Calcula rangos de factibilidad para RHS."""
+
+    def analyze(self, original_c, original_b) -> Dict[str, Any]:
+        """Ejecuta análisis completo de sensibilidad."""
+```
+
+### Casos de Uso Prácticos
+
+#### 1. Planificación de Recursos
+
+**Escenario**: Una empresa quiere saber cuánto pagar por recursos adicionales.
+
+```python
+# El precio sombra indica el valor marginal
+if shadow_prices["restriccion_madera"] > costo_madera_adicional:
+    print("Vale la pena comprar más madera")
+```
+
+#### 2. Análisis de Robustez
+
+**Escenario**: Evaluar qué tan estable es la solución ante cambios.
+
+```python
+# Rangos amplios = solución robusta
+for var, (min_c, max_c) in optimality_ranges.items():
+    range_width = max_c - min_c
+    if range_width < 10:  # Rango estrecho
+        print(f"¡Advertencia! {var} es muy sensible a cambios")
+```
+
+#### 3. Negociación de Contratos
+
+**Escenario**: Determinar precios mínimos/máximos aceptables.
+
+```python
+# No aceptar precio fuera del rango de optimalidad
+precio_ofrecido = 45
+if optimality_ranges["x1"][0] <= precio_ofrecido <= optimality_ranges["x1"][1]:
+    print("Precio dentro del rango óptimo")
+else:
+    print("El precio cambiaría nuestra decisión óptima")
+```
+
+### Limitaciones y Consideraciones
+
+1. **Solo para soluciones óptimas**: El análisis requiere un tableau óptimo válido
+2. **Cambios de una variable a la vez**: Los rangos son válidos para cambios individuales, no simultáneos
+3. **Linealidad**: Asume que las relaciones son lineales dentro de los rangos
+4. **Precisión numérica**: Usa tolerancia de `1e-10` para comparaciones
+
+### Referencias Teóricas
+
+- **Bertsimas & Tsitsiklis**: "Introduction to Linear Optimization", Capítulo 5
+- **Winston**: "Operations Research: Applications and Algorithms", Capítulo 6
+- **Hillier & Lieberman**: "Introduction to Operations Research", Capítulo 5.3
 
 ## Sistema de Logging
 

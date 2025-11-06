@@ -1,6 +1,21 @@
 """
 Módulo para operaciones con el tableau simplex.
-Contiene la lógica de construcción y manipulación del tableau.
+
+Este módulo implementa la estructura de datos Tableau y todas las operaciones
+necesarias para el Método Simplex, incluyendo el Método de Dos Fases para
+problemas con restricciones de igualdad (=) y mayor o igual (>=).
+
+Responsabilidades principales:
+- Construcción del tableau inicial con variables de holgura, exceso y artificiales
+- Implementación del Método de Dos Fases para manejar restricciones >= y =
+- Operaciones de pivoteo y actualización del tableau
+- Detección de condiciones de optimalidad, infactibilidad y no acotación
+- Extracción de soluciones del tableau
+
+Método de Dos Fases:
+    Fase 1: Minimiza la suma de variables artificiales para encontrar una solución
+            básica factible (SBF). Si el valor óptimo es 0, el problema es factible.
+    Fase 2: Resuelve el problema original después de eliminar las variables artificiales.
 """
 
 import numpy as np
@@ -9,17 +24,43 @@ from simplex_solver.config import AlgorithmConfig
 
 
 class Tableau:
-    """Clase para manejar las operaciones del tableau simplex."""
+    """
+    Estructura de datos para el tableau simplex con soporte para Método de Dos Fases.
+
+    El tableau representa el sistema de ecuaciones lineales del problema de programación
+    lineal en forma estándar, incluyendo variables de holgura, exceso y artificiales.
+
+    Attributes:
+        tableau: Matriz numpy (m+1) x (n+1) donde:
+                 - m filas representan restricciones
+                 - 1 fila adicional para la función objetivo
+                 - n columnas para variables (originales + holgura + exceso + artificiales)
+                 - 1 columna adicional para el lado derecho (RHS)
+        basic_vars: Lista de índices de variables básicas (una por restricción)
+        artificial_vars: Lista de índices de variables artificiales añadidas
+        num_vars: Número de variables originales del problema
+        num_constraints: Número de restricciones del problema
+        constraint_types: Lista de tipos de restricciones ('<=', '>=', '=')
+        phase: Fase actual del algoritmo (1 o 2)
+        original_c: Coeficientes originales de la función objetivo
+        tol: Tolerancia numérica para comparaciones
+
+    Convención de la última fila:
+        La última fila del tableau representa los costos reducidos r_j = c_j - z_j:
+        - En Fase 1: minimiza suma de variables artificiales
+        - En Fase 2: optimiza función objetivo original
+    """
 
     def __init__(self):
+        """Inicializa un tableau vacío."""
         self.tableau: Optional[np.ndarray] = None
         self.basic_vars: List[int] = []
         self.artificial_vars: List[int] = []
         self.num_vars: int = 0
         self.num_constraints: int = 0
         self.constraint_types: List[str] = []  # '<=', '>=', '='
-        self.phase: int = 1  # 1 para fase 1, 2 para fase 2
-        self.original_c: Optional[np.ndarray] = None  # almacenar c original
+        self.phase: int = 1  # 1 para Fase 1, 2 para Fase 2
+        self.original_c: Optional[np.ndarray] = None  # Coeficientes originales guardados
         self.tol: float = AlgorithmConfig.NUMERICAL_TOLERANCE
 
     def build_initial_tableau(
@@ -31,9 +72,36 @@ class Tableau:
         maximize: bool = True,
     ) -> None:
         """
-        Construye el tableau inicial para el problema simplex.
-        Normaliza constraint_types, transforma filas con b<0 y construye
-        las variables de holgura/exceso/artificiales.
+        Construye el tableau inicial para el Método Simplex con Dos Fases.
+
+        Este método prepara el tableau completo incluyendo:
+        - Variables originales
+        - Variables de holgura para restricciones <=
+        - Variables de exceso y artificiales para restricciones >=
+        - Variables artificiales para restricciones =
+
+        Args:
+            c: Coeficientes de la función objetivo (n elementos)
+            A: Matriz de coeficientes de restricciones (m × n)
+            b: Vector de términos independientes (m elementos)
+            constraint_types: Lista de tipos ('<=', '>=', '=') para cada restricción
+            maximize: True para maximización, False para minimización
+
+        Proceso:
+            1. Normaliza todas las restricciones para tener RHS >= 0
+            2. Cuenta variables necesarias (holgura, exceso, artificiales)
+            3. Construye el tableau con todas las columnas necesarias
+            4. Configura variables básicas iniciales
+            5. Inicializa función objetivo de Fase 1 si hay variables artificiales
+
+        Raises:
+            ValueError: Si hay tipos de restricción desconocidos
+
+        Note:
+            - Restricciones con b[i] < 0 se multiplican por -1 e invierten su tipo
+            - Para >=: añade variable de exceso (-1) y artificial (+1)
+            - Para =: añade solo variable artificial (+1)
+            - Para <=: añade solo variable de holgura (+1)
         """
         # Normalizar entradas
         constraint_types = [s.strip() for s in constraint_types]
@@ -119,15 +187,31 @@ class Tableau:
             self._setup_original_objective(self.original_c)
 
     def _setup_phase1_objective(self):
-        """Configura la función objetivo para la Fase 1 (minimizar suma de artif.)."""
-        # En fase1 queremos minimizar suma de variables artificiales. La fila se
-        # inicializa con coeficiente 1 para cada artificial y luego restamos las
-        # filas básicas que contienen artificiales para obtener los costes reducidos.
+        """
+        Configura la función objetivo para la Fase 1 del Método de Dos Fases.
+
+        Objetivo de Fase 1:
+            Minimizar w = Σ(variables artificiales)
+
+        La Fase 1 busca una solución básica factible (SBF) para el problema original.
+        Si w* = 0 al terminar la Fase 1, entonces existe una SBF y el problema
+        es factible. Si w* > 0, el problema es infactible.
+
+        Proceso:
+            1. Inicializa fila objetivo con costo 1 para cada variable artificial
+            2. Resta cada fila de restricción que contiene una variable artificial básica
+            3. Esto asegura que las variables básicas tengan costo reducido cero
+
+        Note:
+            La última fila del tableau representa costos reducidos: r_j = c_j - z_j
+            Para variables no básicas en Fase 1, buscamos r_j < 0 para mejorar.
+        """
+        # Inicializar fila objetivo: minimizar suma de artificiales
         self.tableau[-1, :] = 0.0
         for art_var in self.artificial_vars:
             self.tableau[-1, art_var] = 1.0
 
-        # Restar las filas de las básicas que contienen artificiales
+        # Hacer cero los costos reducidos de variables básicas artificiales
         for i, basic_var in enumerate(self.basic_vars):
             if basic_var in self.artificial_vars:
                 self.tableau[-1, :] -= self.tableau[i, :]
@@ -151,10 +235,32 @@ class Tableau:
                     self.tableau[-1, :] -= coefficient * self.tableau[i, :]
 
     def setup_phase2(self, original_c: np.ndarray, maximize: bool):
-        """Configura el tableau para la Fase 2 después de la Fase 1.
+        """
+        Prepara el tableau para la Fase 2 del Método de Dos Fases.
 
-        Elimina las columnas artificiales y reconstruye la fila objetivo como r_j = c_j - z_j
-        usando original_c guardado.
+        Después de que la Fase 1 encuentra una solución básica factible (SBF),
+        este método:
+        1. Elimina todas las columnas de variables artificiales
+        2. Reconstruye la función objetivo usando los coeficientes originales
+        3. Actualiza las variables básicas a los nuevos índices de columna
+        4. Garantiza que las variables básicas tengan costo reducido cero
+
+        Args:
+            original_c: Vector de coeficientes originales de la función objetivo
+            maximize: True para maximización, False para minimización
+
+        Process:
+            1. Identifica columnas a mantener (excluye artificiales)
+            2. Filtra el tableau para eliminar columnas artificiales
+            3. Actualiza índices de variables básicas al nuevo sistema
+            4. Maneja variables básicas degeneradas (si alguna artificial fue básica)
+            5. Reconstru ye fila objetivo con r_j = c_j - z_j
+            6. Hace cero los costos reducidos de variables básicas
+
+        Note:
+            Si una variable artificial sigue siendo básica al final de Fase 1
+            con valor > 0, el problema es infactible. Este método asume que
+            la verificación de factibilidad ya se realizó.
         """
         self.phase = 2
 

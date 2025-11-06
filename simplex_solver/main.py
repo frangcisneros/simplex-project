@@ -87,6 +87,10 @@ class ApplicationOrchestrator:
             # Mostrar resultados
             UserInterface.display_result(result)
 
+            # Mostrar análisis de sensibilidad si la solución es óptima
+            if result.get("status") == "optimal" and getattr(args, "sensitivity", False):
+                self._display_sensitivity_analysis(result)
+
             # Gestionar salidas
             self._handle_output(result, problem, args, solve_time)
 
@@ -302,6 +306,53 @@ class ApplicationOrchestrator:
         logger.info(f"Reporte PDF generado exitosamente: {output_path}")
         print(Messages.PDF_GENERATED.format(path=output_path))
 
+    def _display_sensitivity_analysis(self, result: Dict[str, Any]) -> None:
+        """
+        Muestra el análisis de sensibilidad de la solución óptima.
+
+        Args:
+            result: Resultado de la resolución del problema
+        """
+        try:
+            logger.info("Generando análisis de sensibilidad")
+            print("\n" + "=" * 60)
+            print("ANÁLISIS DE SENSIBILIDAD")
+            print("=" * 60)
+
+            analysis = self.solver.get_sensitivity_analysis()
+
+            # Mostrar Precios Sombra
+            print("\n1. PRECIOS SOMBRA (Shadow Prices):")
+            print("   Valor marginal de relajar cada restricción en una unidad")
+            print("-" * 60)
+            for constraint, price in analysis["shadow_prices"].items():
+                print(f"   {constraint}: {price:>12.6f}")
+
+            # Mostrar Rangos de Optimalidad
+            print("\n2. RANGOS DE OPTIMALIDAD:")
+            print("   Rango de coeficientes de la F.O. sin cambiar la base óptima")
+            print("-" * 60)
+            for var, (min_val, max_val) in analysis["optimality_ranges"].items():
+                min_str = f"{min_val:.4f}" if min_val != float("-inf") else "-∞"
+                max_str = f"{max_val:.4f}" if max_val != float("inf") else "+∞"
+                print(f"   {var}: [{min_str:>12}, {max_str:>12}]")
+
+            # Mostrar Rangos de Factibilidad
+            print("\n3. RANGOS DE FACTIBILIDAD:")
+            print("   Rango de valores RHS sin cambiar la base óptima")
+            print("-" * 60)
+            for constraint, (min_val, max_val) in analysis["feasibility_ranges"].items():
+                min_str = f"{min_val:.4f}" if min_val != float("-inf") else "-∞"
+                max_str = f"{max_val:.4f}" if max_val != float("inf") else "+∞"
+                print(f"   {constraint}: [{min_str:>12}, {max_str:>12}]")
+
+            print("\n" + "=" * 60)
+            logger.info("Análisis de sensibilidad mostrado correctamente")
+
+        except Exception as e:
+            logger.warning(f"No se pudo generar el análisis de sensibilidad: {e}")
+            print(f"\nAdvertencia: No se pudo generar el análisis de sensibilidad: {e}")
+
 
 def main():
     """Función principal del programa."""
@@ -333,6 +384,12 @@ def create_parser() -> argparse.ArgumentParser:
         "-H",
         action="store_true",
         help="Ver historial de problemas resueltos",
+    )
+    parser.add_argument(
+        "--sensitivity",
+        "-s",
+        action="store_true",
+        help="Mostrar análisis de sensibilidad (precios sombra, rangos de optimalidad y factibilidad)",
     )
     return parser
 

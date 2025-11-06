@@ -8,6 +8,7 @@ import numpy as np
 from simplex_solver.utils.tableau import Tableau
 from simplex_solver.logging_system import logger
 from simplex_solver.config import AlgorithmConfig
+from simplex_solver.core.sensitivity import SensitivityAnalyzer
 
 
 class SimplexSolver:
@@ -24,6 +25,9 @@ class SimplexSolver:
         self.max_iterations = AlgorithmConfig.MAX_ITERATIONS
         self.steps = []  # History of steps for PDF generation
         self.verbose_level = 0  # Verbosity level for logging iterations
+        self._last_result = None  # Store last solve result for sensitivity analysis
+        self._original_c = None
+        self._original_b = None
 
     def _get_basic_solution(self, maximize: bool) -> tuple:
         """
@@ -198,6 +202,11 @@ class SimplexSolver:
         )
         self.steps.clear()  # Clear step history
 
+        # Store original data for sensitivity analysis
+        self._original_c = np.array(c)
+        self._original_b = np.array(b)
+        self._maximize = maximize
+
         # Build initial tableau
         self.tableau.build_initial_tableau(c, A, b, constraint_types, maximize)
         logger.debug("Initial tableau built")
@@ -288,6 +297,59 @@ class SimplexSolver:
             }
             if self.tableau.artificial_vars:
                 result["phase1_iterations"] = phase1_iterations
+
+            # Store result for sensitivity analysis
+            self._last_result = result
+
             return result
         else:
             return {**phase2_result, "iterations": total_iterations}
+
+    def get_sensitivity_analysis(self) -> Dict[str, Any]:
+        """
+        Perform sensitivity analysis on the optimal solution.
+
+        This method calculates:
+        - Shadow Prices: Marginal value of each constraint
+        - Optimality Ranges: Allowable ranges for objective coefficients
+        - Feasibility Ranges: Allowable ranges for RHS values
+
+        Returns:
+            Dictionary containing shadow_prices, optimality_ranges, and feasibility_ranges
+
+        Raises:
+            ValueError: If no optimal solution exists or solver hasn't been run
+        """
+        # Validate that we have an optimal solution
+        if self._last_result is None:
+            raise ValueError(
+                "Sensitivity analysis is only available after solving a problem. "
+                "Please call solve() first."
+            )
+
+        if self._last_result["status"] != "optimal":
+            raise ValueError(
+                f"Sensitivity analysis is only available for optimal solutions. "
+                f"Current status: {self._last_result['status']}"
+            )
+
+        logger.info("Performing sensitivity analysis...")
+
+        # Validate internal state (should never fail if we passed the checks above)
+        assert self.tableau.tableau is not None, "Tableau is None"
+        assert self._original_c is not None, "Original c is None"
+        assert self._original_b is not None, "Original b is None"
+
+        # Create sensitivity analyzer
+        analyzer = SensitivityAnalyzer(
+            tableau=self.tableau.tableau,
+            basic_vars=self.tableau.basic_vars,
+            num_vars=self.tableau.num_vars,
+            num_constraints=len(self._original_b),
+        )
+
+        # Perform analysis
+        analysis = analyzer.analyze(self._original_c, self._original_b)
+
+        logger.info("Sensitivity analysis completed")
+        return analysis

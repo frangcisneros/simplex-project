@@ -70,6 +70,46 @@ Problema no acotado (la función objetivo puede crecer infinitamente).
 El problema es no acotado (la solución puede crecer infinitamente)
 ```
 
+### 7. ejemplo_dos_fases.txt
+
+**Problema que requiere el Método de Dos Fases** (restricciones mixtas: `>=`, `=`, `<=`).
+
+**Descripción**: Problema de minimización con:
+
+- 2 restricciones de tipo `>=` (requieren variables de exceso y artificiales)
+- 1 restricción de tipo `=` (requiere variable artificial)
+- El método de Dos Fases encuentra una solución básica factible inicial (Fase 1) y luego resuelve el problema original (Fase 2)
+
+**Tipo**: Minimización
+
+**Variables**: 3 (x₁, x₂, x₃)
+
+**Restricciones**:
+
+- 2x₁ + x₂ + x₃ ≥ 4 (requiere variable de exceso s₁ y artificial a₁)
+- x₁ + 2x₂ + x₃ ≥ 6 (requiere variable de exceso s₂ y artificial a₂)
+- x₁ + x₂ + 2x₃ = 5 (requiere variable artificial a₃)
+
+**Estado esperado**: Solución óptima (factible)
+
+**Método utilizado**: Método de Dos Fases
+
+- **Fase 1**: Minimiza w = a₁ + a₂ + a₃ para encontrar una solución básica factible inicial
+- **Fase 2**: Si w\* = 0, resuelve el problema original minimizando z = x₁ + 2x₂ + 3x₃
+
+**Documentación técnica**: Ver `docs/METODO_DOS_FASES.md` para detalles completos del algoritmo.
+
+**Ejemplo de output** (con verbosity 2):
+
+```
+=== FASE 1: Encontrando solución básica factible ===
+...
+Fase 1 completada. w* = 0.0000 (problema factible)
+=== FASE 2: Resolviendo problema original ===
+...
+Solución óptima encontrada
+```
+
 ## Cómo Usar los Ejemplos
 
 ### Opción 1: Menú Contextual (Windows)
@@ -88,7 +128,75 @@ python simplex.py ejemplos/ejemplo_maximizacion.txt
 
 # Con generación de PDF
 python simplex.py ejemplos/ejemplo_carpinteria.txt --pdf resultado.pdf
+
+# Con análisis de sensibilidad
+python simplex.py ejemplos/ejemplo_carpinteria.txt --sensitivity
+
+# Combinar opciones
+python simplex.py ejemplos/ejemplo_carpinteria.txt -s --pdf reporte.pdf
 ```
+
+### Opción 4: Análisis de Sensibilidad
+
+Para problemas con solución óptima, puedes obtener análisis de sensibilidad:
+
+```bash
+python simplex.py ejemplos/ejemplo_carpinteria.txt --sensitivity
+```
+
+El análisis de sensibilidad proporciona:
+
+**1. Precios Sombra**: Valor marginal de cada recurso
+
+```
+restriccion_1:    15.000000  ← Cada unidad extra de madera vale $15
+restriccion_2:    20.000000  ← Cada hora extra vale $20
+```
+
+**2. Rangos de Optimalidad**: Variaciones permitidas en coeficientes de la función objetivo
+
+```
+x1: [60.0000, 120.0000]   ← Precio de mesas puede variar entre $60 y $120
+x2: [25.0000, 100.0000]   ← Precio de sillas puede variar entre $25 y $100
+```
+
+**3. Rangos de Factibilidad**: Variaciones permitidas en recursos disponibles
+
+```
+restriccion_1: [120.0000, 240.0000]  ← Madera puede variar entre 120 y 240
+restriccion_2: [50.0000, 100.0000]   ← Trabajo puede variar entre 50 y 100
+```
+
+Ejemplo completo:
+
+```bash
+$ python simplex.py ejemplos/ejemplo_carpinteria.txt --sensitivity
+
+# ... solución óptima ...
+
+============================================================
+ANÁLISIS DE SENSIBILIDAD
+============================================================
+
+1. PRECIOS SOMBRA (Shadow Prices):
+   restriccion_1:    15.000000
+   restriccion_2:    20.000000
+
+2. RANGOS DE OPTIMALIDAD:
+   x1: [     60.0000,     120.0000]
+   x2: [     25.0000,     100.0000]
+
+3. RANGOS DE FACTIBILIDAD:
+   restriccion_1: [    120.0000,     240.0000]
+   restriccion_2: [     50.0000,     100.0000]
+============================================================
+```
+
+**Casos de uso prácticos:**
+
+- **Decisiones de compra**: Si el precio sombra > costo del recurso, vale la pena comprarlo
+- **Negociación de precios**: Evaluar si cambios de precio afectan la decisión óptima
+- **Planificación de capacidad**: Determinar rangos seguros para cambios en recursos
 
 ### Opción 3: Modo Interactivo
 

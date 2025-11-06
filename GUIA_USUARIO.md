@@ -255,6 +255,131 @@ SimplexSolver.exe ejemplos/ejemplo_maximizacion.txt
 
 # Con generación de PDF
 python simplex.py ejemplos/ejemplo_carpinteria.txt --pdf resultado.pdf
+
+# Con análisis de sensibilidad
+python simplex.py ejemplos/ejemplo_carpinteria.txt --sensitivity
+
+# Combinar opciones
+python simplex.py problema.txt --sensitivity --pdf reporte.pdf
+```
+
+### Análisis de Sensibilidad
+
+El análisis de sensibilidad proporciona información adicional sobre la solución óptima:
+
+```bash
+# Activar análisis de sensibilidad
+python simplex.py problema.txt --sensitivity
+# o usar la forma abreviada
+python simplex.py problema.txt -s
+```
+
+#### ¿Qué información proporciona?
+
+**1. Precios Sombra (Shadow Prices)**
+
+Indican cuánto mejora la función objetivo por cada unidad adicional de un recurso:
+
+```
+PRECIOS SOMBRA (Shadow Prices):
+  restriccion_1:    15.000000  ← Cada unidad extra de madera vale $15
+  restriccion_2:    20.000000  ← Cada hora extra de trabajo vale $20
+```
+
+**Interpretación:**
+
+- Si el precio sombra es 0, hay holgura (recurso no totalmente utilizado)
+- Precio sombra alto indica recurso escaso y valioso
+- Útil para decisiones de compra de recursos adicionales
+
+**2. Rangos de Optimalidad**
+
+Muestran cuánto pueden variar los coeficientes de la función objetivo sin cambiar la solución óptima:
+
+```
+RANGOS DE OPTIMALIDAD:
+  x1: [     60.0000,     120.0000]  ← Precio por mesa puede variar entre $60 y $120
+  x2: [     25.0000,     100.0000]  ← Precio por silla puede variar entre $25 y $100
+```
+
+**Interpretación:**
+
+- Si el precio está dentro del rango, la decisión actual sigue siendo óptima
+- Útil para negociaciones y contratos
+- Rangos amplios = solución robusta; rangos estrechos = solución sensible
+
+**3. Rangos de Factibilidad**
+
+Indican cuánto pueden variar los recursos disponibles sin cambiar la base óptima:
+
+```
+RANGOS DE FACTIBILIDAD:
+  restriccion_1: [    120.0000,     240.0000]  ← Madera puede variar entre 120 y 240
+  restriccion_2: [     50.0000,     100.0000]  ← Trabajo puede variar entre 50 y 100
+```
+
+**Interpretación:**
+
+- Dentro de estos rangos, los precios sombra son válidos
+- Útil para planificación de recursos
+- Ayuda a decidir cuánto recurso adicional adquirir
+
+#### Ejemplo Completo
+
+```bash
+$ python simplex.py ejemplos/ejemplo_carpinteria.txt --sensitivity
+
+============================================================
+ANÁLISIS DE SENSIBILIDAD
+============================================================
+
+1. PRECIOS SOMBRA (Shadow Prices):
+   Valor marginal de relajar cada restricción en una unidad
+------------------------------------------------------------
+   restriccion_1:    15.000000
+   restriccion_2:    20.000000
+
+2. RANGOS DE OPTIMALIDAD:
+   Rango de coeficientes de la F.O. sin cambiar la base óptima
+------------------------------------------------------------
+   x1: [     60.0000,     120.0000]
+   x2: [     25.0000,     100.0000]
+
+3. RANGOS DE FACTIBILIDAD:
+   Rango de valores RHS sin cambiar la base óptima
+------------------------------------------------------------
+   restriccion_1: [    120.0000,     240.0000]
+   restriccion_2: [     50.0000,     100.0000]
+
+============================================================
+```
+
+#### Casos de Uso Prácticos
+
+**Caso 1: Decisión de compra de recursos**
+
+```
+Precio sombra del trabajo = $20/hora
+Costo de hora extra = $15/hora
+→ Vale la pena contratar horas extra (ganancia neta: $5/hora)
+```
+
+**Caso 2: Negociación de precios**
+
+```
+Precio actual de mesas: $80
+Rango de optimalidad: [$60, $120]
+Oferta de cliente: $70
+→ Aún es óptimo producir, aunque con menor ganancia
+```
+
+**Caso 3: Planificación de capacidad**
+
+```
+Disponibilidad actual de madera: 200 unidades
+Rango de factibilidad: [120, 240]
+Propuesta: aumentar a 250 unidades
+→ Fuera del rango, requiere recalcular la solución
 ```
 
 ### Historial de Problemas
