@@ -235,6 +235,7 @@ class BuildOrchestrator:
                 "README.md;.",
                 "tools/system_analyzer.py;tools",
                 "simplex_solver/ui;simplex_solver/ui",
+                "dist/SimplexSolver.exe;.",
             ],
             hidden_imports=[
                 "numpy",
@@ -324,6 +325,17 @@ class BuildOrchestrator:
         print(f"  Construyendo {config.name}")
         print(f"{'='*70}")
 
+        # Verificación especial para el instalador
+        if target == "installer":
+            solver_exe = Path("dist") / "SimplexSolver.exe"
+            if not solver_exe.exists():
+                print(f"[ERROR] SimplexSolver.exe no encontrado en {solver_exe}")
+                print("[INFO] Debes compilar el solver primero:")
+                print("       python tools/build.py --solver")
+                return False
+            else:
+                print(f"[OK] SimplexSolver.exe encontrado: {solver_exe}")
+
         # Asegurarse de que PyInstaller esté disponible
         if not self.pyinstaller.ensure_available():
             return False
@@ -340,13 +352,27 @@ class BuildOrchestrator:
         return self.builder.verify(exe_path, config.name)
 
     def build_all(self) -> bool:
-        """Construir todos los objetivos."""
+        """Construir todos los objetivos en el orden correcto."""
         print("\n[BUILD] Construyendo todos los objetivos...\n")
 
+        # Orden correcto: solver primero, luego instalador (que incluye el solver)
+        build_order = ["solver", "installer"]
+
         success = True
-        for target in self.CONFIGS.keys():
-            if not self.build(target):
-                success = False
+        for target in build_order:
+            if target in self.CONFIGS:
+                print(f"\n{'='*70}")
+                print(
+                    f"  PASO {build_order.index(target) + 1}/{len(build_order)}: {target.upper()}"
+                )
+                print(f"{'='*70}")
+
+                if not self.build(target):
+                    print(f"\n[ERROR] Falló la construcción de {target}")
+                    success = False
+                    break  # Detener si falla uno
+
+                print(f"\n[OK] {target} completado exitosamente")
 
         return success
 
@@ -369,18 +395,27 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ejemplos:
-  python tools/build.py --installer      # Construir solo el instalador
   python tools/build.py --solver         # Construir solo el solver
-  python tools/build.py --all            # Construir todo
+  python tools/build.py --installer      # Construir solo el instalador (requiere solver)
+  python tools/build.py --all            # Construir todo en orden correcto
   python tools/build.py --clean          # Limpiar artefactos
+  python tools/build.py --clean --all    # Limpiar y construir todo
+
+IMPORTANTE:
+  - Para construir el instalador, primero debes construir el solver.
+  - Usa --all para construir ambos en el orden correcto automáticamente.
         """,
     )
 
     parser.add_argument(
-        "--installer", action="store_true", help="Construir el ejecutable del instalador"
+        "--installer",
+        action="store_true",
+        help="Construir el ejecutable del instalador (requiere SimplexSolver.exe)",
     )
     parser.add_argument("--solver", action="store_true", help="Construir el ejecutable del solver")
-    parser.add_argument("--all", action="store_true", help="Construir todos los ejecutables")
+    parser.add_argument(
+        "--all", action="store_true", help="Construir todos los ejecutables en orden correcto"
+    )
     parser.add_argument("--clean", action="store_true", help="Limpiar artefactos de construcción")
 
     args = parser.parse_args()
@@ -404,6 +439,22 @@ Ejemplos:
     if args.all:
         success = orchestrator.build_all()
     else:
+        # Si solo se solicita el instalador, verificar que exista el solver
+        if args.installer and not args.solver:
+            solver_exe = Path("dist") / "SimplexSolver.exe"
+            if not solver_exe.exists():
+                print("\n" + "=" * 70)
+                print("[ERROR] No se puede construir el instalador sin el solver")
+                print("=" * 70)
+                print("\nOpciones:")
+                print("  1. Construir ambos en orden:    python tools/build.py --all")
+                print("  2. Construir solver primero:    python tools/build.py --solver")
+                print("     Luego el instalador:         python tools/build.py --installer")
+                print("=" * 70)
+                return 1
+
+        if args.solver:
+            success = orchestrator.build("solver") and success
         if args.installer:
             success = orchestrator.build("installer") and success
         if args.solver:

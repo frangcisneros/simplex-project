@@ -58,7 +58,8 @@ class SimplexMenu:
         print(f"  {ConsoleColors.GREEN}4.{ConsoleColors.RESET} Ver logs del sistema")
         print(f"  {ConsoleColors.GREEN}5.{ConsoleColors.RESET} Ver ubicación de logs")
         print(f"  {ConsoleColors.GREEN}6.{ConsoleColors.RESET} Ver ejemplos disponibles")
-        print(f"  {ConsoleColors.GREEN}7.{ConsoleColors.RESET} Ayuda y documentación")
+        print(f"  {ConsoleColors.GREEN}7.{ConsoleColors.RESET} Configuración de IA")
+        print(f"  {ConsoleColors.GREEN}8.{ConsoleColors.RESET} Ayuda y documentación")
         print(f"  {ConsoleColors.GREEN}0.{ConsoleColors.RESET} Salir")
         print(f"\n{ConsoleColors.CYAN}{'-'*70}{ConsoleColors.RESET}")
 
@@ -321,9 +322,186 @@ class SimplexMenu:
 
         self.pause()
 
+    def option_ai_configuration(self):
+        """
+        Opción 7: Configuración de IA.
+
+        Permite al usuario configurar los parámetros del sistema de IA,
+        incluyendo la selección del modelo de Ollama a utilizar.
+        """
+        self.clear_screen()
+        self.ui.print_section("Configuración de IA")
+
+        # Verificar si Ollama está instalado
+        try:
+            import subprocess
+
+            result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=5)
+
+            if result.returncode != 0:
+                self.ui.print_error("Ollama no está disponible")
+                self.ui.print_info("Instala Ollama desde: https://ollama.ai/download")
+                self.pause()
+                return
+
+            # Parsear la lista de modelos
+            lines = result.stdout.strip().split("\n")
+            if len(lines) <= 1:
+                self.ui.print_warning("No hay modelos instalados")
+                self.ui.print_info("Puedes instalar un modelo con: ollama pull <modelo>")
+                self.ui.print_info("Modelos recomendados: llama3.2, mistral, phi3")
+                self.pause()
+                return
+
+            # Mostrar modelos disponibles (saltar la línea de encabezado)
+            models = []
+            self.ui.print_success("Modelos instalados:")
+            print()
+            for i, line in enumerate(lines[1:], 1):
+                parts = line.split()
+                if parts:
+                    model_name = parts[0]
+                    models.append(model_name)
+                    print(
+                        f"  {ConsoleColors.GREEN}{i}.{ConsoleColors.RESET} {ConsoleColors.CYAN}{model_name}{ConsoleColors.RESET}"
+                    )
+
+            print()
+
+            # Cargar configuración actual
+            config_path = self._get_config_path()
+            current_model = self._load_current_model(config_path)
+
+            if current_model:
+                self.ui.print_info(f"Modelo actual: {current_model}")
+            else:
+                self.ui.print_info("No hay modelo configurado (se usará el predeterminado)")
+
+            print()
+
+            # Preguntar si quiere cambiar el modelo
+            if not self.ui.ask_yes_no("¿Deseas cambiar el modelo de IA?", default=False):
+                self.pause()
+                return
+
+            # Solicitar selección
+            while True:
+                choice = self.ui.get_input(
+                    f"Selecciona un modelo (1-{len(models)}) o 0 para cancelar"
+                )
+
+                if choice == "0":
+                    self.ui.print_info("Operación cancelada")
+                    self.pause()
+                    return
+
+                try:
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(models):
+                        selected_model = models[idx]
+
+                        # Guardar configuración
+                        if self._save_model_config(config_path, selected_model):
+                            self.ui.print_success(f"Modelo configurado: {selected_model}")
+                            self.ui.print_info(
+                                "El nuevo modelo se usará en las próximas ejecuciones"
+                            )
+                        else:
+                            self.ui.print_error("No se pudo guardar la configuración")
+
+                        self.pause()
+                        return
+                    else:
+                        self.ui.print_warning(
+                            f"Por favor selecciona un número entre 1 y {len(models)}"
+                        )
+                except ValueError:
+                    self.ui.print_warning("Por favor ingresa un número válido")
+
+        except FileNotFoundError:
+            self.ui.print_error("Ollama no está instalado en el sistema")
+            self.ui.print_info("Instala Ollama desde: https://ollama.ai/download")
+        except subprocess.TimeoutExpired:
+            self.ui.print_error("Timeout al conectar con Ollama")
+            self.ui.print_info("Verifica que Ollama esté funcionando correctamente")
+        except Exception as e:
+            self.ui.print_error(f"Error al acceder a la configuración de IA: {e}")
+
+        self.pause()
+
+    def _get_config_path(self) -> Path:
+        """
+        Obtiene la ruta del archivo de configuración.
+
+        Returns:
+            Path: Ruta al archivo de configuración
+        """
+        if platform.system() == "Windows":
+            appdata = os.getenv("APPDATA", "")
+            config_dir = Path(appdata) / "SimplexSolver"
+        else:
+            home = os.path.expanduser("~")
+            config_dir = Path(home) / ".simplex_solver"
+
+        config_dir.mkdir(parents=True, exist_ok=True)
+        return config_dir / "config.json"
+
+    def _load_current_model(self, config_path: Path) -> Optional[str]:
+        """
+        Carga el modelo actual desde la configuración.
+
+        Args:
+            config_path: Ruta al archivo de configuración
+
+        Returns:
+            Optional[str]: Nombre del modelo configurado o None
+        """
+        try:
+            if config_path.exists():
+                import json
+
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    return config.get("ai_model")
+        except Exception:
+            pass
+        return None
+
+    def _save_model_config(self, config_path: Path, model_name: str) -> bool:
+        """
+        Guarda el modelo seleccionado en la configuración.
+
+        Args:
+            config_path: Ruta al archivo de configuración
+            model_name: Nombre del modelo a guardar
+
+        Returns:
+            bool: True si se guardó correctamente, False en caso contrario
+        """
+        try:
+            import json
+
+            # Cargar configuración existente o crear nueva
+            config = {}
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+
+            # Actualizar modelo
+            config["ai_model"] = model_name
+
+            # Guardar
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
+
+            return True
+        except Exception as e:
+            logger.error(f"Error al guardar configuración: {e}")
+            return False
+
     def option_help(self):
         """
-        Opción 7: Ayuda y documentación.
+        Opción 8: Ayuda y documentación.
 
         Muestra información completa sobre el uso del programa, incluyendo:
         - Formato de archivos de entrada
@@ -443,12 +621,14 @@ class SimplexMenu:
             elif choice == "6":
                 self.option_view_examples()
             elif choice == "7":
+                self.option_ai_configuration()
+            elif choice == "8":
                 self.option_help()
             elif choice == "0":
                 self.option_exit()
             else:
                 print(
-                    f"\n{ConsoleColors.RED}✗ Opción no válida. Por favor, selecciona una opción del 0 al 7.{ConsoleColors.RESET}"
+                    f"\n{ConsoleColors.RED}✗ Opción no válida. Por favor, selecciona una opción del 0 al 8.{ConsoleColors.RESET}"
                 )
                 self.pause("Presiona Enter para volver al menú...")
 

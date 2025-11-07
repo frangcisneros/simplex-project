@@ -87,7 +87,10 @@ class SystemAnalyzer:
         # Información de memoria
         mem = psutil.virtual_memory()
         total_ram_gb = mem.total / (1024**3)
-        available_ram_gb = mem.available / (1024**3)
+        # Usar un cálculo más realista de RAM disponible:
+        # RAM total menos lo que está realmente en uso (no solo "libre")
+        # Esto da una mejor estimación de lo que Ollama puede usar
+        available_ram_gb = (mem.total - mem.used) / (1024**3)
 
         # Información de CPU
         cpu_cores = psutil.cpu_count(logical=False) or psutil.cpu_count()
@@ -164,14 +167,15 @@ class SystemAnalyzer:
         Genera recomendaciones de modelos basadas en las capacidades del sistema.
         """
         recommendations = []
-        available_ram = self.capabilities.available_ram_gb
+        # Usar RAM total con un margen del 20% para el sistema operativo
+        available_ram = self.capabilities.total_ram_gb * 0.8
 
         for model_name, req in self.MODEL_REQUIREMENTS.items():
             ram_needed = req["ram"]
 
             # Determinar si es recomendado
-            # Se considera recomendado si tiene al menos 1.5x la RAM requerida
-            recommended = available_ram >= (ram_needed * 1.2)
+            # Se considera recomendado si tiene suficiente RAM con margen
+            recommended = available_ram >= (ram_needed * 1.3)
 
             # Generar razón
             if available_ram < ram_needed:
@@ -203,6 +207,24 @@ class SystemAnalyzer:
         """Retorna solo los nombres de los modelos recomendados."""
         recommendations = self.get_model_recommendations()
         return [rec.name for rec in recommendations if rec.recommended]
+
+    def get_best_available_model(self) -> str:
+        """
+        Retorna el mejor modelo disponible según la RAM del sistema.
+        Prioriza modelos más potentes si el sistema lo permite.
+        """
+        # Obtener modelos recomendados ordenados por capacidad (descendente)
+        recommendations = self.get_model_recommendations()
+        recommended = [rec for rec in recommendations if rec.recommended]
+
+        if not recommended:
+            # Si no hay modelos recomendados, usar el más pequeño
+            return "llama3.2:1b"
+
+        # Ordenar por RAM requerida (descendente) para obtener el más potente
+        recommended.sort(key=lambda x: x.ram_required_gb, reverse=True)
+
+        return recommended[0].name
 
     def can_run_ollama(self) -> Tuple[bool, str]:
         """

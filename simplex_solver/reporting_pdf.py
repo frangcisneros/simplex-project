@@ -6,6 +6,7 @@ Gestiona la creación de carpetas, el formateo mínimo de datos y delega la gene
 import os
 from typing import Dict, Optional
 from simplex_solver.logging_system import logger
+from simplex_solver.config import ReportConfig
 
 try:
     from simplex_solver.export import export_to_pdf
@@ -15,13 +16,14 @@ except Exception as e:
     raise
 
 
-def generate_pdf(result: Dict, filename: str, reports_dir: str = "reports") -> str:
+def generate_pdf(result: Dict, filename: str, reports_dir: Optional[str] = None) -> str:
     """Genera un reporte en formato PDF basado en los resultados proporcionados.
 
     Args:
         result: Diccionario con la información del problema y los pasos de resolución.
         filename: Nombre del archivo de salida (solo se utiliza el nombre base).
-        reports_dir: Directorio donde se guardará el PDF (se crea si no existe)
+        reports_dir: Directorio donde se guardará el PDF (se crea si no existe).
+                    Si es None, usa DEFAULT_REPORTS_DIR de la configuración.
 
     Returns:
         str: Ruta completa del archivo PDF generado.
@@ -30,6 +32,10 @@ def generate_pdf(result: Dict, filename: str, reports_dir: str = "reports") -> s
         TypeError: Si el parámetro `result` no es un diccionario válido.
         Exception: Si ocurre un error durante la generación del PDF.
     """
+    # Usar directorio por defecto si no se especifica uno
+    if reports_dir is None:
+        reports_dir = ReportConfig.DEFAULT_REPORTS_DIR
+
     logger.info(f"Generando reporte PDF: {filename} en directorio: {reports_dir}")
 
     if not isinstance(result, dict):

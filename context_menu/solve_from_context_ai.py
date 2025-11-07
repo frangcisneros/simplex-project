@@ -60,10 +60,17 @@ def solve_from_file_with_ai(filepath):
 
         # Crear conector NLP
         print("\nConectando con modelo de IA...")
+        print("(Detectando automáticamente el mejor modelo para tu sistema...)")
         try:
-            connector = NLPConnectorFactory.create_connector(
-                NLPModelType.LLAMA3_1_8B
-            )  # Inicializa el modelo de IA.
+            connector = NLPConnectorFactory.create_connector()  # Auto-detecta el modelo óptimo
+
+            # Mostrar qué modelo se está usando
+            model_name = (
+                connector.nlp_processor.model_type.value
+                if hasattr(connector, "nlp_processor")
+                else "desconocido"
+            )
+            print(f"✓ Usando modelo: {model_name}")
         except Exception as e:
             # Manejo de errores al conectar con el modelo de IA
             print(f"\nERROR al conectar con el modelo de IA: {e}")

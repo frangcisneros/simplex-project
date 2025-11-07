@@ -3,6 +3,7 @@ Archivo de configuración central para Simplex Solver.
 Contiene todas las constantes y configuraciones de la aplicación.
 """
 
+import os
 from typing import Final
 
 
@@ -95,7 +96,7 @@ class ReportConfig:
     """Configuración para generación de reportes."""
 
     # Carpeta por defecto para reportes PDF
-    DEFAULT_REPORTS_DIR: Final[str] = "reports"
+    DEFAULT_REPORTS_DIR: Final[str] = os.path.join(os.path.expanduser("~"), "Desktop")
 
     # Tamaño de página para PDFs
     PAGE_SIZE: Final[str] = "letter"

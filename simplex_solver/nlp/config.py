@@ -163,9 +163,52 @@ class DefaultSettings:
     de procesamiento y límites de variables y restricciones.
     """
 
-    DEFAULT_MODEL = NLPModelType.LLAMA3_1_8B  # Modelo recomendado para problemas complejos
+    DEFAULT_MODEL = NLPModelType.LLAMA3_1_8B  # Fallback si no se detecta el sistema
     MAX_PROCESSING_TIME = 60.0  # Tiempo máximo permitido para procesar un problema
     MIN_CONFIDENCE_SCORE = 0.7  # Umbral mínimo de confianza para aceptar resultados
     MAX_VARIABLES = 50  # Límite de variables soportadas
     MAX_CONSTRAINTS = 100  # Límite de restricciones soportadas
     CACHE_SIZE = 50  # Tamaño máximo del caché
+
+    @staticmethod
+    def get_optimal_model() -> NLPModelType:
+        """
+        Detecta automáticamente el mejor modelo de IA según las capacidades del sistema.
+
+        Returns:
+            NLPModelType: El modelo más potente que puede ejecutar el sistema.
+        """
+        try:
+            # Importar aquí para evitar dependencias circulares
+            import sys
+            from pathlib import Path
+
+            # Agregar tools al path si no está
+            tools_path = Path(__file__).parent.parent.parent / "tools"
+            if str(tools_path) not in sys.path:
+                sys.path.insert(0, str(tools_path))
+
+            from system_analyzer import SystemAnalyzer
+
+            analyzer = SystemAnalyzer()
+            best_model_name = analyzer.get_best_available_model()
+
+            # Mapear nombre de modelo a enum
+            model_mapping = {
+                "mistral:7b": NLPModelType.MISTRAL_7B,
+                "llama3.1:8b": NLPModelType.LLAMA3_1_8B,
+                "qwen2.5:14b": NLPModelType.QWEN2_5_14B,
+                "llama3.2:3b": NLPModelType.LLAMA3_2_3B,
+                "llama3.2:1b": NLPModelType.LLAMA3_2_3B,  # Fallback al 3b
+                "phi3:mini": NLPModelType.LLAMA3_2_3B,  # Fallback al 3b
+                "gemma2:9b": NLPModelType.QWEN2_5_14B,  # Similar al 14b
+                "llama3.1:70b": NLPModelType.QWEN2_5_14B,  # Muy grande, pero si lo detecta, usar 14b
+            }
+
+            detected_model = model_mapping.get(best_model_name, DefaultSettings.DEFAULT_MODEL)
+
+            return detected_model
+
+        except Exception:
+            # Si falla la detección, usar el modelo por defecto
+            return DefaultSettings.DEFAULT_MODEL

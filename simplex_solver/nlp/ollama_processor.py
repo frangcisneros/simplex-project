@@ -10,6 +10,9 @@ import logging
 import requests
 import time
 import re
+import os
+import platform
+from pathlib import Path
 from typing import Optional, Dict, Any
 
 from .interfaces import NLPResult, OptimizationProblem, INLPProcessor
@@ -39,7 +42,21 @@ class OllamaNLPProcessor(INLPProcessor):
             ollama_url: URL del servidor Ollama (por defecto localhost:11434).
             custom_config: Configuración personalizada para el modelo.
         """
-        self.model_type = model_type or DefaultSettings.DEFAULT_MODEL
+        # Intentar cargar modelo desde configuración guardada
+        saved_model = self._load_saved_model()
+        if saved_model and model_type is None:
+            # Si hay un modelo guardado y no se especificó uno, usar el guardado
+            try:
+                # Intentar crear NLPModelType desde el nombre guardado
+                self.model_type = self._model_name_to_type(saved_model)
+                logging.info(f"Usando modelo configurado: {saved_model}")
+            except:
+                # Si falla, usar el predeterminado
+                self.model_type = model_type or DefaultSettings.DEFAULT_MODEL
+                logging.warning(f"No se pudo cargar modelo '{saved_model}', usando predeterminado")
+        else:
+            self.model_type = model_type or DefaultSettings.DEFAULT_MODEL
+
         self.ollama_url = ollama_url.rstrip("/")
         self.custom_config = custom_config or {}
 
@@ -54,6 +71,67 @@ class OllamaNLPProcessor(INLPProcessor):
 
         # Inicializar el detector de estructura
         self.structure_detector = ProblemStructureDetector()
+
+    def _load_saved_model(self) -> Optional[str]:
+        """
+        Carga el modelo guardado desde la configuración.
+
+        Returns:
+            Nombre del modelo guardado o None
+        """
+        try:
+            config_path = self._get_config_path()
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    return config.get("ai_model")
+        except Exception as e:
+            logging.debug(f"No se pudo cargar configuración guardada: {e}")
+        return None
+
+    def _get_config_path(self) -> Path:
+        """
+        Obtiene la ruta del archivo de configuración.
+
+        Returns:
+            Path: Ruta al archivo de configuración
+        """
+        if platform.system() == "Windows":
+            appdata = os.getenv("APPDATA", "")
+            config_dir = Path(appdata) / "SimplexSolver"
+        else:
+            home = os.path.expanduser("~")
+            config_dir = Path(home) / ".simplex_solver"
+
+        config_dir.mkdir(parents=True, exist_ok=True)
+        return config_dir / "config.json"
+
+    def _model_name_to_type(self, model_name: str) -> NLPModelType:
+        """
+        Convierte un nombre de modelo a NLPModelType.
+
+        Args:
+            model_name: Nombre del modelo (ej: "llama3.2:latest", "mistral")
+
+        Returns:
+            NLPModelType correspondiente
+        """
+        # Extraer el nombre base sin tags
+        base_name = model_name.split(":")[0].lower()
+
+        # Mapear nombres comunes a NLPModelType
+        if "llama" in base_name:
+            if "3.2" in model_name or "3-2" in model_name:
+                return NLPModelType.LLAMA3_2_3B
+            elif "3.1" in model_name or "3-1" in model_name:
+                return NLPModelType.LLAMA3_1_8B
+        elif "mistral" in base_name:
+            return NLPModelType.MISTRAL_7B
+        elif "qwen" in base_name:
+            return NLPModelType.QWEN2_5_14B
+
+        # Si no se reconoce, usar el predeterminado
+        return DefaultSettings.DEFAULT_MODEL
 
     def is_available(self) -> bool:
         """

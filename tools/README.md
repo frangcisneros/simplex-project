@@ -15,21 +15,29 @@ Consolida toda la funcionalidad de construcción para crear ejecutables de Windo
 **Uso:**
 
 ```powershell
-# Construir el ejecutable del instalador
-python tools/build.py --installer
+# Construir todo en el orden correcto (RECOMENDADO)
+python tools/build.py --all
 
-# Construir el ejecutable del solver
+# Construir solo el solver
 python tools/build.py --solver
 
-# Construir ambos ejecutables
-python tools/build.py --all
+# Construir solo el instalador (requiere que el solver ya esté compilado)
+python tools/build.py --installer
 
 # Limpiar artefactos de construcción (dist/, build/, *.spec)
 python tools/build.py --clean
 
-# Limpiar y reconstruir
+# Limpiar y reconstruir todo
 python tools/build.py --clean --all
 ```
+
+**Importante - Orden de Construcción:**
+
+El instalador (`SimplexInstaller.exe`) incluye el solver (`SimplexSolver.exe`) empaquetado dentro. Por lo tanto, **debes construir el solver ANTES de construir el instalador**.
+
+- Correcto: `python tools/build.py --all` (construye en orden automáticamente)
+- Correcto: Primero `--solver`, luego `--installer`
+- Incorrecto: Solo `--installer` sin haber compilado el solver primero
 
 **Características:**
 
@@ -41,8 +49,18 @@ python tools/build.py --clean --all
 
 **Salida:**
 
-- `dist/SimplexInstaller.exe` - Instalador interactivo (~40-50 MB)
-- `dist/SimplexSolver.exe` - Solver independiente (~30-40 MB)
+- `dist/SimplexSolver.exe` - Solver independiente (~25-35 MB)
+- `dist/SimplexInstaller.exe` - Instalador interactivo que incluye el solver (~45-55 MB)
+
+**Orden de Construcción:**
+
+Cuando usas `--all`, el sistema automáticamente:
+
+1. Construye `SimplexSolver.exe` primero
+2. Verifica que existe
+3. Construye `SimplexInstaller.exe` incluyendo el solver
+
+Si intentas construir solo el instalador sin tener el solver, recibirás un error claro con instrucciones.
 
 **Configuraciones de Construcción:**
 
@@ -160,6 +178,7 @@ Almacenados en la misma base de datos SQLite que los logs, incluyen:
 ### system_analyzer.py - Analizador de Capacidades del Sistema
 
 Analiza el hardware del sistema y proporciona recomendaciones para la selección de modelos Ollama.
+**Actualizado con detección mejorada de RAM y selección automática de modelo óptimo.**
 
 **Uso:**
 
@@ -167,16 +186,55 @@ Analiza el hardware del sistema y proporciona recomendaciones para la selección
 from tools.system_analyzer import SystemAnalyzer
 
 analyzer = SystemAnalyzer()
-capabilities = analyzer.analyze_system()
 
-print(f"RAM: {capabilities.ram_gb} GB")
-print(f"CPU Cores: {capabilities.cpu_count}")
-print(f"Has NVIDIA GPU: {capabilities.has_nvidia_gpu}")
+# Obtener información básica del sistema
+info = analyzer.get_system_info()
+print(f"RAM Total: {info['RAM Total']}")
+print(f"RAM Disponible: {info['RAM Disponible']}")
 
-# Obtener recomendaciones de modelos
+# Obtener el mejor modelo disponible automáticamente
+best_model = analyzer.get_best_available_model()
+print(f"Modelo recomendado: {best_model}")
+
+# Obtener todas las recomendaciones de modelos
 recommendations = analyzer.get_model_recommendations()
 for rec in recommendations:
-    print(f"{rec.model_name}: {rec.recommendation_level}")
+    if rec.recommended:
+        print(f"✓ {rec.name} - {rec.reason}")
+```
+
+**Características:**
+
+- **Detección Mejorada de RAM**: Usa el 80% de la RAM total como referencia (más realista que RAM "disponible")
+- **Selección Automática de Modelo**: Identifica el modelo de IA más potente que puede ejecutar tu sistema
+- **Recomendaciones Inteligentes**: Considera un margen de seguridad del 30% sobre los requisitos mínimos
+- **Detección de GPU**: Identifica GPUs NVIDIA para aceleración
+- **Análisis de CPU**: Detecta núcleos y frecuencia
+
+**Modelos Soportados:**
+
+| Modelo       | RAM Requerida | Tamaño | Descripción                     |
+| ------------ | ------------- | ------ | ------------------------------- |
+| llama3.2:1b  | 2 GB          | 1.3 GB | Modelo pequeño y rápido         |
+| llama3.2:3b  | 4 GB          | 2.0 GB | Balance velocidad/calidad       |
+| phi3:mini    | 4 GB          | 2.3 GB | Optimizado de Microsoft         |
+| llama3.1:8b  | 8 GB          | 4.7 GB | Modelo por defecto              |
+| mistral:7b   | 8 GB          | 4.1 GB | Excelente para tareas generales |
+| gemma2:9b    | 10 GB         | 5.5 GB | Modelo de Google                |
+| llama3.1:70b | 48 GB         | 40 GB  | Solo para sistemas potentes     |
+
+**Integración con el Sistema de IA:**
+
+El sistema ahora detecta automáticamente el mejor modelo al crear el conector NLP:
+
+```python
+from simplex_solver.nlp import NLPConnectorFactory
+
+# Auto-detecta el mejor modelo según tu sistema
+connector = NLPConnectorFactory.create_connector()
+
+# O especifica uno manualmente
+connector = NLPConnectorFactory.create_connector(nlp_model_type=NLPModelType.LLAMA3_1_8B)
 ```
 
 **Usado por:**
@@ -273,8 +331,6 @@ Todas las herramientas utilizan un formato de salida consistente:
 - `[STATS]` - Información estadística
 - `[BUILD]` - Mensaje relacionado con construcción
 - `[CLEAN]` - Operación de limpieza
-
-No se utilizan emojis para mantener una salida profesional.
 
 ## Manejo de Errores
 

@@ -112,7 +112,7 @@ class NLPConnectorFactory:
 
     @staticmethod
     def create_connector(
-        nlp_model_type: NLPModelType = DefaultSettings.DEFAULT_MODEL,
+        nlp_model_type: Optional[NLPModelType] = None,  # None = auto-detectar
         solver_type: SolverType = SolverType.SIMPLEX,
         use_mock_nlp: bool = False,
         custom_config: Optional[Dict[str, Any]] = None,
@@ -121,7 +121,8 @@ class NLPConnectorFactory:
         Construye un conector NLP completo con todos sus componentes.
 
         Args:
-            nlp_model_type: Modelo de lenguaje a usar (por ejemplo, Mistral, Llama).
+            nlp_model_type: Modelo de lenguaje a usar. Si es None, detecta automáticamente
+                          el mejor modelo según las capacidades del sistema.
             solver_type: Tipo de solver a utilizar (actualmente solo SIMPLEX).
             use_mock_nlp: Si es True, utiliza un procesador NLP simulado para pruebas.
             custom_config: Configuración personalizada para el modelo NLP.
@@ -129,6 +130,10 @@ class NLPConnectorFactory:
         Returns:
             NLPOptimizationConnector configurado y listo para usar.
         """
+        # Auto-detectar el mejor modelo si no se especifica
+        if nlp_model_type is None:
+            nlp_model_type = DefaultSettings.get_optimal_model()
+
         # Crear procesador NLP
         if use_mock_nlp:
             nlp_processor = MockNLPProcessor()

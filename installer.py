@@ -11,6 +11,22 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
+try:
+    import winshell
+    from winshell.shortcut import Shortcut
+
+    WINSHELL_AVAILABLE = True
+except ImportError:
+    WINSHELL_AVAILABLE = False
+
+# Alternativa usando win32com
+try:
+    import win32com.client
+
+    WIN32COM_AVAILABLE = True
+except ImportError:
+    WIN32COM_AVAILABLE = False
+
 # Importar el analizador de sistema desde tools
 sys.path.insert(0, str(Path(__file__).parent / "tools"))
 from system_analyzer import SystemAnalyzer  # type: ignore
@@ -78,6 +94,204 @@ class SimplexInstaller:
 
             traceback.print_exc()
             raise
+
+    def _get_install_dir(self) -> Path:
+        """
+        Obtiene la ruta de instalación del programa.
+
+        Returns:
+            Path: Ruta donde se instala el programa
+        """
+        program_files = Path(os.environ.get("ProgramFiles", "C:/Program Files"))
+        return program_files / "SimplexSolver"
+
+    def _is_already_installed(self) -> bool:
+        """
+        Verifica si el programa ya está instalado en el sistema.
+
+        Returns:
+            bool: True si está instalado, False en caso contrario
+        """
+        install_dir = self._get_install_dir()
+        exe_path = install_dir / "simplex.exe"
+        return exe_path.exists()
+
+    def _get_installed_version(self) -> Optional[str]:
+        """
+        Obtiene la versión del programa instalado.
+
+        Returns:
+            Optional[str]: Versión instalada o None si no se puede determinar
+        """
+        try:
+            install_dir = self._get_install_dir()
+            exe_path = install_dir / "simplex.exe"
+
+            if exe_path.exists():
+                result = subprocess.run(
+                    [str(exe_path), "--version"], capture_output=True, text=True, timeout=5
+                )
+                if result.returncode == 0:
+                    # Extraer versión del output
+                    version = result.stdout.strip()
+                    return version if version else "Desconocida"
+        except Exception:
+            pass
+        return None
+
+    def show_reinstall_options(self) -> str:
+        """
+        Muestra opciones cuando el programa ya está instalado.
+
+        Returns:
+            str: Opción seleccionada ('reinstall', 'update', 'uninstall', 'cancel')
+        """
+        self.ui.clear_screen()
+        self.ui.print_header("INSTALACIÓN EXISTENTE DETECTADA")
+
+        install_dir = self._get_install_dir()
+        version = self._get_installed_version()
+
+        print(
+            f"{ConsoleColors.YELLOW}⚠ Simplex Solver ya está instalado en el sistema{ConsoleColors.RESET}\n"
+        )
+        print(f"{ConsoleColors.WHITE}Detalles de la instalación actual:{ConsoleColors.RESET}")
+        print(f"  • Ubicación: {ConsoleColors.CYAN}{install_dir}{ConsoleColors.RESET}")
+        if version:
+            print(f"  • Versión: {ConsoleColors.CYAN}{version}{ConsoleColors.RESET}")
+        print()
+
+        print(f"{ConsoleColors.WHITE}¿Qué deseas hacer?{ConsoleColors.RESET}\n")
+        print(
+            f"  {ConsoleColors.GREEN}1.{ConsoleColors.RESET} Reinstalar (eliminar e instalar de nuevo)"
+        )
+        print(f"     - Configuración limpia desde cero")
+        print(f"     - Se perderán configuraciones personalizadas")
+        print()
+        print(
+            f"  {ConsoleColors.GREEN}2.{ConsoleColors.RESET} Actualizar/Reparar (mantener configuración)"
+        )
+        print(f"     - Actualiza archivos del programa")
+        print(f"     - Mantiene tu configuración de IA y historial")
+        print()
+        print(f"  {ConsoleColors.GREEN}3.{ConsoleColors.RESET} Desinstalar")
+        print(f"     - Elimina el programa completamente")
+        print(f"     - Limpia PATH y menú contextual")
+        print()
+        print(f"  {ConsoleColors.GREEN}4.{ConsoleColors.RESET} Cancelar (no hacer nada)")
+        print()
+
+        while True:
+            choice = self.ui.get_input("Selecciona una opción (1-4)")
+
+            if choice == "1":
+                if self.ui.ask_yes_no(
+                    "¿Confirmas que deseas REINSTALAR? (se perderá la configuración)", default=False
+                ):
+                    return "reinstall"
+            elif choice == "2":
+                if self.ui.ask_yes_no("¿Confirmas que deseas ACTUALIZAR/REPARAR?", default=True):
+                    return "update"
+            elif choice == "3":
+                if self.ui.ask_yes_no("¿Confirmas que deseas DESINSTALAR?", default=False):
+                    return "uninstall"
+            elif choice == "4":
+                return "cancel"
+            else:
+                self.ui.print_warning("Por favor selecciona una opción válida (1-4)")
+
+    def uninstall_program(self) -> bool:
+        """
+        Desinstala el programa completamente.
+
+        Returns:
+            bool: True si se desinstaló correctamente
+        """
+        self.ui.clear_screen()
+        self.ui.print_header("DESINSTALANDO SIMPLEX SOLVER")
+
+        success = True
+        install_dir = self._get_install_dir()
+
+        # 1. Eliminar directorio de instalación
+        if install_dir.exists():
+            try:
+                self.ui.print_info(f"Eliminando archivos de {install_dir}...")
+                shutil.rmtree(install_dir)
+                self.ui.print_success("✓ Archivos del programa eliminados")
+            except Exception as e:
+                self.ui.print_error(f"✗ Error al eliminar archivos: {e}")
+                success = False
+
+        # 2. Eliminar acceso directo del escritorio
+        try:
+            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            shortcut_path = os.path.join(desktop, "Simplex Solver (Consola).lnk")
+            if os.path.exists(shortcut_path):
+                os.remove(shortcut_path)
+                self.ui.print_success("✓ Acceso directo eliminado")
+        except Exception as e:
+            self.ui.print_warning(f"⚠ No se pudo eliminar acceso directo: {e}")
+
+        # 3. Limpiar menú contextual
+        try:
+            if platform.system() == "Windows":
+                import winreg
+
+                keys_to_delete = [r"txtfile\shell\SimplexSolver", r"txtfile\shell\SimplexSolverAI"]
+
+                for key_path in keys_to_delete:
+                    try:
+                        winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, key_path + r"\command")
+                        winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, key_path)
+                    except WindowsError:
+                        pass  # La clave no existe o no se puede eliminar
+
+                self.ui.print_success("✓ Menú contextual limpiado")
+        except Exception as e:
+            self.ui.print_warning(f"⚠ No se pudo limpiar menú contextual: {e}")
+
+        # 4. Informar sobre PATH (no se puede limpiar automáticamente de forma segura)
+        if success:
+            print()
+            self.ui.print_success("✓ Desinstalación completada")
+            print()
+            self.ui.print_info("NOTA: El PATH del sistema no se modificó automáticamente")
+            print(f"  Si deseas eliminarlo manualmente:")
+            print(f"  1. Abre 'Variables de entorno'")
+            print(f"  2. Edita la variable PATH")
+            print(
+                f"  3. Elimina la entrada: {ConsoleColors.CYAN}{install_dir}{ConsoleColors.RESET}"
+            )
+            print()
+
+            # Preguntar si desea eliminar configuración de usuario
+            if self.ui.ask_yes_no(
+                "¿Deseas eliminar también la configuración de usuario?", default=False
+            ):
+                self._delete_user_config()
+
+        return success
+
+    def _delete_user_config(self):
+        """
+        Elimina la configuración de usuario (config, historial, logs).
+        """
+        try:
+            if platform.system() == "Windows":
+                appdata = os.getenv("APPDATA", "")
+                config_dir = Path(appdata) / "SimplexSolver"
+            else:
+                home = os.path.expanduser("~")
+                config_dir = Path(home) / ".simplex_solver"
+
+            if config_dir.exists():
+                shutil.rmtree(config_dir)
+                self.ui.print_success(f"✓ Configuración de usuario eliminada: {config_dir}")
+            else:
+                self.ui.print_info("No se encontró configuración de usuario")
+        except Exception as e:
+            self.ui.print_warning(f"⚠ No se pudo eliminar configuración: {e}")
 
     def _find_python_executable(self) -> Optional[str]:
         """
@@ -151,6 +365,7 @@ class SimplexInstaller:
     def show_welcome(self):
         """
         Muestra la pantalla de bienvenida con información general sobre el instalador.
+        Detecta si hay una instalación previa y ofrece opciones.
         """
         self.ui.clear_screen()
         self.ui.print_header("INSTALADOR DE SIMPLEX SOLVER")
@@ -170,6 +385,14 @@ class SimplexInstaller:
                 f"{ConsoleColors.YELLOW}  El menú contextual no se podrá instalar{ConsoleColors.RESET}"
             )
         print()
+
+        # Verificar si ya está instalado
+        if self._is_already_installed():
+            print(f"{ConsoleColors.CYAN}Presiona Enter para continuar...{ConsoleColors.RESET}")
+            input()
+            return  # Continuará al método run() que manejará las opciones
+
+        # Instalación nueva - mostrar bienvenida normal
         print(
             f"{ConsoleColors.WHITE}Bienvenido al instalador interactivo del Simplex Solver.{ConsoleColors.RESET}"
         )
@@ -249,6 +472,13 @@ class SimplexInstaller:
 
         self.ui.clear_screen()
         self.ui.print_header("SELECCIÓN DE MODELOS DE IA")
+
+        # Mostrar RAM disponible para que el usuario entienda las recomendaciones
+        ram_total = self.analyzer.capabilities.total_ram_gb
+        ram_usable = ram_total * 0.8  # 80% de la RAM total es usable
+        print(
+            f"{ConsoleColors.CYAN}RAM del sistema: {ram_total:.1f} GB (aprox. {ram_usable:.1f} GB usables para modelos){ConsoleColors.RESET}\n"
+        )
 
         recommendations = self.analyzer.get_model_recommendations()
 
@@ -353,6 +583,213 @@ class SimplexInstaller:
                 self.ui.print_warning("Por favor ingresa números válidos separados por comas")
 
         return selected
+
+    def install_program_files(self) -> Optional[str]:
+        """
+        Copia el SimplexSolver.exe a Program Files.
+        """
+        try:
+            # Determina la ruta de instalación
+            program_files = Path(os.environ.get("ProgramFiles", "C:/Program Files"))
+            install_dir = program_files / "SimplexSolver"
+            install_dir.mkdir(parents=True, exist_ok=True)
+
+            # Determina la ruta de origen (donde PyInstaller desempaquetó el solver)
+            source_exe_path = Path(getattr(sys, "_MEIPASS", ".")) / "SimplexSolver.exe"
+
+            if not source_exe_path.exists():
+                self.ui.print_error(
+                    "Error: SimplexSolver.exe no se encontró dentro del instalador."
+                )
+                self.log_operation("Copiar Archivos", False, "Solver no encontrado")
+                return None
+
+            # Copia el archivo
+            target_exe_path = install_dir / "SimplexSolver.exe"
+            shutil.copy(source_exe_path, target_exe_path)
+            self.ui.print_success(f"Programa instalado en {install_dir}")
+            self.log_operation("Copiar Archivos", True, str(install_dir))
+
+            # Renombrar a 'simplex.exe'
+            final_exe_path = install_dir / "simplex.exe"
+            if final_exe_path.exists():
+                final_exe_path.unlink()
+            target_exe_path.rename(final_exe_path)
+            self.ui.print_info(f"Renombrado a {final_exe_path.name}")
+
+            return str(install_dir)  # Devuelve la ruta de instalación
+
+        except Exception as e:
+            self.ui.print_error(f"Error al copiar archivos: {e}")
+            self.log_operation("Copiar Archivos", False, str(e))
+            return None
+
+    def setup_environment_path(self, install_dir: str):
+        """
+        Agrega el directorio de instalación al PATH del sistema.
+        """
+        if not self.is_admin:
+            self.ui.print_warning("Se requieren permisos de admin para modificar el PATH.")
+            self.log_operation("Modificar PATH", False, "Sin admin")
+            return False
+
+        try:
+            self.ui.print_info("Agregando al PATH del sistema...")
+            # Usar setx /M para modificar el PATH de MÁQUINA (requiere admin)
+            cmd = ["setx", "/M", "PATH", f"%PATH%;{install_dir}"]
+            subprocess.run(cmd, check=True, capture_output=True, text=True, shell=False)
+
+            self.ui.print_success("PATH del sistema actualizado.")
+            self.ui.print_warning(
+                "Es posible que necesites reiniciar la consola (cmd) para ver los cambios."
+            )
+            self.log_operation("Modificar PATH", True, install_dir)
+            return True
+
+        except Exception as e:
+            error_detail = str(e)
+            if hasattr(e, "stderr"):
+                error_detail = e.stderr
+            self.ui.print_error(f"No se pudo modificar el PATH: {error_detail}")
+            self.log_operation("Modificar PATH", False, error_detail)
+            return False
+
+    def create_desktop_shortcut(self, install_dir: str):
+        """
+        Crea un acceso directo en el escritorio que abre la consola interactiva.
+        """
+        # Intentar primero con PowerShell (siempre disponible en Windows)
+        if platform.system() == "Windows":
+            return self._create_shortcut_powershell(install_dir)
+        # Intentar con win32com si PowerShell falla
+        elif WIN32COM_AVAILABLE:
+            return self._create_shortcut_win32com(install_dir)
+        elif WINSHELL_AVAILABLE:
+            return self._create_shortcut_winshell(install_dir)
+        else:
+            self.ui.print_warning("No hay módulos disponibles para crear accesos directos.")
+            self.ui.print_info("Instala: pip install pywin32 winshell")
+            self.log_operation("Acceso Directo", False, "Módulos no disponibles")
+            return False
+
+    def _create_shortcut_powershell(self, install_dir: str):
+        """
+        Crea acceso directo usando PowerShell (el método más confiable en Windows).
+        """
+        try:
+            self.ui.print_info("Creando acceso directo en el escritorio (PowerShell)...")
+
+            # Obtener ruta del escritorio
+            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            link_filepath = os.path.join(desktop, "Simplex Solver (Consola).lnk")
+            solver_exe_path = str(Path(install_dir) / "simplex.exe")
+
+            # Script de PowerShell para crear el acceso directo
+            ps_script = f"""
+$WshShell = New-Object -ComObject WScript.Shell
+$Shortcut = $WshShell.CreateShortcut("{link_filepath}")
+$Shortcut.TargetPath = "cmd.exe"
+$Shortcut.Arguments = '/K "{solver_exe_path}"'
+$Shortcut.WorkingDirectory = "{install_dir}"
+$Shortcut.Description = "Consola interactiva de Simplex Solver"
+$Shortcut.IconLocation = "{solver_exe_path},0"
+$Shortcut.Save()
+"""
+
+            # Ejecutar PowerShell
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            if result.returncode == 0 and os.path.exists(link_filepath):
+                self.ui.print_success("✓ Acceso directo creado en el escritorio.")
+                self.log_operation("Acceso Directo", True, link_filepath)
+                return True
+            else:
+                error_msg = result.stderr if result.stderr else "Error desconocido"
+                self.ui.print_warning(f"PowerShell falló: {error_msg}")
+                # Intentar método alternativo
+                if WIN32COM_AVAILABLE:
+                    self.ui.print_info("Intentando método alternativo...")
+                    return self._create_shortcut_win32com(install_dir)
+                return False
+
+        except subprocess.TimeoutExpired:
+            self.ui.print_error("Timeout al ejecutar PowerShell")
+            self.log_operation("Acceso Directo", False, "Timeout en PowerShell")
+            return False
+        except Exception as e:
+            self.ui.print_error(f"Error creando acceso directo (PowerShell): {e}")
+            self.log_operation("Acceso Directo", False, str(e))
+            # Intentar método alternativo
+            if WIN32COM_AVAILABLE:
+                self.ui.print_info("Intentando método alternativo...")
+                return self._create_shortcut_win32com(install_dir)
+            return False
+
+    def _create_shortcut_win32com(self, install_dir: str):
+        """
+        Crea acceso directo usando win32com (más compatible con PyInstaller).
+        """
+        try:
+            import win32com.client
+            import os
+
+            self.ui.print_info("Creando acceso directo en el escritorio (win32com)...")
+
+            # Obtener ruta del escritorio
+            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            link_filepath = os.path.join(desktop, "Simplex Solver (Consola).lnk")
+
+            solver_exe_path = str(Path(install_dir) / "simplex.exe")
+
+            # Crear el acceso directo
+            shell = win32com.client.Dispatch("WScript.Shell")
+            shortcut = shell.CreateShortcut(link_filepath)
+            shortcut.TargetPath = "cmd.exe"
+            shortcut.Arguments = f'/K "{solver_exe_path}"'
+            shortcut.WorkingDirectory = install_dir
+            shortcut.Description = "Consola interactiva de Simplex Solver"
+            shortcut.IconLocation = solver_exe_path
+            shortcut.Save()
+
+            self.ui.print_success("Acceso directo creado en el escritorio.")
+            self.log_operation("Acceso Directo", True, link_filepath)
+            return True
+
+        except Exception as e:
+            self.ui.print_error(f"Error creando acceso directo (win32com): {e}")
+            self.log_operation("Acceso Directo", False, str(e))
+            return False
+
+    def _create_shortcut_winshell(self, install_dir: str):
+        """
+        Crea acceso directo usando winshell (método alternativo).
+        """
+        try:
+            desktop = winshell.desktop()
+            link_filepath = str(Path(desktop) / "Simplex Solver (Consola).lnk")
+
+            solver_exe_path = str(Path(install_dir) / "simplex.exe")
+
+            with Shortcut(link_filepath) as link:
+                link.path = "cmd.exe"
+                # /K mantiene la consola abierta y ejecuta "simplex.exe"
+                link.arguments = f'/K ""{solver_exe_path}""'
+                link.description = "Consola interactiva de Simplex Solver"
+                link.working_directory = install_dir
+
+            self.ui.print_success("Acceso directo creado en el escritorio.")
+            self.log_operation("Acceso Directo", True, link_filepath)
+            return True
+
+        except Exception as e:
+            self.ui.print_error(f"No se pudo crear el acceso directo: {e}")
+            self.log_operation("Acceso Directo", False, str(e))
+            return False
 
     def ask_context_menu(self):
         """
@@ -802,22 +1239,28 @@ class SimplexInstaller:
 
         print(f"\n{ConsoleColors.WHITE}Próximos pasos:{ConsoleColors.RESET}\n")
 
-        print(f"1. Para usar el solver interactivo:")
-        print(f"   {ConsoleColors.CYAN}python simplex.py --interactive{ConsoleColors.RESET}")
+        print(f"1. Para usar el solver desde cualquier lugar:")
+        print(f"   {ConsoleColors.CYAN}simplex --interactive{ConsoleColors.RESET}")
+        print(
+            f"   {ConsoleColors.YELLOW}(Reinicia tu consola/terminal para que el PATH se actualice){ConsoleColors.RESET}"
+        )
 
         print(f"\n2. Para resolver un archivo:")
+        print(f"   {ConsoleColors.CYAN}simplex ruta\\archivo.txt{ConsoleColors.RESET}")
+
+        print(f"\n3. Desde el acceso directo del escritorio:")
         print(
-            f"   {ConsoleColors.CYAN}python simplex.py ejemplos/ejemplo_maximizacion.txt{ConsoleColors.RESET}"
+            f"   {ConsoleColors.CYAN}Haz doble clic en 'Simplex Solver (Consola)'{ConsoleColors.RESET}"
         )
 
         if self.install_ollama and self.selected_models:
-            print(f"\n3. Para usar el modo IA:")
+            print(f"\n4. Para usar el modo IA:")
             print(
-                f'   {ConsoleColors.CYAN}python simplex.py --ai "tu problema en lenguaje natural"{ConsoleColors.RESET}'
+                f'   {ConsoleColors.CYAN}simplex --ai "tu problema en lenguaje natural"{ConsoleColors.RESET}'
             )
 
         if self.install_context_menu:
-            print(f"\n4. Desde el explorador de Windows:")
+            print(f"\n5. Desde el explorador de Windows:")
             print(
                 f"   {ConsoleColors.CYAN}Click derecho en un archivo .txt > Resolver con Simplex{ConsoleColors.RESET}"
             )
@@ -849,6 +1292,52 @@ class SimplexInstaller:
             # Paso 1: Bienvenida
             self.show_welcome()
 
+            # Verificar si ya está instalado y manejar opciones
+            if self._is_already_installed():
+                action = self.show_reinstall_options()
+
+                if action == "cancel":
+                    self.ui.print_info("Instalación cancelada por el usuario")
+                    self.ui.pause("Presiona Enter para salir...")
+                    return True
+
+                elif action == "uninstall":
+                    if self.uninstall_program():
+                        self.ui.pause("Presiona Enter para salir...")
+                        return True
+                    else:
+                        self.ui.print_error("La desinstalación tuvo problemas")
+                        self.ui.pause("Presiona Enter para salir...")
+                        return False
+
+                elif action == "reinstall":
+                    self.ui.clear_screen()
+                    self.ui.print_header("REINSTALACIÓN")
+                    self.ui.print_info("Eliminando instalación anterior...")
+
+                    # Eliminar instalación previa
+                    install_dir = self._get_install_dir()
+                    if install_dir.exists():
+                        try:
+                            shutil.rmtree(install_dir)
+                            self.ui.print_success("✓ Instalación anterior eliminada")
+                        except Exception as e:
+                            self.ui.print_error(f"Error al eliminar instalación previa: {e}")
+                            return False
+
+                    # Continuar con instalación normal
+                    self.ui.print_info("Continuando con instalación limpia...")
+                    self.ui.pause()
+
+                elif action == "update":
+                    self.ui.clear_screen()
+                    self.ui.print_header("ACTUALIZACIÓN/REPARACIÓN")
+                    self.ui.print_info(
+                        "Se actualizarán los archivos del programa manteniendo tu configuración"
+                    )
+                    self.ui.pause()
+                    # Continuar con instalación (sobrescribirá archivos)
+
             # Paso 2: Análisis del sistema
             self.show_system_analysis()
 
@@ -869,7 +1358,7 @@ class SimplexInstaller:
             self.ui.print_header("PROCESO DE INSTALACIÓN")
 
             # Calcular total de tareas
-            total_tasks = 1  # Dependencias siempre
+            total_tasks = 3  # Instalar archivos, configurar PATH, crear acceso directo (siempre)
             if self.install_ollama:
                 total_tasks += 1
                 if self.selected_models:
@@ -897,12 +1386,27 @@ class SimplexInstaller:
                     f"{ConsoleColors.CYAN}╚══════════════════════════════════════════════════════════════════════╝{ConsoleColors.RESET}\n"
                 )
 
-            # Instalar dependencias de Python
+            # Tarea 1: Instalar archivos
             current_task += 1
-            show_overall_progress("Instalando dependencias de Python", current_task, total_tasks)
-            if not self.install_python_dependencies():
-                self.ui.print_error("Fallo en la instalación de dependencias")
+            show_overall_progress("Instalando archivos del programa", current_task, total_tasks)
+            install_dir = self.install_program_files()
+
+            if not install_dir:
+                self.ui.print_error("Fallo en la instalación de archivos. Abortando.")
+                self.show_completion()
                 return False
+
+            # Tarea 2: Configurar PATH
+            current_task += 1
+            show_overall_progress(
+                "Configurando variables de entorno (PATH)", current_task, total_tasks
+            )
+            self.setup_environment_path(install_dir)
+
+            # Tarea 3: Crear Acceso Directo
+            current_task += 1
+            show_overall_progress("Creando accesos directos", current_task, total_tasks)
+            self.create_desktop_shortcut(install_dir)
 
             # Instalar Ollama
             if self.install_ollama:
