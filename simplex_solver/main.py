@@ -90,6 +90,10 @@ class ApplicationOrchestrator:
             # Mostrar los resultados al usuario
             UserInterface.display_result(result)
 
+            # Preguntar si desea ver las tablas intermedias
+            if result.get("status") == "optimal" and result.get("steps"):
+                self._ask_show_intermediate_tables(result)
+
             # Mostrar análisis de sensibilidad si la solución es óptima
             if result.get("status") == "optimal" and getattr(args, "sensitivity", False):
                 self._display_sensitivity_analysis(result)
@@ -115,7 +119,7 @@ class ApplicationOrchestrator:
 
     def _load_problem(self, args: argparse.Namespace) -> Optional[ProblemData]:
         """
-        Carga un problema desde la fuente especificada (archivo, entrada interactiva o historial).
+        Carga un problema desde la fuente especificada (archivo, entrada interactiva, NLP o historial).
 
         Returns:
             ProblemData o None si el usuario cancela la operación.
@@ -131,8 +135,12 @@ class ApplicationOrchestrator:
             else:
                 return None
 
+        # Cargar problema desde archivo con procesamiento NLP
+        if args.nlp and args.filename:
+            return self._load_from_nlp(args.filename)
+
         # Cargar problema desde un archivo
-        if args.filename:
+        elif args.filename:
             return self._load_from_file(args.filename)
 
         # Cargar problema desde entrada interactiva
@@ -188,6 +196,152 @@ class ApplicationOrchestrator:
             Defaults.INTERACTIVE_FILENAME,
             Defaults.EMPTY_FILE_CONTENT,
         )
+
+    def _load_from_nlp(self, filename: str) -> ProblemData:
+        """
+        Carga y procesa un problema usando procesamiento de lenguaje natural (NLP/IA).
+
+        Args:
+            filename: Ruta al archivo con la descripción del problema en lenguaje natural.
+
+        Returns:
+            ProblemData con los datos del problema procesado por IA.
+
+        Raises:
+            SystemExit: Si hay un error en el procesamiento NLP o el problema no puede ser resuelto.
+        """
+        print(f"=== SIMPLEX SOLVER - Procesamiento con IA: {filename} ===\n")
+        logger.info(f"Modo: Procesamiento NLP desde archivo '{filename}'")
+
+        # Leer el contenido del archivo
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                content = f.read()
+        except (FileNotFoundError, IOError, UnicodeDecodeError) as e:
+            logger.error(f"Error al leer archivo: {e}")
+            print(f"ERROR: No se pudo leer el archivo: {e}")
+            sys.exit(1)
+
+        if not content.strip():
+            logger.error("El archivo está vacío")
+            print("ERROR: El archivo está vacío")
+            sys.exit(1)
+
+        print("Contenido del archivo:")
+        print("-" * 70)
+        print(content)
+        print("-" * 70)
+        print()
+
+        # Importar módulos NLP
+        try:
+            from simplex_solver.nlp import NLPConnectorFactory
+        except ImportError as e:
+            logger.error(f"Error al importar módulos NLP: {e}")
+            print(f"ERROR: No se pudieron cargar los módulos de IA: {e}")
+            print("Asegúrate de que Ollama esté instalado y configurado correctamente.")
+            sys.exit(1)
+
+        # Crear conector NLP y procesar
+        print("Conectando con modelo de IA...")
+        print("(Detectando automáticamente el mejor modelo para tu sistema...)\n")
+
+        try:
+            connector = NLPConnectorFactory.create_connector()
+            logger.info("Conector NLP creado exitosamente")
+
+            # Mostrar modelo en uso
+            if hasattr(connector, "nlp_processor") and hasattr(
+                connector.nlp_processor, "model_type"
+            ):
+                model_name = connector.nlp_processor.model_type.value
+                print(f"✓ Usando modelo: {model_name}\n")
+                logger.info(f"Modelo NLP: {model_name}")
+
+        except Exception as e:
+            logger.error(f"Error al crear conector NLP: {e}", exception=e)
+            print(f"ERROR: No se pudo conectar con el modelo de IA: {e}")
+            print("\nAsegúrate de que:")
+            print("  1. Ollama está instalado y ejecutándose")
+            print("  2. Tienes al menos un modelo descargado")
+            print("\nComandos útiles:")
+            print("  - Ver modelos: ollama list")
+            print("  - Descargar modelo: ollama pull llama3.2")
+            sys.exit(1)
+
+        # Procesar con IA
+        print("Procesando problema con IA...")
+        logger.info("Iniciando procesamiento NLP del texto")
+
+        try:
+            result = connector.process_and_solve(content)
+        except Exception as e:
+            logger.error(f"Error durante el procesamiento NLP: {e}", exception=e)
+            print(f"ERROR: Fallo en el procesamiento con IA: {e}")
+            sys.exit(1)
+
+        # Verificar éxito del procesamiento
+        if not result.get("success"):
+            error_msg = result.get("error", "Error desconocido")
+            logger.error(f"Procesamiento NLP fallido: {error_msg}")
+            print(f"ERROR: No se pudo procesar el problema con IA: {error_msg}")
+            sys.exit(1)
+
+        # Extraer datos del problema
+        extracted = result.get("extracted_problem", {})
+        solution = result.get("solution", {})
+
+        if not extracted:
+            logger.error("No se extrajo información del problema")
+            print("ERROR: La IA no pudo extraer el problema del texto")
+            sys.exit(1)
+
+        print("\n✓ Problema procesado exitosamente por IA")
+        logger.info("Problema extraído exitosamente del texto")
+
+        # Convertir a formato ProblemData
+        try:
+            # Extraer coeficientes de la función objetivo
+            c = extracted.get("objective_coefficients", [])
+
+            # Extraer restricciones
+            constraints = extracted.get("constraints", [])
+            A = []
+            b = []
+            constraint_types = []
+
+            for constraint in constraints:
+                A.append(constraint.get("coefficients", []))
+                b.append(constraint.get("rhs", 0))
+                constraint_types.append(constraint.get("type", "<="))
+
+            # Determinar si es maximización
+            objective_type = extracted.get("objective_type", "maximize").lower()
+            maximize = "max" in objective_type
+
+            # Validar que tengamos datos
+            if not c or not A or not b:
+                raise ValueError("Datos incompletos extraídos del problema")
+
+            logger.info(
+                f"Problema convertido: {len(c)} variables, {len(A)} restricciones, "
+                f"{'maximización' if maximize else 'minimización'}"
+            )
+
+            return ProblemData(
+                c=c,
+                A=A,
+                b=b,
+                constraint_types=constraint_types,
+                maximize=maximize,
+                filename=filename,
+                file_content=content,
+            )
+
+        except Exception as e:
+            logger.error(f"Error al convertir datos del problema: {e}", exception=e)
+            print(f"ERROR: No se pudieron convertir los datos extraídos: {e}")
+            sys.exit(1)
 
     def _validate_problem(self, problem: ProblemData) -> None:
         """
@@ -372,6 +526,32 @@ class ApplicationOrchestrator:
             logger.warning(f"No se pudo generar el análisis de sensibilidad: {e}")
             print(f"\nAdvertencia: No se pudo generar el análisis de sensibilidad: {e}")
 
+    def _ask_show_intermediate_tables(self, result: Dict[str, Any]) -> None:
+        """
+        Pregunta al usuario si desea ver las tablas intermedias del método Simplex.
+
+        Args:
+            result: Resultado de la resolución del problema con los steps
+        """
+        try:
+            print()  # Línea en blanco
+            response = (
+                input("¿Desea ver las tablas intermedias del método Simplex? (s/n): ")
+                .strip()
+                .lower()
+            )
+
+            if response in ["s", "si", "sí", "y", "yes"]:
+                UserInterface.display_intermediate_tables(result)
+            else:
+                print("Tablas intermedias omitidas.")
+
+        except (KeyboardInterrupt, EOFError):
+            print("\nTablas intermedias omitidas.")
+        except Exception as e:
+            logger.warning(f"Error al mostrar tablas intermedias: {e}")
+            print(f"\nNo se pudieron mostrar las tablas intermedias: {e}")
+
 
 def main():
     """
@@ -407,6 +587,12 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("filename", nargs="?", help="Archivo con el problema a resolver")
     parser.add_argument("--interactive", "-i", action="store_true", help="Modo interactivo")
+    parser.add_argument(
+        "--nlp",
+        "-n",
+        action="store_true",
+        help="Procesar el archivo con procesamiento de lenguaje natural (IA/Ollama)",
+    )
     parser.add_argument(
         "--pdf",
         "-p",

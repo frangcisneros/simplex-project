@@ -30,6 +30,7 @@ class SimplexSolver:
         self._last_result = None  # Almacena el último resultado para análisis de sensibilidad
         self._original_c = None  # Coeficientes originales de la función objetivo
         self._original_b = None  # Valores originales del lado derecho de las restricciones
+        self._find_alternative_solutions = True  # Flag para buscar soluciones alternativas
 
     def _get_basic_solution(self, maximize: bool) -> tuple:
         """
@@ -299,13 +300,32 @@ class SimplexSolver:
                 }
             )
 
+            # Buscar soluciones alternativas
+            alternative_solutions = []
+            if self._find_alternative_solutions:
+                logger.info("Buscando soluciones alternativas óptimas...")
+                alternative_solutions = self._find_alternative_optimal_solutions(
+                    maximize, solution, optimal_value, total_iterations
+                )
+
+            # Construir lista de soluciones (primera + alternativas)
+            all_solutions = [solution]
+            if alternative_solutions:
+                all_solutions.extend(alternative_solutions)
+                logger.info(
+                    f"Se encontraron {len(alternative_solutions)} soluciones alternativas óptimas"
+                )
+
             result = {
                 "status": "optimal",
-                "solution": solution,
+                "solution": solution,  # Mantener compatibilidad hacia atrás
+                "solutions": all_solutions,  # Nueva estructura: lista de todas las soluciones
                 "optimal_value": optimal_value,
                 "iterations": total_iterations,
                 "steps": self.steps,
                 "n_original_vars": self.tableau.num_vars,
+                "has_alternative_solutions": len(alternative_solutions) > 0,
+                "num_alternative_solutions": len(alternative_solutions),
             }
             if self.tableau.artificial_vars:
                 result["phase1_iterations"] = phase1_iterations
@@ -375,3 +395,164 @@ class SimplexSolver:
 
         logger.info("Análisis de sensibilidad completado")
         return analysis
+
+    def _find_alternative_optimal_solutions(
+        self,
+        maximize: bool,
+        first_solution: Dict[str, float],
+        optimal_value: float,
+        current_iterations: int,
+    ) -> List[Dict[str, float]]:
+        """
+        Encuentra soluciones alternativas óptimas pivoteando sobre variables no básicas
+        con costo reducido cero.
+
+        El método funciona de la siguiente manera:
+        1. Identifica todas las variables no básicas con costo reducido cero
+        2. Para cada una, guarda el estado actual del tableau
+        3. Realiza un pivoteo con esa variable como entrante
+        4. Extrae la nueva solución básica (que tendrá el mismo valor objetivo)
+        5. Restaura el tableau al estado original para probar la siguiente variable
+
+        Args:
+            maximize: True para maximización, False para minimización.
+            first_solution: La primera solución óptima encontrada.
+            optimal_value: El valor objetivo óptimo.
+            current_iterations: Número actual de iteraciones (para logging).
+
+        Returns:
+            Lista de diccionarios, cada uno representando una solución alternativa óptima.
+            La lista está vacía si no hay soluciones alternativas.
+
+        Note:
+            Este método preserva el estado del tableau, restaurándolo después de
+            explorar cada alternativa.
+        """
+        alternative_solutions = []
+
+        # Verificar que el tableau esté inicializado
+        if self.tableau.tableau is None:
+            logger.warning("Tableau no inicializado, no se pueden buscar soluciones alternativas")
+            return alternative_solutions
+
+        # Identificar variables no básicas con costo reducido cero
+        zero_cost_vars = self.tableau.get_non_basic_zero_reduced_cost_vars(maximize)
+
+        if not zero_cost_vars:
+            logger.debug("No se encontraron variables no básicas con costo reducido cero")
+            return alternative_solutions
+
+        logger.info(
+            f"Encontradas {len(zero_cost_vars)} variables candidatas para soluciones alternativas"
+        )
+
+        # Guardar el estado original del tableau
+        original_tableau = self.tableau.tableau.copy()
+        original_basic_vars = self.tableau.basic_vars.copy()
+
+        for entering_col in zero_cost_vars:
+            try:
+                # Restaurar tableau al estado óptimo original antes de cada pivoteo
+                self.tableau.tableau = original_tableau.copy()
+                self.tableau.basic_vars = original_basic_vars.copy()
+
+                logger.debug(
+                    f"Explorando solución alternativa con variable entrante: columna {entering_col}"
+                )
+
+                # Verificar si el pivoteo es posible (no unbounded)
+                if self.tableau.is_unbounded(entering_col):
+                    logger.debug(f"Variable {entering_col} produce problema no acotado, omitiendo")
+                    continue
+
+                # Encontrar variable saliente
+                leaving_row, pivot = self.tableau.get_leaving_variable(entering_col)
+
+                if leaving_row == -1:
+                    logger.debug(
+                        f"No se pudo encontrar variable saliente para columna {entering_col}"
+                    )
+                    continue
+
+                logger.debug(
+                    f"Pivoteando: entrante={entering_col}, saliente={self.tableau.basic_vars[leaving_row]}"
+                )
+
+                # Realizar pivoteo
+                self.tableau.pivot(entering_col, leaving_row)
+
+                # Extraer la nueva solución
+                alt_solution, alt_value = self.tableau.get_solution(maximize)
+
+                # Verificar que el valor objetivo se mantiene (dentro de tolerancia)
+                if abs(alt_value - optimal_value) < AlgorithmConfig.NUMERICAL_TOLERANCE:
+                    # Verificar que la solución es diferente de la primera y de las ya encontradas
+                    if self._is_different_solution(
+                        alt_solution, first_solution
+                    ) and not self._solution_exists(alt_solution, alternative_solutions):
+                        alternative_solutions.append(alt_solution)
+                        logger.info(
+                            f"Solución alternativa #{len(alternative_solutions)} encontrada con valor {alt_value:.6f}"
+                        )
+                    else:
+                        logger.debug("Solución duplicada o idéntica a la primera, omitiendo")
+                else:
+                    logger.warning(
+                        f"Pivoteo produjo valor diferente: {alt_value:.6f} vs {optimal_value:.6f}"
+                    )
+
+            except Exception as e:
+                logger.warning(
+                    f"Error al explorar solución alternativa con variable {entering_col}: {e}"
+                )
+                continue
+
+        # Restaurar tableau al estado óptimo original
+        self.tableau.tableau = original_tableau
+        self.tableau.basic_vars = original_basic_vars
+
+        return alternative_solutions
+
+    def _is_different_solution(
+        self, solution1: Dict[str, float], solution2: Dict[str, float]
+    ) -> bool:
+        """
+        Compara dos soluciones para determinar si son significativamente diferentes.
+
+        Args:
+            solution1: Primera solución a comparar.
+            solution2: Segunda solución a comparar.
+
+        Returns:
+            True si las soluciones son diferentes (al menos una variable difiere
+            más allá de la tolerancia numérica), False si son esencialmente iguales.
+        """
+        # Verificar que tengan las mismas variables
+        if set(solution1.keys()) != set(solution2.keys()):
+            return True
+
+        # Comparar cada variable
+        for var in solution1:
+            diff = abs(solution1[var] - solution2[var])
+            if diff > AlgorithmConfig.NUMERICAL_TOLERANCE:
+                return True
+
+        return False
+
+    def _solution_exists(
+        self, solution: Dict[str, float], solution_list: List[Dict[str, float]]
+    ) -> bool:
+        """
+        Verifica si una solución ya existe en una lista de soluciones.
+
+        Args:
+            solution: Solución a buscar.
+            solution_list: Lista de soluciones donde buscar.
+
+        Returns:
+            True si la solución ya existe en la lista, False en caso contrario.
+        """
+        for existing_solution in solution_list:
+            if not self._is_different_solution(solution, existing_solution):
+                return True
+        return False

@@ -181,6 +181,32 @@ def export_to_pdf(result: dict, filename: str):
                 )
                 solution_content.append(Paragraph(f"<b>Para</b> {vars_str}", styles["Normal"]))
 
+            # Mostrar soluciones alternativas si existen
+            if result.get("has_alternative_solutions", False):
+                num_alt = result.get("num_alternative_solutions", 0)
+                solution_content.append(Spacer(1, 6))
+                solution_content.append(
+                    Paragraph(
+                        f"<b>⚠️ Soluciones alternativas:</b> Se encontraron {num_alt} soluciones alternativas óptimas",
+                        styles["Normal"],
+                    )
+                )
+
+                # Mostrar todas las soluciones alternativas
+                if "solutions" in result and len(result["solutions"]) > 1:
+                    for idx, alt_solution in enumerate(result["solutions"][1:], start=2):
+                        solution_content.append(Spacer(1, 4))
+                        alt_vars_str = ", ".join(
+                            f"<b><font color='{highlight_color}'>{var}={val:.2f}</font></b>"
+                            for var, val in alt_solution.items()
+                        )
+                        solution_content.append(
+                            Paragraph(
+                                f"<b>Solución alternativa #{idx - 1}:</b> {alt_vars_str}",
+                                styles["Normal"],
+                            )
+                        )
+
         elif status == "unbounded":
             solution_content.append(Paragraph("Problema no acotado", styles["Heading3"]))
 

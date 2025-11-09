@@ -14,20 +14,6 @@ sys.path.insert(
     0, str(PROJECT_ROOT)
 )  # Agrega el directorio raíz al PATH para importar módulos personalizados.
 
-try:
-    # Importar módulos necesarios para la resolución con IA
-    from simplex_solver.nlp import NLPConnectorFactory, NLPModelType
-    from simplex_solver.reporting_pdf import generate_pdf
-except ImportError as e:
-    # Manejo de errores si los módulos no están disponibles
-    print("=" * 70)
-    print("ERROR: No se pudieron importar los módulos necesarios")
-    print("=" * 70)
-    print(f"Error: {e}")
-    print("\nAsegúrese de que el proyecto está instalado correctamente.")
-    input("\nPresione Enter para salir...")
-    sys.exit(1)
-
 
 def solve_from_file_with_ai(filepath):
     """
@@ -40,119 +26,48 @@ def solve_from_file_with_ai(filepath):
         print("=" * 70)
         print("SIMPLEX SOLVER - Resolución con IA")
         print("=" * 70)
-        print(f"\nArchivo: {filepath}")
-        print("\nLeyendo archivo y procesando con modelo de lenguaje natural...")
+        print(f"\nArchivo: {filepath}\n")
 
-        # Leer el contenido del archivo
-        with open(filepath, "r", encoding="utf-8") as f:
-            content = f.read()
+        # Importar módulos necesarios
+        from simplex_solver.main import ApplicationOrchestrator, create_parser
 
-        if not content.strip():
-            # Validar que el archivo no esté vacío
-            print("\nERROR: El archivo está vacío")
-            input("\nPresione Enter para salir...")
-            sys.exit(1)
+        # Ofrecer generar PDF antes de resolver
+        print("¿Desea generar un reporte en PDF al finalizar?")
+        respuesta = input("(S/N): ").strip().upper()
+        generate_pdf = respuesta == "S"
 
-        print("\nContenido del archivo:")
-        print("-" * 70)
-        print(content)  # Muestra el contenido del archivo para referencia.
-        print("-" * 70)
+        # Construir argumentos para el solver
+        args = ["--nlp", filepath]
 
-        # Crear conector NLP
-        print("\nConectando con modelo de IA...")
-        print("(Detectando automáticamente el mejor modelo para tu sistema...)")
-        try:
-            connector = NLPConnectorFactory.create_connector()  # Auto-detecta el modelo óptimo
+        if generate_pdf:
+            # Generar nombre del PDF basado en el archivo original
+            filepath_obj = Path(filepath)
+            pdf_name = filepath_obj.stem + "_solucion_ia.pdf"
+            args.extend(["--pdf", pdf_name])
+            print(f"\nSe generará el PDF: {pdf_name}")
 
-            # Mostrar qué modelo se está usando
-            model_name = (
-                connector.nlp_processor.model_type.value
-                if hasattr(connector, "nlp_processor")
-                else "desconocido"
-            )
-            print(f"✓ Usando modelo: {model_name}")
-        except Exception as e:
-            # Manejo de errores al conectar con el modelo de IA
-            print(f"\nERROR al conectar con el modelo de IA: {e}")
-            print("\nAsegúrese de que:")
-            print("  1. Ollama está instalado y ejecutándose.")
-            print("  2. El modelo llama3.1:8b está descargado.")
-            print("\nPuede verificar con: ollama list")
-            print("Puede descargar el modelo con: ollama pull llama3.1:8b")
-            input("\nPresione Enter para salir...")
-            sys.exit(1)
+        # Crear parser y procesar argumentos
+        parser = create_parser()
+        parsed_args = parser.parse_args(args)
 
-        # Procesar y resolver con IA
-        print("\nProcesando problema con IA...")
-        result = connector.process_and_solve(
-            content
-        )  # Procesa el contenido del archivo con el modelo de IA.
-
-        # Mostrar resultados
+        # Ejecutar el flujo completo con el orquestador
         print("\n" + "=" * 70)
-        print("RESULTADOS")
+        orchestrator = ApplicationOrchestrator()
+        orchestrator.run(parsed_args)
+
+        print("\n" + "=" * 70)
+        print("Proceso completado exitosamente")
         print("=" * 70)
-
-        if result.get("success"):
-            print("\nProblema resuelto exitosamente\n")
-
-            if "message" in result and result["message"]:
-                print(f"Mensaje: {result['message']}\n")
-
-            solution = result.get("solution", {})
-
-            if "optimal_value" in solution:
-                print(f"Valor óptimo: {solution['optimal_value']}")
-
-            if "variables" in solution and solution["variables"]:
-                print("\nVariables:")
-                for var_name, var_value in solution["variables"].items():
-                    print(f"   {var_name} = {var_value}")
-
-            if "problem_type" in solution:
-                print(f"\nTipo de problema: {solution['problem_type']}")
-
-            # Ofrecer generar PDF
-            print("\n¿Desea generar un reporte en PDF?")
-            respuesta = input("(S/N): ").strip().upper()
-
-            if respuesta == "S":
-                # Generar nombre del PDF basado en el archivo original
-                filepath_obj = Path(filepath)
-                pdf_name = filepath_obj.stem + "_solucion_ia.pdf"
-                pdf_path = filepath_obj.parent / pdf_name
-
-                print(f"\nGenerando PDF: {pdf_path}")
-                try:
-                    # Adaptar el resultado para generate_pdf
-                    pdf_result = {
-                        "status": "optimal",
-                        "optimal_value": solution.get("optimal_value"),
-                        "solution": solution.get("variables", {}),
-                        "iterations": solution.get("iterations", 0),
-                        "maximize": "maximiz" in solution.get("problem_type", "").lower(),
-                    }
-                    output_path = generate_pdf(pdf_result, str(pdf_path))
-                    print(f"PDF generado exitosamente en: {output_path}")
-                except Exception as e:
-                    print(f"Error al generar PDF: {e}")
-
-        else:
-            # Manejo de errores si el problema no se pudo resolver
-            print("\nNo se pudo resolver el problema\n")
-            if "message" in result:
-                print(f"Mensaje: {result['message']}")
-            if "error" in result:
-                print(f"Error: {result['error']}")
-
-        print("=" * 70)
-        print("\nProceso completado")
 
     except FileNotFoundError as e:
         # Manejo de errores si el archivo no existe
         print(f"\nERROR: No se encontró el archivo: {e}")
         input("\nPresione Enter para salir...")
         sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n\nProceso interrumpido por el usuario")
+        input("\nPresione Enter para salir...")
+        sys.exit(0)
     except Exception as e:
         # Manejo de errores inesperados
         print(f"\nERROR inesperado: {e}")

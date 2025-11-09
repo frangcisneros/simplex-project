@@ -1,0 +1,6 @@
+MAXIMIZE
+3x1 + 2x2
+
+SUBJECT TO
+x1 + x2 <= 4
+2x1 + x2 <= 5

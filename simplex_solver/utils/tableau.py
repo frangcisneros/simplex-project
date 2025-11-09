@@ -351,6 +351,39 @@ class Tableau:
             else:
                 return bool(np.all(last_row >= -self.tol))
 
+    def get_non_basic_zero_reduced_cost_vars(self, maximize: bool) -> List[int]:
+        """
+        Identifica variables no básicas con costo reducido cero en el tableau óptimo.
+
+        Una variable no básica con costo reducido cero indica la posibilidad de una
+        solución alternativa óptima. Realizar un pivoteo con esta variable producirá
+        otra solución con el mismo valor objetivo.
+
+        Args:
+            maximize: True para maximización, False para minimización.
+
+        Returns:
+            Lista de índices de columnas (variables) no básicas con costo reducido cero.
+
+        Note:
+            Solo debe llamarse cuando el tableau está en estado óptimo (después de
+            is_optimal() retorna True).
+        """
+        if self.tableau is None or self.phase == 1:
+            return []
+
+        last_row = self.tableau[-1, :-1]  # Fila de costos reducidos (sin RHS)
+        non_basic_zero_vars = []
+
+        for col_idx in range(len(last_row)):
+            # Verificar si la variable NO es básica
+            if col_idx not in self.basic_vars:
+                # Verificar si el costo reducido es cero (dentro de tolerancia)
+                if abs(last_row[col_idx]) < self.tol:
+                    non_basic_zero_vars.append(col_idx)
+
+        return non_basic_zero_vars
+
     def get_entering_variable(self, maximize: bool) -> int:
         """Encuentra la variable que entra a la base (regla: mejor coeficiente).
 

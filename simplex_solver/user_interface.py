@@ -4,7 +4,8 @@ Contiene funciones para entrada interactiva y visualización de resultados.
 """
 
 import sys
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
+import numpy as np
 
 # Importar el validador de entrada
 from simplex_solver.input_validator import InputValidator
@@ -260,9 +261,27 @@ class UserInterface:
             if "phase1_iterations" in result:
                 print(f"Iteraciones Fase 1: {result['phase1_iterations']}")
             print(f"Valor óptimo: {result['optimal_value']:.6f}")
-            print("\n Solución:")
+
+            # Mostrar primera solución
+            print("\nSolución:")
             for var, value in sorted(result["solution"].items()):
                 print(f"  {var} = {value:.6f}")
+
+            # Mostrar soluciones alternativas si existen
+            if result.get("has_alternative_solutions", False):
+                num_alt = result.get("num_alternative_solutions", 0)
+                print(f"\n{'=' * 50}")
+                print(f"⚠️  ATENCIÓN: SOLUCIONES MÚLTIPLES ENCONTRADAS")
+                print(f"{'=' * 50}")
+                print(f"Se encontraron {num_alt} soluciones alternativas óptimas")
+                print(f"Todas tienen el mismo valor objetivo: {result['optimal_value']:.6f}")
+                print(f"{'=' * 50}")
+
+                if "solutions" in result and len(result["solutions"]) > 1:
+                    for idx, alt_solution in enumerate(result["solutions"][1:], start=2):
+                        print(f"\n  ► Solución Alternativa #{idx - 1}:")
+                        for var, value in sorted(alt_solution.items()):
+                            print(f"      {var} = {value:.6f}")
 
             # Mostrar análisis de sensibilidad si está disponible
             if "sensitivity_analysis" in result and result["sensitivity_analysis"] is not None:
@@ -332,3 +351,124 @@ class UserInterface:
                 print(f"  {constraint}: [{lower_str}, {upper_str}]")
 
         print("=" * 50)
+
+    @staticmethod
+    def display_intermediate_tables(result: dict) -> None:
+        """
+        Muestra las tablas intermedias del método Simplex.
+
+        Parámetros:
+            result: Diccionario que contiene los pasos (steps) de la resolución.
+        """
+        if "steps" not in result or not result["steps"]:
+            print("\nNo hay tablas intermedias disponibles.")
+            return
+
+        steps = result["steps"]
+        n_original_vars = result.get("n_original_vars", 0)
+
+        print("\n" + "=" * 70)
+        print("TABLAS INTERMEDIAS DEL MÉTODO SIMPLEX")
+        print("=" * 70)
+
+        for idx, step in enumerate(steps):
+            iter_num = step["iteration"]
+            tableau = step["tableau"]
+            basic_vars = step.get("basic_vars", [])
+            entering_var = step.get("entering_var")
+            leaving_var = step.get("leaving_var")
+
+            # Título de la iteración
+            if entering_var is None:
+                if idx == 0:
+                    print(f"\n{'─' * 70}")
+                    print(f"  ITERACIÓN {iter_num} - TABLEAU INICIAL")
+                    print(f"{'─' * 70}")
+                else:
+                    print(f"\n{'─' * 70}")
+                    print(f"  ITERACIÓN {iter_num} - TABLEAU FINAL (ÓPTIMO)")
+                    print(f"{'─' * 70}")
+            else:
+                entering_name = UserInterface._format_var_name(entering_var, n_original_vars)
+                leaving_name = UserInterface._format_var_name(leaving_var, n_original_vars)
+                print(f"\n{'─' * 70}")
+                print(f"  ITERACIÓN {iter_num}")
+                print(f"  Variable entrante: {entering_name} | Variable saliente: {leaving_name}")
+                print(f"{'─' * 70}")
+
+            # Mostrar la tabla
+            UserInterface._print_tableau(tableau, basic_vars, n_original_vars)
+
+        print("\n" + "=" * 70)
+
+    @staticmethod
+    def _format_var_name(var_idx: int, n_original_vars: int) -> str:
+        """
+        Formatea el nombre de una variable (x1, x2, ... o s1, s2, ...).
+
+        Parámetros:
+            var_idx: Índice de la variable.
+            n_original_vars: Número de variables originales del problema.
+
+        Retorna:
+            Nombre formateado de la variable.
+        """
+        if isinstance(var_idx, int):
+            if var_idx < n_original_vars:
+                return f"x{var_idx + 1}"
+            else:
+                slack_idx = var_idx - n_original_vars + 1
+                return f"s{slack_idx}"
+        else:
+            return str(var_idx)
+
+    @staticmethod
+    def _print_tableau(tableau: np.ndarray, basic_vars: List[int], n_original_vars: int) -> None:
+        """
+        Imprime una tabla del método Simplex de forma formateada.
+
+        Parámetros:
+            tableau: Matriz numpy con la tabla actual.
+            basic_vars: Lista de variables básicas.
+            n_original_vars: Número de variables originales del problema.
+        """
+        if tableau is None:
+            print("  (Tableau no disponible)")
+            return
+
+        m, n_plus = tableau.shape
+        n = n_plus - 1  # columnas de variables (sin RHS)
+
+        # Encabezado
+        header = (
+            ["VB"]
+            + [UserInterface._format_var_name(i, n_original_vars) for i in range(n)]
+            + ["RHS"]
+        )
+
+        # Calcular anchos de columna
+        col_widths = [max(len(h), 8) for h in header]
+
+        # Imprimir encabezado
+        print("\n  ", end="")
+        for i, h in enumerate(header):
+            print(f"{h:>{col_widths[i]}}", end="  ")
+        print()
+        print("  " + "─" * (sum(col_widths) + 2 * len(col_widths)))
+
+        # Imprimir filas
+        for row_idx, row in enumerate(tableau):
+            # Variable básica
+            if row_idx < len(basic_vars):
+                vb_name = UserInterface._format_var_name(basic_vars[row_idx], n_original_vars)
+            else:
+                vb_name = "z"
+
+            print(f"  {vb_name:>{col_widths[0]}}", end="  ")
+
+            # Valores de la fila
+            for col_idx, val in enumerate(row):
+                print(f"{val:>{col_widths[col_idx + 1]}.2f}", end="  ")
+            print()
+
+        print()

@@ -21,6 +21,7 @@ import sys
 import subprocess
 import shutil
 import argparse
+import time
 from pathlib import Path
 from typing import List, Optional
 from dataclasses import dataclass
@@ -190,18 +191,83 @@ class ExecutableBuilder:
     def build(spec_file: Path, name: str) -> bool:
         """Construir un ejecutable a partir de un archivo .spec."""
         print(f"\n[BUILD] Construyendo {name}...")
+        print(f"[INFO] Este proceso puede tomar varios minutos...")
+        print(f"[INFO] Mostrando salida de PyInstaller (filtrado):\n")
+        print("=" * 70)
+
+        # Patrones a filtrar (advertencias ruidosas que no afectan el funcionamiento)
+        filter_patterns = [
+            "Library not found: could not resolve 'cublas",
+            "Library not found: could not resolve 'cusparse",
+            "Library not found: could not resolve 'cudart",
+            "DeprecationWarning: `torch.distributed.",
+            "NOTE: Redirects are currently not supported",
+            "pkg_resources is deprecated as an API",
+            "DeprecationWarning: builtin type swigvarlink",
+            "SyntaxWarning: 'return' in a 'finally' block",
+            "Setuptools: '",  # Filtra los mensajes de setuptools-vendored
+        ]
+
+        # ERROR conocido de numpy que es inofensivo
+        ignore_errors = ["ERROR: Hidden import 'numpy.core._methods' not found"]
 
         try:
             cmd = [sys.executable, "-m", "PyInstaller", str(spec_file), "--clean"]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            # Usar Popen para mostrar salida en tiempo real
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
 
-            print(f"[OK] {name} construido correctamente")
-            return True
+            # Leer y mostrar salida línea por línea, filtrando ruido
+            for line in process.stdout:
+                # Verificar si la línea debe ser filtrada
+                should_filter = False
 
-        except subprocess.CalledProcessError as e:
-            print(f"[ERROR] Falló la construcción de {name}")
-            print(e.stderr)
+                # Filtrar advertencias ruidosas
+                for pattern in filter_patterns:
+                    if pattern in line:
+                        should_filter = True
+                        break
+
+                # No filtrar errores reales, solo los conocidos como inofensivos
+                if "ERROR:" in line:
+                    for ignored in ignore_errors:
+                        if ignored in line:
+                            should_filter = True
+                            break
+
+                # Mostrar solo líneas no filtradas
+                if not should_filter:
+                    print(line, end="")
+
+            # Esperar a que el proceso termine
+            process.wait()
+
+            print("=" * 70)
+
+            if process.returncode == 0:
+                print(f"\n[OK] {name} construido correctamente")
+                return True
+            else:
+                print(f"\n[ERROR] Falló la construcción de {name}")
+                print(f"[ERROR] Código de salida: {process.returncode}")
+                return False
+
+        except KeyboardInterrupt:
+            print("\n[WARN] Build interrumpido por el usuario (Ctrl+C)")
+            if process:
+                process.terminate()
+                process.wait()
+            return False
+        except Exception as e:
+            print(f"[ERROR] Error inesperado durante la construcción de {name}")
+            print(f"[ERROR] {str(e)}")
             return False
 
     @staticmethod
@@ -354,11 +420,16 @@ class BuildOrchestrator:
     def build_all(self) -> bool:
         """Construir todos los objetivos en el orden correcto."""
         print("\n[BUILD] Construyendo todos los objetivos...\n")
+        print("[INFO] Este proceso puede tomar 5-10 minutos en total")
+        print("[INFO] El solver puede tardar 3-5 minutos")
+        print("[INFO] El instalador puede tardar 2-3 minutos\n")
 
         # Orden correcto: solver primero, luego instalador (que incluye el solver)
         build_order = ["solver", "installer"]
 
         success = True
+        start_time = time.time()
+
         for target in build_order:
             if target in self.CONFIGS:
                 print(f"\n{'='*70}")
@@ -367,12 +438,19 @@ class BuildOrchestrator:
                 )
                 print(f"{'='*70}")
 
+                target_start = time.time()
+
                 if not self.build(target):
-                    print(f"\n[ERROR] Falló la construcción de {target}")
+                    elapsed = time.time() - target_start
+                    print(f"\n[ERROR] Falló la construcción de {target} después de {elapsed:.1f}s")
                     success = False
                     break  # Detener si falla uno
 
-                print(f"\n[OK] {target} completado exitosamente")
+                elapsed = time.time() - target_start
+                print(f"\n[OK] {target} completado exitosamente en {elapsed:.1f}s")
+
+        total_time = time.time() - start_time
+        print(f"\n[INFO] Tiempo total: {total_time:.1f}s ({total_time/60:.1f} minutos)")
 
         return success
 
