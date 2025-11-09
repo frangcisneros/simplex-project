@@ -13,6 +13,9 @@ on:
       - main # Se ejecuta cuando se abre un pull request hacia la rama principal.
       - quality/tests # También se ejecuta en pull requests hacia la rama quality/tests.
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest # Define que el trabajo se ejecutará en un contenedor con Ubuntu.
@@ -66,10 +69,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1 # Utiliza una acción para crear un release en GitHub.
         with:
-          name: Release ${{ github.ref_name }} # Asigna el nombre del release basado en el nombre del tag.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Release ${{ github.ref_name }}
           files: |
-            dist/*  # Incluye todos los archivos generados en el directorio "dist".
-            GUIA_USUARIO.md  # Incluye la guía de usuario.
-            GUIA_DESARROLLADOR.md  # Incluye la guía de desarrollador.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Token de autenticación para interactuar con la API de GitHub.
+            dist/*
+            GUIA_USUARIO.md
+            GUIA_DESARROLLADOR.md
