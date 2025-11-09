@@ -26,10 +26,14 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Archive and deprecated files
+archive/
+
 # PyInstaller
-#  Usually these files are written by a python script from a template
+#  Usually these files are written by a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
+!installer.manifest
 *.spec
 
 # Installer logs
@@ -207,5 +211,22 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# PDFs generados por Simplex Solver
+# Simplex Solver specific files
+# Logs and databases
+logs/
+*.db
+simplex_logs.db
+
+# Generated reports and PDFs
 /reports/
+*.pdf
+
+# PyInstaller spec files
+*.spec
+
+# Build artifacts
+build/
+dist/
+
+# Temporary test files
+ejemplos/test.txt

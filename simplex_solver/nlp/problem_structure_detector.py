@@ -1,0 +1,412 @@
+"""
+Detector de estructura de problemas de optimización.
+
+Analiza el texto del problema para identificar:
+- Número de plantas/instalaciones
+- Número de productos/tamaños/tipos
+- Tipo de problema (simple, multi-instalación, mezclas)
+- Validación de variables extraídas vs esperadas
+"""
+
+import re
+from typing import Dict, List, Tuple, Optional
+import logging
+
+
+class ProblemStructureDetector:
+    """
+    Detecta automáticamente la estructura de un problema de optimización
+    basándose en el análisis del texto proporcionado.
+
+    Este detector utiliza palabras clave y patrones específicos para identificar
+    características del problema, como el tipo de problema, el número de instalaciones
+    y productos, y si el problema involucra mezclas o transporte.
+    """
+
+    def __init__(self):
+        # Inicializa el logger para registrar eventos y advertencias durante la detección.
+        self.logger = logging.getLogger(__name__)
+
+    def detect_structure(self, problem_text: str) -> Dict:
+        """
+        Analiza el texto y detecta la estructura del problema.
+
+        Args:
+            problem_text (str): Texto que describe el problema de optimización.
+
+        Returns:
+            Dict: Un diccionario con información sobre la estructura del problema, incluyendo:
+                - problem_type: Tipo de problema detectado ('simple', 'multi_facility', etc.).
+                - num_facilities: Número de instalaciones detectadas.
+                - num_products: Número de productos detectados.
+                - expected_variables: Número esperado de variables en el modelo.
+                - facility_names: Lista de nombres de instalaciones detectadas.
+                - product_names: Lista de nombres de productos detectados.
+                - has_blending: Indica si el problema involucra mezclas.
+        """
+        text = problem_text.lower()
+
+        # Detectar si el problema es de tipo dieta.
+        diet_keywords = ["dieta", "alimento", "calorías", "proteína", "porción"]
+        if any(keyword in text for keyword in diet_keywords):
+            foods = self._detect_food_items(text)
+            if foods:
+                return {
+                    "problem_type": "diet",
+                    "num_facilities": 1,
+                    "num_products": len(foods),
+                    "expected_variables": len(foods),
+                    "facility_names": [],
+                    "product_names": foods,
+                    "has_blending": False,
+                }
+
+        # Detectar si el problema es de tipo transporte.
+        transport_keywords = [
+            "transporte",
+            "transportar",
+            "almacén",
+            "almacen",
+            "tienda",
+        ]
+        if any(keyword in text for keyword in transport_keywords):
+            routes = self._detect_transport_routes(text)
+            if routes:
+                return {
+                    "problem_type": "transport",
+                    "num_facilities": 1,
+                    "num_products": len(routes),
+                    "expected_variables": len(routes),
+                    "facility_names": [],
+                    "product_names": routes,
+                    "has_blending": False,
+                }
+
+        # Detectar instalaciones y productos en el texto.
+        facilities = self._detect_facilities(text)
+        num_facilities = len(facilities) if facilities else 1
+
+        products = self._detect_products(text)
+        num_products = len(products) if products else 1
+
+        # Detectar si el problema involucra mezclas.
+        has_blending = self._detect_blending(text)
+
+        # Determinar el tipo de problema basado en las características detectadas.
+        if num_facilities > 1 and num_products > 1:
+            problem_type = "multi_facility"
+            expected_variables = num_facilities * num_products
+        elif has_blending:
+            raw_materials = self._detect_raw_materials(text)
+            final_blends = self._detect_final_blends(text)
+
+            if raw_materials and final_blends:
+                problem_type = "blending_complex"
+                expected_variables = (
+                    len(raw_materials)
+                    + len(final_blends)
+                    + (len(raw_materials) * len(final_blends))
+                )
+            else:
+                problem_type = "blending_simple"
+                expected_variables = num_products + 1
+        elif num_facilities > 1 or "planta" in text:
+            problem_type = "multi_facility"
+            expected_variables = num_facilities * num_products
+        else:
+            problem_type = "simple"
+            expected_variables = num_products
+
+        return {
+            "problem_type": problem_type,
+            "num_facilities": num_facilities,
+            "num_products": num_products,
+            "expected_variables": expected_variables,
+            "facility_names": facilities,
+            "product_names": products,
+            "has_blending": has_blending,
+        }
+
+    def _detect_facilities(self, text: str) -> List[str]:
+        """
+        Detecta instalaciones (plantas) mencionadas en el texto.
+
+        Args:
+            text (str): Texto del problema.
+
+        Returns:
+            List[str]: Lista de nombres de instalaciones detectadas.
+        """
+        facilities = []
+
+        # Buscar patrones como "tres plantas", "dos plantas", etc.
+        num_pattern = r"(tres|dos|cuatro|cinco|2|3|4|5)\s+plantas"
+        match = re.search(num_pattern, text)
+        if match:
+            num_word = match.group(1)
+            num_map = {
+                "dos": 2,
+                "2": 2,
+                "tres": 3,
+                "3": 3,
+                "cuatro": 4,
+                "4": 4,
+                "cinco": 5,
+                "5": 5,
+            }
+            num = num_map.get(num_word, 1)
+            facilities = [f"planta_{i+1}" for i in range(num)]
+            return facilities
+
+        # Buscar patrones como "planta 1", "planta 2", etc.
+        planta_pattern = r"planta[s]?\s*[\d\s,y]+"
+        match = re.search(planta_pattern, text)
+        if match:
+            numbers = re.findall(r"\d+", match.group())
+            if numbers:
+                facilities = [f"planta_{n}" for n in sorted(set(numbers))]
+
+        return facilities
+
+    def _detect_products(self, text: str) -> List[str]:
+        """
+        Detecta productos o tamaños mencionados en el texto.
+
+        Args:
+            text (str): Texto del problema.
+
+        Returns:
+            List[str]: Lista de nombres de productos detectados.
+        """
+        products = []
+
+        # Detectar alimentos en problemas de dieta.
+        food_items = self._detect_food_items(text)
+        if food_items:
+            return food_items
+
+        # Detectar rutas en problemas de transporte.
+        transport_routes = self._detect_transport_routes(text)
+        if transport_routes:
+            return transport_routes
+
+        # Buscar patrones como "tres tamaños", "dos productos", etc.
+        num_pattern = r"(tres|dos|cuatro|2|3|4)\s+(producto|tamaño|tipo)"
+        match = re.search(num_pattern, text)
+        if match:
+            num_word = match.group(1)
+            num_map = {"dos": 2, "2": 2, "tres": 3, "3": 3, "cuatro": 4, "4": 4}
+            num = num_map.get(num_word, 1)
+            products = [f"producto_{i+1}" for i in range(num)]
+            return products
+
+        # Buscar tamaños explícitos como "grande", "mediano", etc.
+        size_patterns = [
+            r"(grande|mediano|chico)",
+            r"(small|medium|large)",
+        ]
+
+        for pattern in size_patterns:
+            matches = re.findall(pattern, text)
+            if matches:
+                products.extend(list(set(matches)))
+
+        if products:
+            return list(set(products))[:10]
+
+        # Buscar productos específicos como "producto A", "producto B", etc.
+        product_pattern = r"producto[s]?\s*[:\-]?\s*([A-Z][,\s]*[A-Z]*[,\s]*[A-Z]*)"
+        matches = re.findall(product_pattern, text)
+        if matches:
+            for match in matches:
+                prods = re.findall(r"[A-Z]", match)
+                products.extend(prods)
+
+        return list(set(products))[:10]
+
+    def _detect_blending(self, text: str) -> bool:
+        """
+        Detecta si el problema involucra mezclas.
+
+        Args:
+            text (str): Texto del problema.
+
+        Returns:
+            bool: Verdadero si el problema involucra mezclas, Falso en caso contrario.
+        """
+        strong_blending_keywords = [
+            "avgas",
+            "gasolina de aviación",
+            "refinería",
+            "promedio de",
+            "proporción",
+            "porcentaje",
+        ]
+
+        has_strong_keywords = any(keyword in text for keyword in strong_blending_keywords)
+
+        facility_indicators = [
+            "plantas",
+            "fábrica",
+            "instalación",
+            "capacidad de producción",
+        ]
+
+        has_facilities = any(indicator in text for indicator in facility_indicators)
+
+        if has_facilities and not has_strong_keywords:
+            return False
+
+        return has_strong_keywords
+
+    def _detect_raw_materials(self, text: str) -> List[str]:
+        """Detecta materias primas en problemas de mezclas."""
+        materials = []
+
+        # Buscar "gas 1", "gas 2", etc.
+        gas_pattern = r"gas\s*(\d+)"
+        matches = re.findall(gas_pattern, text)
+        if matches:
+            materials = [f"gas_{n}" for n in sorted(set(matches))]
+
+        # Buscar "tipo 1", "tipo 2", etc.
+        if not materials:
+            type_pattern = r"tipo\s*(\d+)"
+            matches = re.findall(type_pattern, text)
+            if matches:
+                materials = [f"tipo_{n}" for n in sorted(set(matches))]
+
+        return materials
+
+    def _detect_final_blends(self, text: str) -> List[str]:
+        """Detecta mezclas finales en problemas de mezclas."""
+        blends = []
+
+        # Buscar "avgas A", "avgas B", etc. (text ya está en minúsculas)
+        avgas_pattern = r"avgas\s*([a-z])"
+        matches = re.findall(avgas_pattern, text)
+        if matches:
+            blends = [f"avgas_{m.upper()}" for m in sorted(set(matches))]
+
+        # Buscar "mezcla A", "mezcla B", etc.
+        if not blends:
+            mix_pattern = r"mezcla\s*([a-z])"
+            matches = re.findall(mix_pattern, text)
+            if matches:
+                blends = [f"mezcla_{m.upper()}" for m in sorted(set(matches))]
+
+        return blends
+
+    def _detect_food_items(self, text: str) -> List[str]:
+        """Detecta alimentos en problemas de dieta."""
+        foods = []
+
+        # Palabras clave que indican problema de dieta
+        diet_keywords = [
+            "dieta",
+            "alimento",
+            "comida",
+            "porción",
+            "calorías",
+            "proteína",
+        ]
+        is_diet_problem = any(keyword in text for keyword in diet_keywords)
+
+        if not is_diet_problem:
+            return []
+
+        # Alimentos comunes
+        food_patterns = [
+            r"\b(pan|pollo|carne|pescado|vegetales?|verduras?|frutas?|arroz|pasta|leche|huevos?)\b",
+        ]
+
+        for pattern in food_patterns:
+            matches = re.findall(pattern, text)
+            foods.extend(matches)
+
+        # Eliminar duplicados y retornar
+        return list(set(foods))[:10] if foods else []
+
+    def _detect_transport_routes(self, text: str) -> List[str]:
+        """Detecta rutas en problemas de transporte."""
+        # Palabras clave que indican problema de transporte
+        transport_keywords = [
+            "transporte",
+            "transportar",
+            "almacén",
+            "almacen",
+            "tienda",
+            "ruta",
+            "envío",
+        ]
+        is_transport = any(keyword in text for keyword in transport_keywords)
+
+        if not is_transport:
+            return []
+
+        # Contar almacenes y tiendas
+        warehouses = []
+        stores = []
+
+        # Detectar "2 almacenes", "3 tiendas", etc.
+        warehouse_match = re.search(r"(\d+)\s+almacen", text)
+        if warehouse_match:
+            num_warehouses = int(warehouse_match.group(1))
+            warehouses = [f"almacen_{i+1}" for i in range(num_warehouses)]
+
+        store_match = re.search(r"(\d+)\s+tienda", text)
+        if store_match:
+            num_stores = int(store_match.group(1))
+            stores = [f"tienda_{chr(65+i)}" for i in range(num_stores)]  # A, B, C...
+
+        # Crear rutas (almacén × tienda)
+        if warehouses and stores:
+            routes = []
+            for w in warehouses:
+                for s in stores:
+                    routes.append(f"{w}_a_{s}")
+            return routes
+
+        return []
+
+    def validate_extracted_variables(
+        self, extracted_problem: Dict, structure: Dict
+    ) -> Tuple[bool, List[str]]:
+        """
+        Valida si las variables extraídas coinciden con la estructura esperada.
+
+        Args:
+            extracted_problem (Dict): Variables y parámetros extraídos del problema.
+            structure (Dict): Estructura del problema detectada.
+
+        Returns:
+            Tuple[bool, List[str]]: (es_válido, lista_de_advertencias)
+        """
+        warnings = []
+        is_valid = True
+
+        num_extracted = len(extracted_problem.get("variable_names", []))
+        expected = structure["expected_variables"]
+
+        if num_extracted != expected:
+            is_valid = False
+            warnings.append(f"Número de variables: extraídas={num_extracted}, esperadas={expected}")
+
+            # Dar sugerencias específicas
+            if structure["problem_type"] == "multi_facility":
+                warnings.append(
+                    f"Problema multi-instalación: {structure['num_facilities']} plantas × "
+                    f"{structure['num_products']} productos = {expected} variables"
+                )
+                if num_extracted < expected:
+                    warnings.append(
+                        "⚠️ FALTAN VARIABLES - El modelo no extrajo todas las combinaciones planta×producto"
+                    )
+
+        # Validar coeficientes objetivo
+        num_coeffs = len(extracted_problem.get("objective_coefficients", []))
+        if num_coeffs != num_extracted:
+            is_valid = False
+            warnings.append(f"Coeficientes objetivo: {num_coeffs}, pero variables: {num_extracted}")
+
+        return is_valid, warnings

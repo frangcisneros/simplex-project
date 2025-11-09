@@ -1,0 +1,6 @@
+MAXIMIZE
+3 5
+SUBJECT TO
+1 0 <= 4
+0 2 <= 12
+3 2 <= 18

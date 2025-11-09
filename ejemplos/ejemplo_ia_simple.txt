@@ -1,0 +1,8 @@
+Una fábrica produce dos productos: mesas y sillas.
+Cada mesa genera una ganancia de $50 y cada silla $30.
+Las restricciones son:
+- Disponemos de 100 horas de trabajo
+- Cada mesa requiere 2 horas y cada silla 1 hora
+- No podemos producir más de 40 mesas por límites de almacenamiento
+
+¿Cuántas mesas y sillas debemos producir para maximizar la ganancia?

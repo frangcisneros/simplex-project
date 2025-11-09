@@ -6,13 +6,16 @@ Verifica que el sistema se inicializa correctamente y registra eventos.
 import sys
 import os
 
+# Agregar el directorio raíz al path para permitir importaciones
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.logging_system import logger, LogLevel
+from simplex_solver.logging_system import logger, LogLevel
 
 
 def test_logging_system():
-    """Prueba básica del sistema de logging."""
+    """
+    Prueba el sistema de logging verificando diferentes tipos de logs y operaciones.
+    """
     print("=" * 60)
     print("TEST DEL SISTEMA DE LOGGING")
     print("=" * 60)

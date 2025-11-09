@@ -1,2 +1,2 @@
-# Dependencias para generar el ejecutable
-pyinstaller>=5.0
+pyinstaller>=6.0.0
+winshell>=0.6.0

@@ -1,14 +1,15 @@
 @echo off
 setlocal enabledelayedexpansion
 :: Script para instalar el menú contextual de Simplex Solver
-:: Ejecutar como Administrador
+:: Este script debe ejecutarse con permisos de administrador.
 
+:: Mostrar encabezado informativo
 echo ===============================================
 echo  INSTALADOR DE MENU CONTEXTUAL - SIMPLEX SOLVER
 echo ===============================================
 echo.
 
-:: Obtener la ruta del directorio del proyecto (parent de context_menu)
+:: Obtener la ruta del directorio del proyecto (padre de context_menu)
 set "SCRIPT_DIR=%~dp0"
 set "PROJECT_DIR=%SCRIPT_DIR%.."
 set "PYTHON_SCRIPT=%SCRIPT_DIR%solve_from_context.py"
@@ -24,7 +25,7 @@ if not exist "%PYTHON_SCRIPT%" (
     exit /b 1
 )
 
-:: Verificar que existe el wrapper batch
+:: Verificar que existe el wrapper batch para el método clásico
 if not exist "%BAT_WRAPPER%" (
     echo ERROR: No se encontro el archivo run_solver.bat
     echo Asegurese de ejecutar este script desde la carpeta context_menu.
@@ -32,6 +33,7 @@ if not exist "%BAT_WRAPPER%" (
     exit /b 1
 )
 
+:: Verificar que existe el wrapper batch para el método con IA
 if not exist "%BAT_WRAPPER_AI%" (
     echo ERROR: No se encontro el archivo run_solver_ai.bat
     echo Asegurese de ejecutar este script desde la carpeta context_menu.
@@ -39,12 +41,13 @@ if not exist "%BAT_WRAPPER_AI%" (
     exit /b 1
 )
 
+:: Mostrar información de las rutas detectadas
 echo Directorio del proyecto: %PROJECT_DIR%
 echo Script de Python: %PYTHON_SCRIPT%
 echo Wrapper Batch: %BAT_WRAPPER%
 echo.
 
-:: Verificar que Python está disponible
+:: Verificar que Python está disponible en el sistema
 echo Verificando Python...
 where python >nul 2>&1
 if %errorlevel% neq 0 (
@@ -90,26 +93,27 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: Agregar entradas al Registro de Windows
 echo Agregando entrada al Registro de Windows...
 echo.
 
 :: Registrar para Windows 10 (funciona en todas las versiones)
 echo Registrando para compatibilidad con Windows 10...
 reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver" /ve /d "Resolver con Simplex Solver" /f
-reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver\command" /ve /d "\"%BAT_WRAPPER%\" \"%%1\"" /f
+reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolver\command" /ve /d "cmd.exe /c \"\"%BAT_WRAPPER%\" \"%%1\"\"" /f
 
 :: Agregar opción con IA
 reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolverAI" /ve /d "Resolver con Simplex Solver (IA)" /f
-reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolverAI\command" /ve /d "\"%BAT_WRAPPER_AI%\" \"%%1\"" /f
+reg add "HKEY_CLASSES_ROOT\txtfile\shell\SimplexSolverAI\command" /ve /d "cmd.exe /c \"\"%BAT_WRAPPER_AI%\" \"%%1\"\"" /f
 
 :: Si es Windows 11, agregar también a SystemFileAssociations
 if "%WIN_VERSION%"=="11" (
     echo Registrando para Windows 11...
     reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver" /ve /d "Resolver con Simplex Solver" /f
-    reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver\command" /ve /d "\"%BAT_WRAPPER%\" \"%%1\"" /f
+    reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolver\command" /ve /d "cmd.exe /c \"\"%BAT_WRAPPER%\" \"%%1\"\"" /f
     
     reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolverAI" /ve /d "Resolver con Simplex Solver (IA)" /f
-    reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolverAI\command" /ve /d "\"%BAT_WRAPPER_AI%\" \"%%1\"" /f
+    reg add "HKEY_CLASSES_ROOT\SystemFileAssociations\.txt\shell\SimplexSolverAI\command" /ve /d "cmd.exe /c \"\"%BAT_WRAPPER_AI%\" \"%%1\"\"" /f
 )
 
 :: Si hay un icono, agregarlo
