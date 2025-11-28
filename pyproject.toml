@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "Francisco", email = ""}
+    {name = "Francisco", email = "francisco@example.com"}
 ]
 keywords = ["simplex", "linear-programming", "optimization", "AI", "NLP"]
 classifiers = [
